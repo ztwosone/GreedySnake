@@ -1,0 +1,39 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Test/test_scene.gd" id="1_script"]
+
+[node name="TestScene" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="ColorRect" type="ColorRect" parent="."]
+layout_mode = 0
+offset_left = 540.0
+offset_top = 260.0
+offset_right = 740.0
+offset_bottom = 460.0
+color = Color(1, 0, 0, 1)
+
+[node name="ColorLabel" type="Label" parent="."]
+layout_mode = 0
+offset_left = 390.0
+offset_top = 190.0
+offset_right = 890.0
+offset_bottom = 245.0
+theme_override_font_sizes/font_size = 32
+horizontal_alignment = 1
+text = "红色 (Red)"
+
+[node name="CycleButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 515.0
+offset_top = 620.0
+offset_right = 765.0
+offset_bottom = 670.0
+theme_override_font_sizes/font_size = 20
+text = "切换颜色 / Cycle Color"
