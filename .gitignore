@@ -1,0 +1,23 @@
+# Godot 4.x
+Project/.godot/
+
+# Godot exported builds
+Project/export/
+Project/build/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE / Editor
+.vscode/
+*.swp
+*.swo
+*~
+
+# Claude Code auto memory (optional, uncomment if you want to track it)
+# .claude/
+
+# Secrets
+*.env
