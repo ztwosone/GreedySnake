@@ -1,0 +1,57 @@
+[gd_scene load_steps=8 format=3 uid="uid://game_world"]
+
+[ext_resource type="Script" path="res://scenes/game_world.gd" id="1"]
+[ext_resource type="Script" path="res://scenes/grid_background.gd" id="2"]
+[ext_resource type="Script" path="res://entities/snake/snake.gd" id="3"]
+[ext_resource type="Script" path="res://systems/length/length_system.gd" id="4"]
+[ext_resource type="Script" path="res://systems/food_manager.gd" id="5"]
+[ext_resource type="Script" path="res://systems/enemy/enemy_manager.gd" id="6"]
+[ext_resource type="Script" path="res://ui/hud.gd" id="7"]
+
+[node name="GameWorld" type="Node2D"]
+script = ExtResource("1")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+
+[node name="GridBackground" type="Node2D" parent="."]
+script = ExtResource("2")
+
+[node name="WallVisual" type="Node2D" parent="."]
+
+[node name="EntityContainer" type="Node2D" parent="."]
+
+[node name="Snake" type="Node2D" parent="EntityContainer"]
+script = ExtResource("3")
+
+[node name="EnemyContainer" type="Node2D" parent="EntityContainer"]
+
+[node name="FoodContainer" type="Node2D" parent="EntityContainer"]
+
+[node name="LengthSystem" type="Node" parent="."]
+script = ExtResource("4")
+
+[node name="FoodManager" type="Node" parent="."]
+script = ExtResource("5")
+
+[node name="EnemyManager" type="Node" parent="."]
+script = ExtResource("6")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="HUD" type="Control" parent="UI"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("7")
+
+[node name="LengthLabel" type="Label" parent="UI/HUD"]
+layout_mode = 1
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 300.0
+offset_bottom = 50.0
+theme_override_font_sizes/font_size = 24
+text = "Length: 0"
