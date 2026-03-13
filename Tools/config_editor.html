@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake Roguelite - Config Editor</title>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --accent: #e94560;
+    --text: #eee;
+    --text2: #aaa;
+    --input-bg: #1a1a3e;
+    --border: #333;
+    --success: #4caf50;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 20px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  h1 { color: var(--accent); margin-bottom: 6px; font-size: 1.6rem; }
+  .subtitle { color: var(--text2); margin-bottom: 20px; font-size: 0.9rem; }
+  .toolbar {
+    display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;
+  }
+  .toolbar button, .toolbar label {
+    padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer;
+    font-size: 0.9rem; font-weight: 600; transition: all 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { filter: brightness(1.15); }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: #1a4a7a; }
+  .btn-success { background: var(--success); color: #fff; }
+  .toast {
+    position: fixed; top: 20px; right: 20px; background: var(--success);
+    color: #fff; padding: 12px 20px; border-radius: 8px; font-weight: 600;
+    opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 99;
+  }
+  .toast.show { opacity: 1; }
+  .section {
+    background: var(--surface); border-radius: 10px; padding: 18px;
+    margin-bottom: 16px; border: 1px solid var(--border);
+  }
+  .section-header {
+    display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; user-select: none;
+  }
+  .section-header h2 {
+    font-size: 1.1rem; color: var(--accent);
+  }
+  .section-header .toggle { font-size: 1.2rem; transition: transform 0.2s; }
+  .section-header .toggle.collapsed { transform: rotate(-90deg); }
+  .section-body { margin-top: 14px; }
+  .section-body.hidden { display: none; }
+  .field-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 10px;
+  }
+  .field {
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .field label {
+    font-size: 0.8rem; color: var(--text2); font-weight: 500;
+  }
+  .field input, .field select {
+    background: var(--input-bg); border: 1px solid var(--border);
+    color: var(--text); padding: 7px 10px; border-radius: 5px; font-size: 0.9rem;
+  }
+  .field input:focus { outline: none; border-color: var(--accent); }
+  .field input[type="color"] { height: 36px; padding: 2px 4px; cursor: pointer; }
+  .nested-section {
+    background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px; margin-bottom: 10px;
+  }
+  .nested-section h3 {
+    font-size: 0.95rem; color: #ccc; margin-bottom: 10px;
+    border-bottom: 1px solid var(--border); padding-bottom: 6px;
+  }
+  .range-field {
+    display: flex; gap: 8px; align-items: center;
+  }
+  .range-field input { width: 80px; }
+  .range-field span { color: var(--text2); }
+  #raw-editor {
+    width: 100%; min-height: 400px; background: var(--input-bg);
+    color: #7fdbca; border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px; font-family: 'Consolas', 'Fira Code', monospace;
+    font-size: 0.85rem; resize: vertical; tab-size: 2;
+  }
+  .tab-bar {
+    display: flex; gap: 0; margin-bottom: 16px;
+  }
+  .tab-bar button {
+    padding: 10px 24px; border: 1px solid var(--border); background: var(--surface);
+    color: var(--text2); cursor: pointer; font-size: 0.9rem; font-weight: 600;
+    transition: all 0.15s;
+  }
+  .tab-bar button:first-child { border-radius: 8px 0 0 8px; }
+  .tab-bar button:last-child { border-radius: 0 8px 8px 0; }
+  .tab-bar button.active {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+  }
+  .view { display: none; }
+  .view.active { display: block; }
+</style>
+</head>
+<body>
+
+<h1>Snake Roguelite Config Editor</h1>
+<p class="subtitle">编辑 game_config.json — 保存后复制到 Project/data/json/ 目录</p>
+
+<div class="toolbar">
+  <label class="btn-secondary" style="cursor:pointer">
+    📂 导入 JSON
+    <input type="file" accept=".json" id="import-file" style="display:none">
+  </label>
+  <button class="btn-primary" onclick="exportJSON()">💾 导出 JSON</button>
+  <button class="btn-secondary" onclick="copyJSON()">📋 复制到剪贴板</button>
+  <button class="btn-secondary" onclick="resetDefaults()">🔄 重置默认</button>
+</div>
+
+<div class="tab-bar">
+  <button class="active" onclick="switchTab('visual', this)">可视化编辑</button>
+  <button onclick="switchTab('raw', this)">JSON 源码</button>
+</div>
+
+<div id="toast" class="toast">已复制!</div>
+
+<div id="view-visual" class="view active"></div>
+<div id="view-raw" class="view">
+  <textarea id="raw-editor" spellcheck="false"></textarea>
+  <div style="margin-top:10px">
+    <button class="btn-primary" onclick="applyRawJSON()">应用 JSON</button>
+    <span id="raw-error" style="color:#f44;margin-left:12px;font-size:0.85rem"></span>
+  </div>
+</div>
+
+<script>
+// ─── Default config ───
+const DEFAULT_CONFIG = {
+  "version": "1.0.0",
+  "grid": { "cell_size": 32, "width": 40, "height": 22, "window_scale": 1 },
+  "tick": { "base_interval": 0.25 },
+  "snake": { "initial_length": 6, "min_length": 1 },
+  "food": { "max_count": 3, "growth_amount": 1 },
+  "enemy": { "max_count": 3, "spawn_safe_distance": 3, "default_attack_cost": 1 },
+  "status_effects": {
+    "fire": { "display_name":"灼烧","entity_damage_interval":2.0,"entity_damage_amount":1,"entity_duration":6.0,"max_layers":99,"tile_duration":8.0,"spread_chance":0.2,"spread_interval":1.0,"color":"#FF4500" },
+    "ice": { "display_name":"冰冻","speed_modifier":0.5,"freeze_at_layer":2,"freeze_duration":2.0,"entity_duration":6.0,"max_layers":2,"tile_duration":12.0,"color":"#ADD8E6" },
+    "poison": { "display_name":"中毒","food_growth_modifier":0.5,"entity_duration":8.0,"toxify_at_layer":3,"toxify_length_penalty":3,"max_layers":3,"tile_duration":10.0,"trail_interval":3,"color":"#006400" }
+  },
+  "reactions": {
+    "steam": { "type_a":"fire","type_b":"ice","display_name":"蒸腾","damage_coefficient":0.5,"radius":3,"cloud_duration":5.0 },
+    "toxic_explosion": { "type_a":"fire","type_b":"poison","display_name":"毒爆","damage_coefficient":1.0,"radius":3,"apply_burn_layers":2,"apply_poison_layers":1 }
+  },
+  "enemy_types": {
+    "wanderer": { "display_name":"游荡者","hp":1,"attack_cost":1,"speed":1,"status_response":"ignore","behavior":"random_move","color":"#CC1A4D" },
+    "chaser": { "display_name":"追踪者","hp":1,"attack_cost":1,"speed":1,"status_response":"avoid","behavior":"track_head","threat_range":3,"threat_speed_bonus":1,"color":"#FF3366" },
+    "bog_crawler": { "display_name":"毒沼匍匐者","hp":2,"attack_cost":1,"speed":1,"status_response":"attract","status_preference":"poison","behavior":"seek_status","poison_speed_bonus":2,"death_poison_tiles":3,"color":"#2D5A27" }
+  },
+  "length_thresholds": { "danger":[1,4],"survival":[5,10],"combat":[11,20],"comfort":[21,35],"overload":[36,999] }
+};
+
+let config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+
+// ─── Section display names ───
+const SECTION_NAMES = {
+  version: "版本", grid: "网格 Grid", tick: "节拍 Tick", snake: "蛇 Snake",
+  food: "食物 Food", enemy: "敌人 Enemy", status_effects: "状态效果 Status Effects",
+  reactions: "元素反应 Reactions", enemy_types: "敌人类型 Enemy Types",
+  length_thresholds: "长度阈值 Length Thresholds"
+};
+
+// ─── Tab switching ───
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-bar button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + tab).classList.add('active');
+  if (tab === 'raw') {
+    document.getElementById('raw-editor').value = JSON.stringify(config, null, 2);
+  }
+}
+
+function applyRawJSON() {
+  const el = document.getElementById('raw-editor');
+  const errEl = document.getElementById('raw-error');
+  try {
+    config = JSON.parse(el.value);
+    errEl.textContent = '';
+    renderVisual();
+    showToast('JSON 已应用');
+  } catch(e) {
+    errEl.textContent = '解析错误: ' + e.message;
+  }
+}
+
+// ─── Render visual editor ───
+function renderVisual() {
+  const container = document.getElementById('view-visual');
+  container.innerHTML = '';
+  for (const [sectionKey, sectionVal] of Object.entries(config)) {
+    if (sectionKey === 'version') {
+      container.innerHTML += renderVersionField(sectionVal);
+      continue;
+    }
+    const name = SECTION_NAMES[sectionKey] || sectionKey;
+    const sec = document.createElement('div');
+    sec.className = 'section';
+
+    if (['status_effects','reactions','enemy_types'].includes(sectionKey)) {
+      sec.innerHTML = `<div class="section-header" onclick="toggleSection(this)">
+        <h2>${name}</h2><span class="toggle">▼</span></div>
+        <div class="section-body">${renderNestedDict(sectionKey, sectionVal)}</div>`;
+    } else if (sectionKey === 'length_thresholds') {
+      sec.innerHTML = `<div class="section-header" onclick="toggleSection(this)">
+        <h2>${name}</h2><span class="toggle">▼</span></div>
+        <div class="section-body">${renderThresholds(sectionVal)}</div>`;
+    } else {
+      sec.innerHTML = `<div class="section-header" onclick="toggleSection(this)">
+        <h2>${name}</h2><span class="toggle">▼</span></div>
+        <div class="section-body"><div class="field-grid">${renderFlatFields(sectionKey, sectionVal)}</div></div>`;
+    }
+    container.appendChild(sec);
+  }
+}
+
+function renderVersionField(val) {
+  return `<div class="section" style="padding:12px 18px;display:flex;align-items:center;gap:14px;">
+    <strong style="color:var(--accent)">Version</strong>
+    <input value="${val}" style="background:var(--input-bg);border:1px solid var(--border);color:var(--text);
+      padding:5px 10px;border-radius:5px;width:120px;font-size:0.9rem"
+      onchange="config.version=this.value">
+  </div>`;
+}
+
+function renderFlatFields(path, obj) {
+  let html = '';
+  for (const [k, v] of Object.entries(obj)) {
+    html += makeField(path + '.' + k, k, v);
+  }
+  return html;
+}
+
+function renderNestedDict(sectionKey, obj) {
+  let html = '';
+  for (const [id, inner] of Object.entries(obj)) {
+    const displayName = inner.display_name ? `${inner.display_name} (${id})` : id;
+    html += `<div class="nested-section"><h3>${displayName}</h3>
+      <div class="field-grid">${renderFlatFields(sectionKey + '.' + id, inner)}</div></div>`;
+  }
+  return html;
+}
+
+function renderThresholds(obj) {
+  let html = '<div class="field-grid">';
+  for (const [k, v] of Object.entries(obj)) {
+    html += `<div class="field"><label>${k}</label>
+      <div class="range-field">
+        <input type="number" value="${v[0]}" onchange="updateThreshold('${k}',0,this.value)">
+        <span>~</span>
+        <input type="number" value="${v[1]}" onchange="updateThreshold('${k}',1,this.value)">
+      </div></div>`;
+  }
+  return html + '</div>';
+}
+
+function updateThreshold(key, idx, val) {
+  config.length_thresholds[key][idx] = Number(val);
+}
+
+function makeField(path, key, value) {
+  const type = typeof value;
+  const id = 'f_' + path.replace(/\./g, '_');
+  if (key === 'color' && type === 'string' && value.startsWith('#')) {
+    return `<div class="field"><label>${key}</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input type="color" id="${id}" value="${value}" onchange="setVal('${path}',this.value)">
+        <input value="${value}" style="background:var(--input-bg);border:1px solid var(--border);
+          color:var(--text);padding:5px 8px;border-radius:5px;width:90px;font-size:0.85rem"
+          onchange="setVal('${path}',this.value);document.getElementById('${id}').value=this.value">
+      </div></div>`;
+  }
+  if (type === 'number') {
+    const step = Number.isInteger(value) ? 1 : 0.01;
+    return `<div class="field"><label>${key}</label>
+      <input type="number" step="${step}" value="${value}" onchange="setVal('${path}',Number(this.value))">
+    </div>`;
+  }
+  if (type === 'string') {
+    return `<div class="field"><label>${key}</label>
+      <input type="text" value="${value}" onchange="setVal('${path}',this.value)">
+    </div>`;
+  }
+  if (type === 'boolean') {
+    return `<div class="field"><label>${key}</label>
+      <select onchange="setVal('${path}',this.value==='true')">
+        <option value="true" ${value?'selected':''}>true</option>
+        <option value="false" ${!value?'selected':''}>false</option>
+      </select></div>`;
+  }
+  return '';
+}
+
+function setVal(path, value) {
+  const parts = path.split('.');
+  let obj = config;
+  for (let i = 0; i < parts.length - 1; i++) obj = obj[parts[i]];
+  obj[parts[parts.length - 1]] = value;
+}
+
+function toggleSection(header) {
+  const body = header.nextElementSibling;
+  const toggle = header.querySelector('.toggle');
+  body.classList.toggle('hidden');
+  toggle.classList.toggle('collapsed');
+}
+
+// ─── Import / Export ───
+document.getElementById('import-file').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      config = JSON.parse(ev.target.result);
+      renderVisual();
+      showToast('导入成功');
+    } catch(err) {
+      alert('JSON 解析失败: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  this.value = '';
+});
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'game_config.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function copyJSON() {
+  navigator.clipboard.writeText(JSON.stringify(config, null, 2)).then(() => showToast('已复制到剪贴板'));
+}
+
+function resetDefaults() {
+  if (confirm('确定要重置为默认配置吗？')) {
+    config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+    renderVisual();
+    showToast('已重置');
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ─── Init ───
+renderVisual();
+</script>
+</body>
+</html>

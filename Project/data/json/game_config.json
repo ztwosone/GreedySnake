@@ -1,0 +1,119 @@
+{
+  "version": "1.0.0",
+  "grid": {
+    "cell_size": 32,
+    "width": 40,
+    "height": 22,
+    "window_scale": 1
+  },
+  "tick": {
+    "base_interval": 0.25
+  },
+  "snake": {
+    "initial_length": 6,
+    "min_length": 1
+  },
+  "food": {
+    "max_count": 3,
+    "growth_amount": 1
+  },
+  "enemy": {
+    "max_count": 3,
+    "spawn_safe_distance": 3,
+    "default_attack_cost": 1
+  },
+  "status_effects": {
+    "fire": {
+      "display_name": "灼烧",
+      "entity_damage_interval": 2.0,
+      "entity_damage_amount": 1,
+      "entity_duration": 6.0,
+      "max_layers": 99,
+      "tile_duration": 8.0,
+      "spread_chance": 0.2,
+      "spread_interval": 1.0,
+      "color": "#FF4500"
+    },
+    "ice": {
+      "display_name": "冰冻",
+      "speed_modifier": 0.5,
+      "freeze_at_layer": 2,
+      "freeze_duration": 2.0,
+      "entity_duration": 6.0,
+      "max_layers": 2,
+      "tile_duration": 12.0,
+      "color": "#ADD8E6"
+    },
+    "poison": {
+      "display_name": "中毒",
+      "food_growth_modifier": 0.5,
+      "entity_duration": 8.0,
+      "toxify_at_layer": 3,
+      "toxify_length_penalty": 3,
+      "max_layers": 3,
+      "tile_duration": 10.0,
+      "trail_interval": 3,
+      "color": "#006400"
+    }
+  },
+  "reactions": {
+    "steam": {
+      "type_a": "fire",
+      "type_b": "ice",
+      "display_name": "蒸腾",
+      "damage_coefficient": 0.5,
+      "radius": 3,
+      "cloud_duration": 5.0
+    },
+    "toxic_explosion": {
+      "type_a": "fire",
+      "type_b": "poison",
+      "display_name": "毒爆",
+      "damage_coefficient": 1.0,
+      "radius": 3,
+      "apply_burn_layers": 2,
+      "apply_poison_layers": 1
+    }
+  },
+  "enemy_types": {
+    "wanderer": {
+      "display_name": "游荡者",
+      "hp": 1,
+      "attack_cost": 1,
+      "speed": 1,
+      "status_response": "ignore",
+      "behavior": "random_move",
+      "color": "#CC1A4D"
+    },
+    "chaser": {
+      "display_name": "追踪者",
+      "hp": 1,
+      "attack_cost": 1,
+      "speed": 1,
+      "status_response": "avoid",
+      "behavior": "track_head",
+      "threat_range": 3,
+      "threat_speed_bonus": 1,
+      "color": "#FF3366"
+    },
+    "bog_crawler": {
+      "display_name": "毒沼匍匐者",
+      "hp": 2,
+      "attack_cost": 1,
+      "speed": 1,
+      "status_response": "attract",
+      "status_preference": "poison",
+      "behavior": "seek_status",
+      "poison_speed_bonus": 2,
+      "death_poison_tiles": 3,
+      "color": "#2D5A27"
+    }
+  },
+  "length_thresholds": {
+    "danger": [1, 4],
+    "survival": [5, 10],
+    "combat": [11, 20],
+    "comfort": [21, 35],
+    "overload": [36, 999]
+  }
+}
