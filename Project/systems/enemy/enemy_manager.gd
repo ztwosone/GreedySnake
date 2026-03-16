@@ -16,10 +16,10 @@ func _ready() -> void:
 func init_enemies(count: int) -> void:
 	max_enemy_count = count
 	for i in range(count):
-		spawn_enemy()
+		spawn_enemy(_pick_random_type())
 
 
-func spawn_enemy() -> void:
+func spawn_enemy(type_id: String = "wanderer") -> void:
 	var empty_cells: Array[Vector2i] = GridWorld.get_empty_cells()
 	if empty_cells.is_empty():
 		return
@@ -37,11 +37,12 @@ func spawn_enemy() -> void:
 	var pos: Vector2i = candidates[randi() % candidates.size()]
 
 	var enemy := Enemy.new()
+	enemy.setup_from_config(type_id)
 	enemy.place_on_grid(pos)
 	if enemy_container:
 		enemy_container.add_child(enemy)
 	current_enemies.append(enemy)
-	EventBus.enemy_spawned.emit({"enemy_def": enemy, "position": pos})
+	EventBus.enemy_spawned.emit({"enemy_def": enemy, "position": pos, "type": type_id})
 
 
 func _on_snake_hit_enemy(data: Dictionary) -> void:
@@ -63,7 +64,27 @@ func _on_enemy_killed(data: Dictionary) -> void:
 		current_enemies.erase(enemy)
 	# Respawn to maintain count
 	if current_enemies.size() < max_enemy_count:
-		spawn_enemy()
+		spawn_enemy(_pick_random_type())
+
+
+func _pick_random_type() -> String:
+	var cfg_node = Engine.get_main_loop().root.get_node_or_null("ConfigManager")
+	if cfg_node == null:
+		return "wanderer"
+	var enemy_cfg: Dictionary = cfg_node.enemy
+	var weights: Dictionary = enemy_cfg.get("spawn_weights", {})
+	if weights.is_empty():
+		return "wanderer"
+	var total: int = 0
+	for w in weights.values():
+		total += int(w)
+	var roll: int = randi() % total
+	var accum: int = 0
+	for type_id in weights:
+		accum += int(weights[type_id])
+		if roll < accum:
+			return type_id
+	return "wanderer"
 
 
 func clear_enemies() -> void:

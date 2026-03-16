@@ -21,7 +21,15 @@ func _on_food_eaten(_data: Dictionary) -> void:
 	if not snake or not snake.is_alive:
 		return
 	var amount := 1
-	snake.grow_pending += amount
+
+	# 中毒时食物增长量减半
+	var sem = Engine.get_main_loop().root.get_node_or_null("StatusEffectManager")
+	if sem and sem.poison_effect:
+		var modifier: float = sem.poison_effect.get_growth_modifier(sem, snake)
+		amount = int(floor(float(amount) * modifier))
+
+	if amount > 0:
+		snake.grow_pending += amount
 	EventBus.snake_length_increased.emit({
 		"amount": amount,
 		"source": "food",

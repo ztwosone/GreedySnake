@@ -23,11 +23,33 @@ signal length_grow_requested(data: Dictionary)     # 请求增长 { amount }
 # === Enemy ===
 signal enemy_killed(data: Dictionary)              # 敌人被击杀 { enemy_def, position, method }
 signal enemy_spawned(data: Dictionary)             # 敌人生成 { enemy_def, position }
+signal enemy_action_decided(data: Dictionary)      # 敌人AI决策 { enemy, action, direction }
 
 # === GridWorld ===
 signal entity_moved(data: Dictionary)              # 实体移动 { entity, from, to }
 signal entity_placed(data: Dictionary)             # 实体放置 { entity, position }
 signal entity_removed(data: Dictionary)            # 实体移除 { entity, position }
+
+# === Status Effects ===
+signal status_applied(data: Dictionary)            # 状态施加 { target, type, layer, source }
+signal status_removed(data: Dictionary)            # 状态移除 { target, type, source }
+signal status_layer_changed(data: Dictionary)      # 叠层变化 { target, type, old_layer, new_layer }
+signal status_expired(data: Dictionary)            # 状态过期 { target, type }
+
+# === Ice Effect ===
+signal ice_freeze_started(data: Dictionary)      # 冰冻冻结开始 {}
+signal ice_freeze_ended(data: Dictionary)        # 冰冻冻结结束 {}
+
+# === Status Tiles ===
+signal status_tile_placed(data: Dictionary)        # 状态格放置 { position, type, layer }
+signal status_tile_removed(data: Dictionary)       # 状态格移除 { position, type }
+signal entity_entered_status_tile(data: Dictionary) # 实体踩入状态格 { entity, tile, position, type }
+
+# === Combat ===
+signal snake_body_crush(data: Dictionary)        # 蛇身碾压 { enemy, position, segment_index, cost, status_transferred }
+
+# === Reactions ===
+signal reaction_triggered(data: Dictionary)      # 反应触发 { reaction_id, position, type_a, type_b, layer_a, layer_b, damage }
 
 # === Game Flow ===
 signal game_started                                # 游戏开始

@@ -20,7 +20,13 @@
   "enemy": {
     "max_count": 3,
     "spawn_safe_distance": 3,
-    "default_attack_cost": 1
+    "default_attack_cost": 1,
+    "spawn_weights": {
+      "wanderer": 50,
+      "chaser": 30,
+      "bog_crawler": 20
+    },
+    "max_status_tiles": 100
   },
   "status_effects": {
     "fire": {
@@ -80,7 +86,7 @@
       "display_name": "游荡者",
       "hp": 1,
       "attack_cost": 1,
-      "speed": 1,
+      "speed": 0.5,
       "status_response": "ignore",
       "behavior": "random_move",
       "color": "#CC1A4D"
@@ -100,7 +106,7 @@
       "display_name": "毒沼匍匐者",
       "hp": 2,
       "attack_cost": 1,
-      "speed": 1,
+      "speed": 0.33,
       "status_response": "attract",
       "status_preference": "poison",
       "behavior": "seek_status",

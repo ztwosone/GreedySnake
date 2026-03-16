@@ -22,6 +22,7 @@ EventBus="*res://autoloads/event_bus.gd"
 TickManager="*res://autoloads/tick_manager.gd"
 GridWorld="*res://autoloads/grid_world.gd"
 GameManager="*res://autoloads/game_manager.gd"
+StatusEffectManager="*res://systems/status/status_effect_manager.gd"
 
 [display]
 

@@ -16,8 +16,16 @@ func init_foods(count: int) -> void:
 		spawn_food()
 
 
+var tile_manager: StatusTileManager = null
+
+
 func spawn_food() -> void:
 	var empty_cells: Array[Vector2i] = GridWorld.get_empty_cells()
+	# 排除毒液格位置
+	if tile_manager:
+		empty_cells = empty_cells.filter(func(pos: Vector2i) -> bool:
+			return not tile_manager.has_tile(pos, "poison")
+		)
 	if empty_cells.is_empty():
 		return
 	var pos: Vector2i = empty_cells[randi() % empty_cells.size()]

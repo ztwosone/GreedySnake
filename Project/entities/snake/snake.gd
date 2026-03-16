@@ -99,10 +99,11 @@ func move() -> void:
 		segments[1].update_visual()
 
 	# 7. Handle tail
+	var vacated_pos := Vector2i(-1, -1)
 	if grow_pending > 0:
 		grow_pending -= 1
 	else:
-		var old_tail_pos: Vector2i = body.pop_back()
+		vacated_pos = body.pop_back()
 		var old_tail_seg: SnakeSegment = segments.pop_back()
 		old_tail_seg.remove_from_grid()
 		old_tail_seg.queue_free()
@@ -122,6 +123,7 @@ func move() -> void:
 		"direction": direction,
 		"head_pos": body[0],
 		"old_tail_pos": body[-1],
+		"vacated_pos": vacated_pos,
 	})
 
 
