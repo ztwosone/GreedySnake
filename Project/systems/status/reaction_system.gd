@@ -157,6 +157,13 @@ func _execute_reaction(reaction_cfg: Dictionary, pos: Vector2i, layer_a: int, la
 
 	# 查找并执行反应处理器
 	var reaction_id: String = _get_reaction_id(type_a, type_b)
+
+	# 优先尝试原子链（如果 reaction_cfg 中定义了 atoms）
+	if reaction_cfg.has("atoms"):
+		_execute_reaction_atoms(reaction_cfg, pos, layer_a, layer_b, target)
+		return
+
+	# 回退到旧处理器
 	var handler = _reaction_handlers.get(reaction_id)
 	if handler and handler.has_method("execute"):
 		handler.execute({
@@ -186,3 +193,28 @@ func _get_reaction_id(type_a: String, type_b: String) -> String:
 		   (r.get("type_a") == type_b and r.get("type_b") == type_a):
 			return rid
 	return ""
+
+
+func _execute_reaction_atoms(reaction_cfg: Dictionary, pos: Vector2i, layer_a: int, layer_b: int, target: Object) -> void:
+	## 使用原子系统执行反应
+	var sem = Engine.get_main_loop().root.get_node_or_null("StatusEffectManager")
+	if sem == null or sem._chain_resolver == null:
+		return
+
+	var chain: EffectChain = sem._chain_resolver.resolve_reaction(reaction_cfg)
+	if chain == null:
+		return
+
+	var ctx := AtomContext.new()
+	ctx.source = target
+	ctx.target = target
+	ctx.source_position = pos
+	ctx.target_position = pos
+	ctx.layer_a = layer_a
+	ctx.layer_b = layer_b
+	ctx.effect_mgr = sem
+	ctx.tile_mgr = tile_manager
+	ctx.tick_mgr = Engine.get_main_loop().root.get_node_or_null("TickManager")
+
+	var executor := AtomExecutor.new()
+	executor.execute_chain(chain, ctx)

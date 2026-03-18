@@ -22,10 +22,13 @@ func _on_food_eaten(_data: Dictionary) -> void:
 		return
 	var amount := 1
 
-	# 中毒时食物增长量减半
+	# 查询增长修改器（原子系统或旧 poison_effect 回退）
 	var sem = Engine.get_main_loop().root.get_node_or_null("StatusEffectManager")
-	if sem and sem.poison_effect:
-		var modifier: float = sem.poison_effect.get_growth_modifier(sem, snake)
+	if sem:
+		var modifier: float = sem.get_modifier("growth", snake, 1.0)
+		if modifier == 1.0 and sem.poison_effect:
+			# 回退：无原子修改器时检查旧毒效果
+			modifier = sem.poison_effect.get_growth_modifier(sem, snake)
 		amount = int(floor(float(amount) * modifier))
 
 	if amount > 0:

@@ -38,7 +38,35 @@
       "tile_duration": 8.0,
       "spread_chance": 0.2,
       "spread_interval": 1.0,
-      "color": "#FF4500"
+      "color": "#FF4500",
+      "entity_effects": [
+        {
+          "trigger": "on_interval",
+          "interval": 2.0,
+          "atoms": [
+            { "atom": "damage", "amount_per_layer": 1, "source": "fire" }
+          ],
+          "pattern": "self"
+        }
+      ],
+      "tile_effects": [
+        {
+          "trigger": "on_interval",
+          "interval": 1.0,
+          "atoms": [
+            { "atom": "place_tile", "type": "fire", "layer": 1 }
+          ],
+          "pattern": "neighbors",
+          "chance": 0.2
+        },
+        {
+          "trigger": "on_entity_enter",
+          "atoms": [
+            { "atom": "apply_status", "type": "fire", "layers": 1, "source": "tile" }
+          ],
+          "pattern": "target"
+        }
+      ]
     },
     "ice": {
       "display_name": "冰冻",
@@ -48,7 +76,40 @@
       "entity_duration": 6.0,
       "max_layers": 2,
       "tile_duration": 12.0,
-      "color": "#ADD8E6"
+      "color": "#ADD8E6",
+      "entity_effects": [
+        {
+          "trigger": "on_applied",
+          "atoms": [
+            { "atom": "modify_speed", "multiplier": 0.5 }
+          ],
+          "pattern": "self"
+        },
+        {
+          "trigger": "on_layer_reach",
+          "layer": 2,
+          "atoms": [
+            { "atom": "freeze", "duration": 2.0 }
+          ],
+          "pattern": "self"
+        },
+        {
+          "trigger": "on_removed",
+          "atoms": [
+            { "atom": "modify_speed", "multiplier": 1.0 }
+          ],
+          "pattern": "self"
+        }
+      ],
+      "tile_effects": [
+        {
+          "trigger": "on_entity_enter",
+          "atoms": [
+            { "atom": "apply_status", "type": "ice", "layers": 1, "source": "tile" }
+          ],
+          "pattern": "target"
+        }
+      ]
     },
     "poison": {
       "display_name": "中毒",
@@ -59,7 +120,41 @@
       "max_layers": 3,
       "tile_duration": 10.0,
       "trail_interval": 3,
-      "color": "#006400"
+      "color": "#006400",
+      "entity_effects": [
+        {
+          "trigger": "on_applied",
+          "atoms": [
+            { "atom": "modify_growth", "multiplier": 0.5 }
+          ],
+          "pattern": "self"
+        },
+        {
+          "trigger": "on_layer_reach",
+          "layer": 3,
+          "atoms": [
+            { "atom": "damage", "amount": 3, "source": "poison_toxify" },
+            { "atom": "remove_status", "type": "poison" }
+          ],
+          "pattern": "self"
+        },
+        {
+          "trigger": "on_removed",
+          "atoms": [
+            { "atom": "modify_growth", "multiplier": 1.0 }
+          ],
+          "pattern": "self"
+        }
+      ],
+      "tile_effects": [
+        {
+          "trigger": "on_entity_enter",
+          "atoms": [
+            { "atom": "apply_status", "type": "poison", "layers": 1, "source": "tile" }
+          ],
+          "pattern": "target"
+        }
+      ]
     }
   },
   "reactions": {

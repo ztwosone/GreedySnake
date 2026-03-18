@@ -91,6 +91,8 @@ func _try_entity_to_spatial(snake: Node, vacated_pos: Vector2i) -> void:
 		# 防循环：本 tick 刚从空间获得的状态不回写
 		if _freshly_applied.has(snake_id) and _freshly_applied[snake_id].has(stype):
 			continue
+		# 注意：trail_effects 原子链暂不启用，留痕仍由 StatusTransferSystem 处理
+		# 未来移除旧代码时，由原子链的 on_move → place_tile_trail 接管
 		if _should_transfer_to_spatial(stype):
 			_transfer_entity_to_spatial(vacated_pos, stype)
 

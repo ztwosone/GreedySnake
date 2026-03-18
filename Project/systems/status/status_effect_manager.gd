@@ -1,19 +1,52 @@
 extends Node
 ## 状态效果全局管理器
 ## 追踪所有活跃的状态效果实例，处理叠层、过期和载体销毁。
+## 集成 Atom 效果链系统：优先使用 JSON 定义的原子链，无定义时回退旧处理器。
 
 # 存储: { instance_id: int → { type: String → StatusEffectData } }
 var _statuses: Dictionary = {}
 # 反查: { instance_id: int → Object }
 var _id_to_target: Dictionary = {}
 
-# 效果处理器（可插拔）
+# 效果处理器（旧版，用于无原子链定义时的回退）
 var fire_effect: FireEffect = FireEffect.new()
 var ice_effect: IceEffect = IceEffect.new()
 var poison_effect: PoisonEffect = PoisonEffect.new()
 
 # 火焰蔓延需要 tile_manager 引用
-var tile_manager: StatusTileManager = null
+var tile_manager: StatusTileManager = null:
+	set(value):
+		tile_manager = value
+		if _trigger_manager:
+			_trigger_manager.tile_mgr = value
+
+# === Atom 系统 ===
+var _atom_registry: AtomRegistry = null
+var _chain_resolver: EffectChainResolver = null
+var _trigger_manager: TriggerManager = null
+# 活跃修改器: { "growth" → { target_instance_id → multiplier }, "speed" → ..., ... }
+var _active_modifiers: Dictionary = {
+	"growth": {},
+	"speed": {},
+}
+# 记录哪些 effect 已注册了原子链（用于判断是否回退旧处理器）
+var _atom_enabled_effects: Dictionary = {}  # { effect.get_instance_id() → true }
+
+
+func _ready() -> void:
+	_init_atom_system()
+
+
+func _init_atom_system() -> void:
+	_atom_registry = AtomRegistry.new()
+	_chain_resolver = EffectChainResolver.new(_atom_registry)
+	# TriggerManager 是 Node，需加入场景树
+	_trigger_manager = TriggerManager.new()
+	_trigger_manager.name = "TriggerManager"
+	_trigger_manager.effect_mgr = self
+	_trigger_manager.tile_mgr = tile_manager
+	_trigger_manager.tick_mgr = Engine.get_main_loop().root.get_node_or_null("TickManager")
+	add_child(_trigger_manager)
 
 
 func _process(delta: float) -> void:
@@ -22,11 +55,26 @@ func _process(delta: float) -> void:
 
 
 func _process_effects(delta: float) -> void:
-	fire_effect.process_entity_effects(delta, self)
-	if tile_manager:
-		fire_effect.process_tile_spread(delta, tile_manager)
-	ice_effect.process_entity_effects(delta, self)
-	poison_effect.process_entity_effects(delta, self)
+	# 旧处理器仅处理没有原子链的效果类型
+	if _has_legacy_effects("fire"):
+		fire_effect.process_entity_effects(delta, self)
+		if tile_manager:
+			fire_effect.process_tile_spread(delta, tile_manager)
+	if _has_legacy_effects("ice"):
+		ice_effect.process_entity_effects(delta, self)
+	if _has_legacy_effects("poison"):
+		poison_effect.process_entity_effects(delta, self)
+
+
+func _has_legacy_effects(type: String) -> bool:
+	## 返回是否存在该类型的效果且没有原子链（需要旧处理器）
+	for target_id in _statuses:
+		var effects: Dictionary = _statuses[target_id]
+		if effects.has(type):
+			var effect: StatusEffectData = effects[type]
+			if not _atom_enabled_effects.has(effect.get_instance_id()):
+				return true
+	return false
 
 
 func _tick_update(delta: float) -> void:
@@ -62,6 +110,9 @@ func _tick_update(delta: float) -> void:
 			continue
 
 		var target: Object = _id_to_target.get(target_id)
+		# 注销原子链
+		if target_effects.has(effect_type):
+			_unregister_effect_chains(target_effects[effect_type])
 		target_effects.erase(effect_type)
 
 		if target_effects.is_empty():
@@ -111,12 +162,19 @@ func apply_status(target: Object, type: String, source: String) -> StatusEffectD
 
 	_statuses[target_id][type] = effect
 
+	# === Atom 链解析与注册 ===
+	_resolve_and_register_chains(effect)
+
 	EventBus.status_applied.emit({
 		"target": target,
 		"type": type,
 		"layer": effect.layer,
 		"source": source,
 	})
+
+	# 触发 on_applied 链
+	if _trigger_manager and effect.chains.size() > 0:
+		_trigger_manager.fire_on_applied(effect)
 
 	return effect
 
@@ -127,6 +185,9 @@ func remove_status(target: Object, type: String, source: String = "manual") -> v
 		return
 	if not _statuses[target_id].has(type):
 		return
+
+	var effect: StatusEffectData = _statuses[target_id][type]
+	_unregister_effect_chains(effect)
 
 	_statuses[target_id].erase(type)
 
@@ -149,6 +210,8 @@ func remove_all_statuses(target: Object) -> void:
 
 	var types_to_remove: Array = _statuses[target_id].keys()
 	for type in types_to_remove:
+		var effect: StatusEffectData = _statuses[target_id][type]
+		_unregister_effect_chains(effect)
 		_statuses[target_id].erase(type)
 		if is_instance_valid(target):
 			EventBus.status_removed.emit({
@@ -184,6 +247,12 @@ func has_status(target: Object, type: String) -> bool:
 
 
 func clear_all() -> void:
+	# 注销所有原子链
+	if _trigger_manager:
+		_trigger_manager.clear_all()
+	_atom_enabled_effects.clear()
+	_active_modifiers = { "growth": {}, "speed": {} }
+
 	# 断开所有载体信号
 	for target_id in _id_to_target:
 		var target: Object = _id_to_target[target_id]
@@ -192,7 +261,62 @@ func clear_all() -> void:
 	_id_to_target.clear()
 
 
+## 获取活跃修改器值（供 LengthSystem 等外部系统查询）
+func get_modifier(modifier_type: String, target: Object, default_value: float = 1.0) -> float:
+	if not _active_modifiers.has(modifier_type):
+		return default_value
+	var tid: int = target.get_instance_id()
+	return _active_modifiers[modifier_type].get(tid, default_value)
+
+
+## 设置活跃修改器值（供原子调用）
+func set_modifier(modifier_type: String, target: Object, value: float) -> void:
+	if not _active_modifiers.has(modifier_type):
+		_active_modifiers[modifier_type] = {}
+	_active_modifiers[modifier_type][target.get_instance_id()] = value
+
+
+## 清除活跃修改器值（供原子调用）
+func clear_modifier(modifier_type: String, target: Object) -> void:
+	if _active_modifiers.has(modifier_type):
+		_active_modifiers[modifier_type].erase(target.get_instance_id())
+
+
 # === 内部方法 ===
+
+func _resolve_and_register_chains(effect: StatusEffectData) -> void:
+	if _chain_resolver == null or _trigger_manager == null:
+		return
+	var cfg_node = Engine.get_main_loop().root.get_node_or_null("ConfigManager")
+	if cfg_node == null:
+		return
+	var cfg_data: Dictionary = cfg_node.get_status_effect(effect.type)
+	# 只有配置中有 entity_effects/tile_effects/trail_effects 时才解析
+	if not cfg_data.has("entity_effects") and not cfg_data.has("tile_effects") and not cfg_data.has("trail_effects"):
+		return
+
+	var chains: Array = _chain_resolver.resolve_all(cfg_data)
+	if chains.is_empty():
+		return
+
+	effect.chains = chains
+	_trigger_manager.register_chains(effect, chains)
+	_atom_enabled_effects[effect.get_instance_id()] = true
+
+
+func _unregister_effect_chains(effect: StatusEffectData) -> void:
+	if effect == null:
+		return
+	var eid: int = effect.get_instance_id()
+	if _atom_enabled_effects.has(eid):
+		if _trigger_manager:
+			_trigger_manager.unregister_chains(effect)
+		_atom_enabled_effects.erase(eid)
+	# 清理该 effect carrier 的修改器
+	if effect.carrier and is_instance_valid(effect.carrier):
+		var tid: int = effect.carrier.get_instance_id()
+		for mod_type in _active_modifiers:
+			_active_modifiers[mod_type].erase(tid)
 
 func _detect_carrier_type(target: Object) -> String:
 	# 简单判断：如果有 grid_position 属性则视为 spatial（StatusTile），否则 entity

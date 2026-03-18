@@ -11,6 +11,7 @@ var duration: float = 0.0        # 剩余持续时间（秒）
 var max_duration: float = 0.0    # 完整持续时间（叠层刷新用）
 var source: String = ""          # 来源描述
 var elapsed: float = 0.0         # 已经过时间
+var chains: Array = []           # 运行时 EffectChain 列表（由 SEM 填充）
 
 
 static func create(p_type: String, p_carrier: Object, p_carrier_type: String, p_source: String) -> StatusEffectData:

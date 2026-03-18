@@ -569,6 +569,60 @@ StatusTile (extends GridEntity):
 
 ---
 
+### 3.3.A Effect Atom System（T25 架构升级）
+
+**目录：** `systems/atoms/`
+**职责：** 将状态效果逻辑从硬编码 GDScript 迁移为 JSON 驱动的可组合原子链
+
+#### 核心概念
+
+| 概念 | 说明 |
+|------|------|
+| **Atom（原子）** | 最小效果单元（如 damage、modify_speed、place_tile），由 JSON 配置驱动 |
+| **EffectChain（效果链）** | trigger + conditions + actions + pattern 的组合，运行时执行单元 |
+| **Trigger（触发器）** | 链的激活条件（on_interval、on_applied、on_layer_reach、on_move 等 17 种） |
+| **Pattern（范围模式）** | 效果作用的空间范围（self、radius、neighbors、line、cone 等 11 种） |
+| **Condition（条件原子）** | if_* 原子，evaluate() 返回 bool，AND 组合后决定是否执行动作 |
+
+#### 数据流
+
+```
+game_config.json
+    ↓ EffectChainResolver.resolve_all()
+EffectChain[] (存储在 StatusEffectData.chains)
+    ↓ TriggerManager.register_chains()
+EventBus 信号 / interval 计时器
+    ↓ TriggerManager._fire_trigger()
+AtomExecutor.execute_chain()
+    ↓ conditions → chance → PatternResolver → atoms
+AtomBase.execute(AtomContext)
+```
+
+#### 添加新原子
+
+1. 创建 `systems/atoms/atoms/<category>/<name>_atom.gd`
+2. extends AtomBase，实现 execute() 或 evaluate()（条件原子还需 `is_condition() -> true`）
+3. 在 `atom_registry.gd` 的 `_register_all()` 中添加一行 `_atoms["name"] = preload(...)`
+
+#### 添加新状态效果（纯 JSON）
+
+在 `game_config.json` 的 `status_effects` 中添加配置，使用已有原子组合：
+```json
+{
+  "entity_effects": [
+    { "trigger": "on_interval", "interval": 2.0,
+      "atoms": [{ "atom": "damage", "amount_per_layer": 1 }],
+      "pattern": "self" }
+  ]
+}
+```
+
+#### 向后兼容
+
+旧 FireEffect/IceEffect/PoisonEffect 作为 shim 保留。`_has_legacy_effects(type)` 判断某类型是否需要旧处理器（仅在无原子链定义时运行）。
+
+---
+
 ### 3.4 🟠 P1 — 敌人系统 (EnemySystem)
 
 **对应设计文档：** 系统六（第7章）
