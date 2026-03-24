@@ -23,6 +23,8 @@ var layer_b: int = 0               # 反应时状态 B 层数
 var effect_mgr: Node = null        # StatusEffectManager
 var tile_mgr = null                # StatusTileManager
 var tick_mgr: Node = null          # TickManager
+var enemy_mgr: Node = null         # EnemyManager
+var food_mgr: Node = null          # FoodManager
 
 # === 原子间数据管道 ===
 var results: Dictionary = {}       # damage_cap, cancel_cost, damage_dealt 等
@@ -44,6 +46,8 @@ func with_target_position(pos: Vector2i) -> AtomContext:
 	ctx.effect_mgr = effect_mgr
 	ctx.tile_mgr = tile_mgr
 	ctx.tick_mgr = tick_mgr
+	ctx.enemy_mgr = enemy_mgr
+	ctx.food_mgr = food_mgr
 	ctx.results = results  # 共享同一个 results dict
 	return ctx
 

@@ -19,16 +19,7 @@ func execute(ctx: AtomContext) -> void:
 			ctx.results["destroy_terrain_delay"] = delay
 	else:
 		# Immediate destruction
-		var grid_world = _get_grid_world()
-		if grid_world and grid_world.has_method("set_cell_blocked"):
-			grid_world.set_cell_blocked(ctx.target_position, true)
+		if GridWorld.has_method("set_cell_blocked"):
+			GridWorld.set_cell_blocked(ctx.target_position, true)
 		else:
 			push_warning("DestroyTerrainAtom: GridWorld does not support terrain destruction yet")
-
-
-func _get_grid_world() -> Node:
-	var ml = Engine.get_main_loop()
-	var root = ml.root if ml else null
-	if root:
-		return root.get_node_or_null("GridWorld")
-	return null

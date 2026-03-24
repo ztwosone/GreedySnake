@@ -10,21 +10,7 @@ var max_tiles: int = 100
 var _tile_order: Array = []  # 按创建顺序排列的 [pos, type] 对
 
 
-func _process(delta: float) -> void:
-	tick_update(delta)
-
-
-func tick_update(delta: float) -> void:
-	var expired: Array = []
-	for pos in _tiles:
-		var type_map: Dictionary = _tiles[pos]
-		for type in type_map:
-			var tile: StatusTile = type_map[type]
-			if tile.tick_duration(delta):
-				expired.append({ "pos": pos, "type": type })
-
-	for entry in expired:
-		_remove_tile_internal(entry["pos"], entry["type"], "expired")
+## 状态格永久存在，不再 tick duration
 
 
 func place_tile(pos: Vector2i, type: String, p_layer: int = 1) -> StatusTile:
@@ -40,14 +26,29 @@ func place_tile(pos: Vector2i, type: String, p_layer: int = 1) -> StatusTile:
 		})
 		return existing
 
+	# 同位置异类型 → 触发反应，双方消除
+	if _tiles.has(pos) and not _tiles[pos].is_empty():
+		var conflicting_types: Array = _tiles[pos].keys()
+		for other_type in conflicting_types:
+			if other_type != type:
+				var reaction_id := _get_reaction_id(type, other_type)
+				if reaction_id != "":
+					EventBus.reaction_triggered.emit({
+						"reaction_id": reaction_id,
+						"position": pos,
+						"type_a": type,
+						"type_b": other_type,
+					})
+				# 移除已存在的异类格子
+				_remove_tile_internal(pos, other_type, "tile_reaction")
+		# 异类反应后不放置新格子（双方抵消）
+		return null
+
 	# 超过上限时移除最旧的
 	_enforce_tile_cap()
 
 	# 新建 StatusTile
-	var cfg_node = Engine.get_main_loop().root.get_node_or_null("ConfigManager")
-	var cfg_data: Dictionary = {}
-	if cfg_node:
-		cfg_data = cfg_node.get_status_effect(type)
+	var cfg_data: Dictionary = ConfigManager.get_status_effect(type)
 
 	var tile_duration: float = float(cfg_data.get("tile_duration", 8.0))
 	var color_hex: String = cfg_data.get("color", "#FFFFFF")
@@ -72,6 +73,18 @@ func place_tile(pos: Vector2i, type: String, p_layer: int = 1) -> StatusTile:
 	})
 
 	return tile
+
+
+static func _get_reaction_id(type_a: String, type_b: String) -> String:
+	var pair: Array = [type_a, type_b]
+	pair.sort()
+	if pair == ["fire", "ice"]:
+		return "steam"
+	elif pair == ["fire", "poison"]:
+		return "toxic_explosion"
+	elif pair == ["ice", "poison"]:
+		return "frozen_plague"
+	return ""
 
 
 func remove_tile(pos: Vector2i, type: String) -> void:

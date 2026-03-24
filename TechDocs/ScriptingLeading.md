@@ -429,6 +429,45 @@ on EventBus.snake_moved:
     发射 EventBus.snake_length_increased { amount: 1, source: "growth", new_length }
 ```
 
+#### 3.2.A No-Body Countdown（L1 新增）
+
+当蛇身段全部丢失（仅剩蛇头）时，启动倒计时。倒计时结束前未恢复身段则判定死亡。
+
+**新增属性：**
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| `no_body_ticks` | `int` | `-1` = 未激活，`>0` = 剩余 tick 数 |
+| `no_body_total_ticks` | `int` | 总 tick 数，用于计算比率（HUD 进度条） |
+| `no_body_grace_seconds` | `float` | 来自配置 `snake.no_body_grace_seconds`（默认 10） |
+
+**核心流程：**
+
+```
+on length_decrease → if body.size() <= 1:
+  _start_no_body_countdown()       # no_body_ticks = ceil(grace_seconds / tick_interval)
+  发射 EventBus.no_body_countdown_started { total_seconds }
+
+on tick_post_process:
+  if no_body_ticks > 0:
+    no_body_ticks -= 1
+    发射 EventBus.no_body_countdown_tick { remaining_seconds, total_seconds, ratio }
+    if no_body_ticks <= 0:
+      snake.die("no_body_timeout")
+
+on length_increased → if body.size() > 1:
+  取消倒计时，重置 no_body_ticks = -1
+  发射 EventBus.no_body_countdown_cancelled
+```
+
+**关联配置（game_config.json）：**
+
+```json
+"snake": {
+  "no_body_grace_seconds": 10
+}
+```
+
 #### 3.2.3 关键事件
 
 | 事件（发射） | 触发时机 | 参数 |
@@ -437,12 +476,16 @@ on EventBus.snake_moved:
 | `snake_length_decreased` | 长度减少后 | `{ amount, source, new_length }` |
 | `snake_died` | 长度归零 | `{ cause }` |
 | `length_grow_requested` | 需要增长时 | `{ amount }` |
+| `no_body_countdown_started` | 蛇身段全部丢失，倒计时开始 | `{ total_seconds }` |
+| `no_body_countdown_tick` | 倒计时每 tick 推进 | `{ remaining_seconds, total_seconds, ratio }` |
+| `no_body_countdown_cancelled` | 恢复身段，倒计时取消 | — |
 
 | 事件（监听） | 来源 |
 |-------------|------|
 | `snake_food_eaten` | MovementSystem |
 | `length_decrease_requested` | StatusSystem / CombatSystem / 任何造成伤害的系统 |
 | `snake_moved` | MovementSystem |
+| `tick_post_process` | TickManager（No-Body Countdown 递减） |
 
 ---
 
@@ -736,6 +779,216 @@ EnemyPartDef:
 | `snake_hit_enemy` | MovementSystem |
 | `tick_post_process` | TickManager（敌人 AI 执行） |
 | `status_applied` | StatusSystem（部分敌人需要响应自身状态变化） |
+
+---
+
+### 3.4.A L1 Gameplay Loop Redesign
+
+**版本：** L1 里程碑
+**职责：** 重新设计战斗循环核心，将状态效果从实体级系统迁移为蛇身段级系统，引入敌人攻击机制
+
+> **背景：** L1 对战斗流做了重大调整——蛇吃掉敌人（而非碰撞消耗长度）、蛇身段携带独立状态、敌人主动攻击蛇身段。以下各子节按改动模块分列。
+
+#### 3.4.A.1 Snake Eats Enemies（EnemyManager 改动）
+
+L1 中蛇头碰撞敌人不再消耗长度，而是**直接击杀敌人**并产出食物：
+
+```
+on EventBus.snake_hit_enemy { enemy, position }:
+  enemy.die()                                    # 敌人即死，无长度消耗
+  发射 EventBus.enemy_killed { enemy_def, position, method: "head_strike" }
+  # 掉落食物
+  var drop_count = enemy.drop_food_count         # 来自 enemy_types 配置
+  var empty_cells = GridWorld.get_empty_neighbors(position)
+  for i in min(drop_count, empty_cells.size()):
+    FoodManager.spawn_food_at(empty_cells[i])
+```
+
+**配置（game_config.json → enemy_types）：**
+
+| 敌人类型 | `drop_food_count` | `attack_cooldown` | `can_attack` |
+|---------|-------------------|-------------------|-------------|
+| wanderer | 2 | 3 | true |
+| chaser | 3 | 2 | true |
+| bog_crawler | 4 | 4 | true |
+
+#### 3.4.A.2 Per-Segment Status（SnakeSegment 改动）
+
+蛇身段状态不再由 StatusEffectManager 管理，而是**每个 SnakeSegment 独立携带一种状态**：
+
+```
+SnakeSegment:
+  carried_status: String = ""     # "fire" / "ice" / "poison" / ""
+
+  set_carried_status(type: String):
+    carried_status = type
+    _update_visual()              # 更新身段颜色/特效
+
+  clear_carried_status():
+    carried_status = ""
+    _update_visual()
+```
+
+**关键变更：**
+- 蛇不再使用 StatusEffectManager（该系统仅用于敌人）
+- `Snake._get_effective_speed()` 固定返回 `1.0`（蛇不受状态速度修正）
+- 身段状态完全独立——同一条蛇的不同身段可携带不同状态
+- **状态继承**：蛇移动时创建新蛇头，自动继承旧蛇头的 `carried_status`，确保状态不因蛇移动丢失
+- **蛇基础颜色改为白/灰**（HEAD=0.95, BODY=0.78, TAIL=0.6 灰度），与毒绿色形成对比
+- **敌人也有 `carried_status`** + 状态视觉（`set_carried_status_visual` / `_apply_status_visual`），支持覆盖层和边框动画
+
+#### 3.4.A.3 Enemy Attack System（Enemy + EnemyBrain 改动）
+
+敌人获得主动攻击蛇身段的能力：
+
+```
+Enemy:
+  carried_status: String = ""            # 敌人自身携带的状态
+  attack_cooldown_remaining: int = 0     # 攻击冷却剩余 tick
+
+  _attack_segment(segment: SnakeSegment):
+    snake.take_hit(damage)
+    # 双向状态转移：
+    var seg_status = segment.carried_status
+    var enemy_status = carried_status
+    if seg_status != "" and enemy_status == "":
+      set_carried_status_visual(seg_status)       # 敌人沾染蛇段状态
+    elif seg_status == "" and enemy_status != "":
+      segment.set_carried_status(enemy_status)     # 蛇段获得敌人状态
+    elif seg_status != "" and enemy_status != "":
+      if seg_status != enemy_status:
+        trigger_reaction(enemy_status, seg_status) # 异类 → 反应 + 双方清除
+        segment.clear_carried_status()
+        clear_carried_status()
+```
+
+**EnemyBrain 优先级栈（L1 更新）：**
+
+```
+P0 攻击: _find_attackable_segment()    — 搜索 attack_range 内的非 HEAD 身段
+P1 自我保护: 当前格是危险状态格？→ 向安全格移动（不变）
+P2 威胁响应: 蛇头在威胁范围内？→ 回避（不变）
+P3 状态响应: 根据 status_response 类型决策（不变）
+P4 目标追踪: chaser 追踪最近蛇身段的相邻空格（更新：不再追踪蛇头）
+P5 默认行为: 随机移动 / 碰壁反弹（不变）
+```
+
+> **注意：** P0 攻击是 L1 新增的最高优先级行为。敌人在冷却完毕后会优先攻击蛇身段。
+
+#### 3.4.A.4 Hit Counter（Snake 受击计数）
+
+蛇不再因单次攻击直接丢段，而是**累积受击后才丢失身段**：
+
+```
+Snake:
+  hits_taken: int = 0                    # 已累积受击次数
+  hits_per_segment_loss: int = 3         # 来自配置 snake.hits_per_segment_loss
+
+  take_hit(damage: int = 1):
+    hits_taken += damage
+    if hits_taken >= hits_per_segment_loss:
+      hits_taken = 0
+      发射 EventBus.length_decrease_requested { amount: 1, source: "body_attack" }
+```
+
+**配置（game_config.json → snake）：**
+
+```json
+"snake": {
+  "hits_per_segment_loss": 3,
+  "no_body_grace_seconds": 10
+}
+```
+
+#### 3.4.A.5 Status Tile Interaction Rewrite（StatusTransferSystem 改动）
+
+状态格交互逻辑从「实体级施加」改为**逐身段检测**：
+
+```
+on tick_post_process:
+  for segment in snake.segments:
+    var tile = StatusTileManager.get_tile_at(segment.grid_position)
+    if tile == null:
+      continue
+    match _get_interaction_type(segment.carried_status, tile.status_type):
+      "gain":     segment.set_carried_status(tile.status_type)   # 无状态 → 获得
+      "same":     pass                                            # 同状态 → 无变化
+      "reaction": _trigger_reaction(segment, tile)                # 异状态 → 反应 + 清除身段状态
+```
+
+**关键变更：**
+- 每 tick 遍历**所有蛇身段**，检测其所在位置的状态格
+- 状态格在 L1 中为**永久存在**（不再有持续时间递减，不再 tick_update）
+- **反应清除身段状态 + 消除该位置状态格**（调用 `tile_manager.remove_tile()`）
+- **同位置异类型状态格互斥**：`StatusTileManager.place_tile()` 检测到异类已存在时触发反应 + 双方消除，不放置新格子
+- 所有 `GridWorld.get_entities_at()` / `cell_map` 遍历均需 `is_instance_valid()` 防护（已被 queue_free 的节点可能残留在 cell_map 中）
+
+#### 3.4.A.6 Segment Effect System（新增：SegmentEffectSystem）
+
+**文件：** `systems/combat/segment_effect_system.gd`
+**职责：** 处理蛇身段携带状态的战术效果（火光环、毒轨迹、冰防御）
+
+```
+监听: tick_post_process, snake_moved
+
+_process_fire_aura():
+  # 火光环：每个携带火状态的身段对相邻敌人造成伤害
+  for segment in snake.segments:
+    if segment.carried_status == "fire":
+      var neighbors = GridWorld.get_neighbors(segment.grid_position)
+      for pos in neighbors:
+        var enemies = GridWorld.get_entities_of_type(pos, EntityType.ENEMY)
+        for enemy in enemies:
+          enemy.take_damage(aura_damage)    # aura_damage 来自配置
+
+_process_poison_trail():
+  # 毒轨迹：蛇移动时，若被移除的旧尾段携带毒状态，按间隔留毒格
+  on snake_moved { vacated_pos, vacated_status }:
+    if vacated_status != "poison": return
+    _trail_counter += 1
+    if _trail_counter >= _trail_interval:   # trail_interval=3 (来自配置)
+      _trail_counter = 0
+      tile_manager.place_tile(vacated_pos, "poison")
+
+# 冰防御：已合并入双向状态转移（见 3.4.A.3 _attack_segment）
+```
+
+#### 3.4.A.7 Reaction System Rewrite（ReactionSystem 改动）
+
+L1 仅保留 3 种反应，全部通过配置驱动 AoE 效果：
+
+| 反应名 | 组合 | `enemy_damage` | `self_hit_count` | 特殊效果 |
+|--------|------|---------------|-----------------|---------|
+| steam | fire + ice | 2 | 1 | — |
+| toxic_explosion | fire + poison | 3 | 2 | — |
+| frozen_plague | ice + poison | 0 | 0 | 范围内敌人施加 ice + poison |
+
+```
+on EventBus.reaction_triggered { reaction_type, position, radius }:
+  var enemies_in_range = GridWorld.get_entities_in_radius(position, radius, EntityType.ENEMY)
+  var config = reaction_configs[reaction_type]
+  for enemy in enemies_in_range:
+    enemy.take_damage(config.enemy_damage)
+  if config.self_hit_count > 0:
+    snake.take_hit(config.self_hit_count)
+  # frozen_plague 特殊处理：施加双状态给范围内敌人
+```
+
+#### 3.4.A.8 关键事件
+
+| 事件（发射） | 触发时机 | 参数 |
+|-------------|---------|------|
+| `snake_body_attacked` | 敌人攻击蛇身段 | `{ position, segment, enemy, enemy_status, seg_status }` |
+| `no_body_countdown_started` | 蛇身段全部丢失 | `{ total_seconds }` |
+| `no_body_countdown_tick` | 倒计时 tick 推进 | `{ remaining_seconds, total_seconds, ratio }` |
+| `no_body_countdown_cancelled` | 恢复身段取消倒计时 | — |
+| `reaction_triggered` | 身段状态与状态格/敌人状态触发反应 | `{ reaction_id, position, type_a, type_b }` |
+
+| 事件（监听） | 来源 | 响应 |
+|-------------|------|------|
+| `snake_hit_enemy` | MovementSystem | 击杀敌人 + 掉落食物 |
+| `tick_post_process` | TickManager | 状态格交互检测、火光环、攻击冷却 |
+| `snake_moved` | MovementSystem | 毒轨迹处理 |
 
 ---
 
@@ -1163,6 +1416,10 @@ on EventBus.run_ended { stats }:
 | `snake_length_increased` | `{ amount, source, new_length }` | LengthSystem | ScaleSystem, DifficultySystem |
 | `snake_length_decreased` | `{ amount, source, new_length }` | LengthSystem | ScaleSystem, SnakePartsSystem |
 | `snake_died` | `{ cause }` | LengthSystem | GameManager, MetaGrowthSystem |
+| `snake_body_attacked` | `{ position, segment, enemy, status_transferred }` | Enemy | SegmentEffectSystem, HUD |
+| `no_body_countdown_started` | `{ total_seconds }` | LengthSystem | HUD |
+| `no_body_countdown_tick` | `{ remaining_seconds, total_seconds, ratio }` | LengthSystem | HUD |
+| `no_body_countdown_cancelled` | — | LengthSystem | HUD |
 
 ### 4.3 长度相关事件
 
@@ -1182,6 +1439,7 @@ on EventBus.run_ended { stats }:
 | `status_tile_created` | `{ position, status_type, duration }` | StatusSystem | EnemySystem (AI路径更新) |
 | `status_tile_expired` | `{ position, status_type }` | StatusSystem | EnemySystem |
 | `status_reaction_triggered` | `{ type_a, type_b, position, damage, reaction_name }` | StatusSystem | ScaleSystem, MetaGrowthSystem (统计) |
+| `reaction_triggered` | `{ reaction_type, position, radius }` | ReactionSystem (L1) | ReactionSystem (AoE 执行) |
 
 ### 4.5 敌人相关事件
 

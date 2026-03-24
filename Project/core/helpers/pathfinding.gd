@@ -27,7 +27,7 @@ static func _is_occupied_for_enemy(pos: Vector2i) -> bool:
 	## 检查目标格是否有敌人或食物（敌人不应与这些实体重叠）
 	var entities: Array = GridWorld.get_entities_at(pos)
 	for e in entities:
-		if e is Enemy or e is Food:
+		if is_instance_valid(e) and (e is Enemy or e is Food):
 			return true
 	return false
 

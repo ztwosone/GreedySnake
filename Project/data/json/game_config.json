@@ -11,7 +11,9 @@
   },
   "snake": {
     "initial_length": 6,
-    "min_length": 1
+    "min_length": 1,
+    "hits_per_segment_loss": 3,
+    "no_body_grace_seconds": 10
   },
   "food": {
     "max_count": 3,
@@ -31,6 +33,7 @@
   "status_effects": {
     "fire": {
       "display_name": "灼烧",
+      "aura_damage": 1,
       "entity_damage_interval": 2.0,
       "entity_damage_amount": 1,
       "entity_duration": 6.0,
@@ -39,6 +42,11 @@
       "spread_chance": 0.2,
       "spread_interval": 1.0,
       "color": "#FF4500",
+      "visual": {
+        "snake_effect": "border_flash",
+        "border_color": "#FF4C00",
+        "flash_period": 0.5
+      },
       "entity_effects": [
         {
           "trigger": "on_interval",
@@ -77,6 +85,11 @@
       "max_layers": 2,
       "tile_duration": 12.0,
       "color": "#ADD8E6",
+      "visual": {
+        "snake_effect": "overlay",
+        "overlay_color": "#80B0FF66",
+        "freeze_overlay_color": "#E6F0FFB3"
+      },
       "entity_effects": [
         {
           "trigger": "on_applied",
@@ -121,6 +134,13 @@
       "tile_duration": 10.0,
       "trail_interval": 3,
       "color": "#006400",
+      "visual": {
+        "snake_effect": "pulse",
+        "overlay_color": "#33CC1A4D",
+        "pulse_period": 1.0,
+        "pulse_alpha_min": 0.15,
+        "pulse_alpha_max": 0.45
+      },
       "entity_effects": [
         {
           "trigger": "on_applied",
@@ -164,7 +184,14 @@
       "display_name": "蒸腾",
       "damage_coefficient": 0.5,
       "radius": 3,
-      "cloud_duration": 5.0
+      "enemy_damage": 2,
+      "self_hit_count": 1,
+      "cloud_duration": 5.0,
+      "vfx_color": "#FFFFFF",
+      "vfx_duration": 0.5,
+      "atoms": [
+        { "atom": "damage", "formula": "sum_layers", "coefficient": 0.5, "source": "reaction_steam" }
+      ]
     },
     "toxic_explosion": {
       "type_a": "fire",
@@ -172,8 +199,30 @@
       "display_name": "毒爆",
       "damage_coefficient": 1.0,
       "radius": 3,
+      "enemy_damage": 3,
+      "self_hit_count": 2,
       "apply_burn_layers": 2,
-      "apply_poison_layers": 1
+      "apply_poison_layers": 1,
+      "vfx_color": "#CCFF00",
+      "vfx_duration": 0.6,
+      "atoms": [
+        { "atom": "damage", "formula": "sum_layers", "coefficient": 1.0, "source": "reaction_toxic_explosion" },
+        { "atom": "apply_status", "type": "fire", "layers": 2, "source": "reaction_toxic_explosion" },
+        { "atom": "apply_status", "type": "poison", "layers": 1, "source": "reaction_toxic_explosion" }
+      ]
+    },
+    "frozen_plague": {
+      "type_a": "ice",
+      "type_b": "poison",
+      "display_name": "冻疫",
+      "radius": 3,
+      "enemy_damage": 0,
+      "self_hit_count": 0,
+      "freeze_duration": 3.0,
+      "apply_poison_layers": 1,
+      "vfx_color": "#00CED1",
+      "vfx_duration": 0.5,
+      "atoms": []
     }
   },
   "enemy_types": {
@@ -184,7 +233,14 @@
       "speed": 0.5,
       "status_response": "ignore",
       "behavior": "random_move",
-      "color": "#CC1A4D"
+      "can_attack": true,
+      "attack_cooldown": 3,
+      "attack_range": 1,
+      "attack_damage": 1,
+      "prefer_attack_status": "",
+      "drop_food_count": 2,
+      "color": "#CC1A4D",
+      "shape": "square"
     },
     "chaser": {
       "display_name": "追踪者",
@@ -193,21 +249,35 @@
       "speed": 1,
       "status_response": "avoid",
       "behavior": "track_head",
+      "can_attack": true,
+      "attack_cooldown": 2,
+      "attack_range": 1,
+      "attack_damage": 1,
+      "prefer_attack_status": "",
       "threat_range": 3,
       "threat_speed_bonus": 1,
-      "color": "#FF3366"
+      "drop_food_count": 3,
+      "color": "#FF3366",
+      "shape": "diamond"
     },
     "bog_crawler": {
       "display_name": "毒沼匍匐者",
-      "hp": 2,
+      "hp": 1,
       "attack_cost": 1,
       "speed": 0.33,
       "status_response": "attract",
       "status_preference": "poison",
       "behavior": "seek_status",
+      "can_attack": true,
+      "attack_cooldown": 4,
+      "attack_range": 1,
+      "attack_damage": 1,
+      "prefer_attack_status": "",
       "poison_speed_bonus": 2,
       "death_poison_tiles": 3,
-      "color": "#2D5A27"
+      "drop_food_count": 4,
+      "color": "#2D5A27",
+      "shape": "cross"
     }
   },
   "length_thresholds": {

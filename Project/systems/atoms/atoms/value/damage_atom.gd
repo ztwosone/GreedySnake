@@ -27,19 +27,19 @@ func execute(ctx: AtomContext) -> void:
 
 	ctx.results["damage_dealt"] = final_amount
 
-	var event_bus = _get_event_bus()
-	if event_bus and final_amount > 0:
+	if final_amount <= 0:
+		return
+
+	# 判断 target 类型：蛇走 length_decrease，敌人走 take_damage
+	var target_entity = ctx.target
+	if target_entity and is_instance_valid(target_entity) and target_entity.has_method("take_damage"):
+		# 非蛇实体（Enemy 等）：直接扣 HP
+		target_entity.take_damage(final_amount)
+	else:
+		# 蛇或无具体目标：走长度减少信号
 		var data := {
-			"target": ctx.target,
+			"target": target_entity,
 			"amount": final_amount,
 			"source": get_param("source", "effect"),
 		}
-		event_bus.length_decrease_requested.emit(data)
-
-
-func _get_event_bus() -> Node:
-	var ml = Engine.get_main_loop()
-	var root = ml.root if ml else null
-	if root:
-		return root.get_node_or_null("EventBus")
-	return null
+		EventBus.length_decrease_requested.emit(data)

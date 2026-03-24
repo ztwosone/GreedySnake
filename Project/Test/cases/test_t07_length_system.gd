@@ -11,6 +11,8 @@ func run(t) -> void:
 	t.assert_true(ls.has_method("_on_food_eaten"), "has _on_food_eaten()")
 	t.assert_true(ls.has_method("_on_decrease_requested"), "has _on_decrease_requested()")
 	t.assert_true(ls.has_method("_on_death_collision"), "has _on_death_collision()")
+	t.assert_true(ls.has_method("_on_tick"), "has _on_tick()")
+	t.assert_true(ls.has_method("get_no_body_ticks_remaining"), "has get_no_body_ticks_remaining()")
 	ls.free()
 
 	# --- Integration test ---
@@ -62,16 +64,31 @@ func run(t) -> void:
 
 	EventBus.snake_length_decreased.disconnect(on_decrease)
 
-	# --- Decrease to death ---
+	# --- Decrease to head-only → countdown starts (not immediate death) ---
 	var death_events := []
 	var on_death := func(data: Dictionary) -> void:
 		death_events.append(data)
 	EventBus.snake_died.connect(on_death)
 
-	# Shrink until death (body is now 3, shrink by 3 → should die at size 1)
-	EventBus.length_decrease_requested.emit({"amount": 3, "source": "lethal"})
-	t.assert_eq(snake.is_alive, false, "snake dead after shrink to 1")
-	t.assert_true(death_events.size() >= 1, "snake_died emitted on lethal shrink")
+	# Also connect tick signal for countdown
+	EventBus.tick_post_process.connect(length_sys._on_tick)
+	EventBus.snake_length_increased.connect(length_sys._on_length_increased)
+
+	# body is now 3, shrink by 2 → size 1 (head only), countdown starts
+	EventBus.length_decrease_requested.emit({"amount": 2, "source": "lethal"})
+	t.assert_eq(snake.body.size(), 1, "body shrunk to head only")
+	t.assert_eq(snake.is_alive, true, "snake alive during no-body countdown")
+	t.assert_true(length_sys.get_no_body_ticks_remaining() > 0, "countdown started")
+
+	# Simulate ticks until death
+	var countdown: int = length_sys.get_no_body_ticks_remaining()
+	for i in range(countdown):
+		EventBus.tick_post_process.emit(i)
+	t.assert_eq(snake.is_alive, false, "snake dead after no-body timeout")
+	t.assert_true(death_events.size() >= 1, "snake_died emitted on no-body timeout")
+
+	EventBus.tick_post_process.disconnect(length_sys._on_tick)
+	EventBus.snake_length_increased.disconnect(length_sys._on_length_increased)
 
 	# --- Boundary death ---
 	death_events.clear()

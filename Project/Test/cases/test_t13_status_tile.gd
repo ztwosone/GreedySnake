@@ -61,7 +61,6 @@ func run(t) -> void:
 	t.assert_true(mgr.has_method("get_tile"), "has get_tile()")
 	t.assert_true(mgr.has_method("get_tiles_at"), "has get_tiles_at()")
 	t.assert_true(mgr.has_method("has_tile"), "has has_tile()")
-	t.assert_true(mgr.has_method("tick_update"), "has tick_update()")
 	t.assert_true(mgr.has_method("clear_all"), "has clear_all()")
 
 	# --- place_tile ---
@@ -103,45 +102,40 @@ func run(t) -> void:
 	t.assert_eq(t1.layer, 2, "same-type stacks: layer == 2")
 	t.assert_eq(placed_events.size(), 1, "stacking emits status_tile_placed")
 
-	# --- 同位置不同类型共存 ---
-	var t2: StatusTile = mgr.place_tile(pos1, "ice")
-	t.assert_true(t2 != null, "place ice tile at same pos")
-	t.assert_true(t2 != t1, "different type is a different instance")
-	var tiles_at2: Array = mgr.get_tiles_at(pos1)
-	t.assert_eq(tiles_at2.size(), 2, "same pos: 2 tiles (fire + ice)")
+	# --- 同位置不同类型 → 触发反应，双方消除 ---
+	var reaction_events: Array = []
+	var _on_reaction := func(data: Dictionary) -> void:
+		reaction_events.append(data)
+	EventBus.reaction_triggered.connect(_on_reaction)
 
+	var t2: StatusTile = mgr.place_tile(pos1, "ice")
+	t.assert_true(t2 == null, "place ice on fire pos returns null (reaction)")
+	t.assert_true(not mgr.has_tile(pos1, "fire"), "fire consumed by reaction")
+	t.assert_true(not mgr.has_tile(pos1, "ice"), "ice not placed (reaction)")
+	t.assert_eq(reaction_events.size(), 1, "reaction_triggered emitted")
+	if reaction_events.size() > 0:
+		t.assert_eq(reaction_events[0].get("reaction_id"), "steam", "fire+ice = steam")
+
+	EventBus.reaction_triggered.disconnect(_on_reaction)
 	EventBus.status_tile_placed.disconnect(_on_placed)
 
 	# --- remove_tile ---
+	# Re-place a tile for remove test
+	var t_for_remove: StatusTile = mgr.place_tile(pos1, "poison")
 	var removed_events: Array = []
 	var _on_removed := func(data: Dictionary) -> void:
 		removed_events.append(data)
 	EventBus.status_tile_removed.connect(_on_removed)
 
-	mgr.remove_tile(pos1, "ice")
-	t.assert_true(not mgr.has_tile(pos1, "ice"), "ice removed")
-	t.assert_true(mgr.has_tile(pos1, "fire"), "fire still exists")
+	mgr.remove_tile(pos1, "poison")
+	t.assert_true(not mgr.has_tile(pos1, "poison"), "poison removed")
 	t.assert_eq(removed_events.size(), 1, "status_tile_removed emitted once")
 	if removed_events.size() > 0:
-		t.assert_eq(removed_events[0].get("type"), "ice", "removed signal: type == ice")
+		t.assert_eq(removed_events[0].get("type"), "poison", "removed signal: type == poison")
 
 	EventBus.status_tile_removed.disconnect(_on_removed)
 
-	# --- tick_update 过期 ---
-	var expired_events: Array = []
-	var _on_expired_removed := func(data: Dictionary) -> void:
-		expired_events.append(data)
-	EventBus.status_tile_removed.connect(_on_expired_removed)
-
-	# 手动设置短 duration
-	t1.duration = 0.1
-	mgr.tick_update(0.2)
-	t.assert_true(not mgr.has_tile(pos1, "fire"), "fire tile expired after tick_update")
-	t.assert_eq(expired_events.size(), 1, "status_tile_removed emitted on expiry")
-
-	EventBus.status_tile_removed.disconnect(_on_expired_removed)
-
-	# --- 不同位置独立 ---
+	# --- 不同位置独立（状态格永久存在） ---
 	var pos2 := Vector2i(10, 10)
 	var t3: StatusTile = mgr.place_tile(pos2, "poison")
 	t.assert_true(mgr.has_tile(pos2, "poison"), "poison at pos2 exists")

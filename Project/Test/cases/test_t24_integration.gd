@@ -4,20 +4,18 @@ extends RefCounted
 
 func run(t) -> void:
 	# --- 场景节点完整性 ---
-	t.assert_file_exists("res://systems/combat/crush_system.gd")
 	t.assert_file_exists("res://systems/status/reaction_system.gd")
 	t.assert_file_exists("res://systems/status/status_transfer_system.gd")
 	t.assert_file_exists("res://entities/status_tiles/status_tile_manager.gd")
 
 	# --- EventBus 信号完整性 ---
-	t.assert_true(EventBus.has_signal("snake_body_crush"), "EventBus: snake_body_crush")
 	t.assert_true(EventBus.has_signal("reaction_triggered"), "EventBus: reaction_triggered")
 	t.assert_true(EventBus.has_signal("status_applied"), "EventBus: status_applied")
 	t.assert_true(EventBus.has_signal("status_tile_placed"), "EventBus: status_tile_placed")
 	t.assert_true(EventBus.has_signal("enemy_action_decided"), "EventBus: enemy_action_decided")
 
 	# --- Config 完整性 ---
-	var cfg = Engine.get_main_loop().root.get_node_or_null("ConfigManager")
+	var cfg = ConfigManager
 	if cfg:
 		# spawn_weights 配置
 		var enemy_cfg: Dictionary = cfg.enemy
@@ -116,39 +114,6 @@ func run(t) -> void:
 	# HUD 功能通过 _update_status_display 测试
 	var hud_script = load("res://ui/hud.gd")
 	t.assert_true(hud_script != null, "HUD script loads")
-
-	# --- CrushSystem + 状态转移联动 ---
-	var sem = Engine.get_main_loop().root.get_node_or_null("StatusEffectManager")
-	if sem:
-		var cs := CrushSystem.new()
-		cs.snake = mock_snake
-
-		# 给蛇施加冰冻
-		sem.apply_status(mock_snake, "ice", "test")
-
-		var e := Enemy.new()
-		e.setup_from_config("wanderer")
-		e.place_on_grid(mock_snake.body[1])  # body[1] 位置放敌人
-		if e._tick_connected:
-			EventBus.tick_post_process.disconnect(e._on_tick_post_process)
-			e._tick_connected = false
-
-		var applied: Array = []
-		var sa_cb := func(data: Dictionary) -> void:
-			applied.append(data)
-		EventBus.status_applied.connect(sa_cb)
-
-		cs._on_snake_moved({})
-
-		var ice_transferred := false
-		for a in applied:
-			if a.get("type") == "ice" and a.get("source") == "crush":
-				ice_transferred = true
-		t.assert_true(ice_transferred, "integration: crush transfers ice status to enemy")
-
-		EventBus.status_applied.disconnect(sa_cb)
-		sem.remove_all_statuses(mock_snake)
-		cs.queue_free()
 
 	# --- 所有 Brain 类型可实例化 ---
 	var wb := WandererBrain.new()

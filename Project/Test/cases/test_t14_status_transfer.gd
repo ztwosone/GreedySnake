@@ -1,8 +1,7 @@
 extends RefCounted
-## T14 测试：实体↔空间状态转化系统
-## 注意：由于 headless 测试中 add_child 在 _ready 阶段延迟，
-## 直接调用处理方法而非依赖信号连接。
-## 状态施加在 Snake 节点上（非单个 segment），模拟用 mock snake 结构。
+## T14 测试：状态转化系统（逐段检测版）
+## 蛇身段踩入状态格：无状态→获得、同类→无事发生、异类→反应+清除段状态
+## 敌人踩格子仍走 StatusEffectManager
 
 
 func run(t) -> void:
@@ -14,165 +13,112 @@ func run(t) -> void:
 	t.assert_true(sts is Node, "StatusTransferSystem is Node")
 	t.assert_true(sts.has_method("_on_snake_moved"), "has _on_snake_moved")
 	t.assert_true(sts.has_method("_on_entity_moved"), "has _on_entity_moved")
-	t.assert_true(sts.has_method("_transfer_spatial_to_entity"), "has _transfer_spatial_to_entity")
-	t.assert_true(sts.has_method("_transfer_entity_to_spatial"), "has _transfer_entity_to_spatial")
-	t.assert_true(sts.has_method("_should_transfer_to_spatial"), "has _should_transfer_to_spatial")
+	t.assert_true(sts.has_method("_check_segment_tile"), "has _check_segment_tile")
 	sts.queue_free()
 
 	# --- 集成测试准备 ---
 	GridWorld.init_grid(40, 22)
 
-	# 构建 mock GameWorld 结构：parent/EntityContainer/Snake/HeadSegment
 	var mock_game_world := Node2D.new()
 	mock_game_world.name = "MockGameWorld"
 	Engine.get_main_loop().root.add_child(mock_game_world)
 
-	var entity_container := Node2D.new()
-	entity_container.name = "EntityContainer"
-	mock_game_world.add_child(entity_container)
-
-	var mock_snake := Node2D.new()
-	mock_snake.name = "Snake"
-	entity_container.add_child(mock_snake)
-
 	var tile_mgr := StatusTileManager.new()
 	mock_game_world.add_child(tile_mgr)
 
+	var mock_snake := Snake.new()
+	mock_game_world.add_child(mock_snake)
+	mock_snake.init_snake(Vector2i(10, 10), 4, Vector2i(1, 0))
+
 	var transfer := StatusTransferSystem.new()
 	transfer.tile_manager = tile_mgr
+	transfer.snake = mock_snake
 	mock_game_world.add_child(transfer)
-	# _get_snake_node() looks for get_parent().get_node("EntityContainer/Snake")
 
-	var effect_mgr = Engine.get_main_loop().root.get_node_or_null("StatusEffectManager")
-	t.assert_true(effect_mgr != null, "StatusEffectManager autoload exists")
-	if effect_mgr == null:
-		mock_game_world.queue_free()
-		return
-	effect_mgr.clear_all()
+	# === 空间→段：无状态段踩火格 → 获得火 ===
 
-	# === 空间→实体转化测试 ===
+	tile_mgr.place_tile(Vector2i(10, 10), "fire")
 
-	var tile_pos := Vector2i(10, 10)
-	var fire_tile: StatusTile = tile_mgr.place_tile(tile_pos, "fire")
-	t.assert_true(fire_tile != null, "fire tile placed at (10,10)")
-
-	# 蛇头 segment
-	var dummy_head := SnakeSegment.new()
-	dummy_head.segment_type = SnakeSegment.HEAD
-	mock_snake.add_child(dummy_head)
-	dummy_head.place_on_grid(tile_pos)
-
-	var applied_events: Array = []
-	var _on_applied := func(data: Dictionary) -> void:
-		applied_events.append(data)
-	EventBus.status_applied.connect(_on_applied)
-
-	# 直接调用 _on_snake_moved — 状态施加到 Snake 节点
 	transfer._on_snake_moved({
-		"body": [tile_pos, Vector2i(9, 10), Vector2i(8, 10)],
+		"body": mock_snake.body.duplicate(),
 		"direction": Vector2i(1, 0),
-		"head_pos": tile_pos,
-		"old_tail_pos": Vector2i(8, 10),
-		"vacated_pos": Vector2i(7, 10),
+		"head_pos": mock_snake.body[0],
+		"old_tail_pos": mock_snake.body[-1],
+		"vacated_pos": Vector2i(-1, -1),
 	})
 
-	# 验证 Snake 节点获得了火焰状态
-	t.assert_true(effect_mgr.has_status(mock_snake, "fire"), "spatial→entity: snake got fire status")
-	t.assert_true(applied_events.size() >= 1, "status_applied emitted for spatial→entity")
-	var found_fire_apply: bool = false
-	for ev in applied_events:
-		if ev.get("type") == "fire" and ev.get("source") == "tile":
-			found_fire_apply = true
-			break
-	t.assert_true(found_fire_apply, "status_applied source == 'tile'")
+	t.assert_eq(mock_snake.segments[0].carried_status, "fire", "segment on fire tile gets fire status")
 
-	EventBus.status_applied.disconnect(_on_applied)
+	# === 同类：火段踩火格 → 无事发生 ===
 
-	# === 实体→空间转化测试 ===
-
-	effect_mgr.clear_all()
-	transfer._freshly_applied.clear()
-	effect_mgr.apply_status(mock_snake, "fire", "test")
-	t.assert_true(effect_mgr.has_status(mock_snake, "fire"), "snake has fire for entity→spatial test")
-
-	var tile_placed_events: Array = []
-	var _on_tile_placed := func(data: Dictionary) -> void:
-		tile_placed_events.append(data)
-	EventBus.status_tile_placed.connect(_on_tile_placed)
-
-	tile_mgr.clear_all()
-
-	var vacated := Vector2i(7, 10)
+	# 段已经有 fire，再次走不会改变
 	transfer._on_snake_moved({
-		"body": [tile_pos, Vector2i(9, 10), Vector2i(8, 10)],
+		"body": mock_snake.body.duplicate(),
 		"direction": Vector2i(1, 0),
-		"head_pos": tile_pos,
-		"old_tail_pos": Vector2i(8, 10),
-		"vacated_pos": vacated,
+		"head_pos": mock_snake.body[0],
+		"old_tail_pos": mock_snake.body[-1],
+		"vacated_pos": Vector2i(-1, -1),
 	})
+	t.assert_eq(mock_snake.segments[0].carried_status, "fire", "same type: fire segment on fire tile stays fire")
 
-	t.assert_true(tile_mgr.has_tile(vacated, "fire"), "entity→spatial: fire tile placed at vacated pos")
-	t.assert_true(tile_placed_events.size() >= 1, "status_tile_placed emitted for entity→spatial")
+	# === 异类：火段踩冰格 → 反应+段清除 ===
 
-	EventBus.status_tile_placed.disconnect(_on_tile_placed)
-
-	# === 防循环测试 ===
-
-	effect_mgr.clear_all()
 	tile_mgr.clear_all()
-	transfer._freshly_applied.clear()
-	transfer._transfer_counters.clear()
+	tile_mgr.place_tile(Vector2i(10, 10), "ice")
+	# 段仍然有 fire
+	t.assert_eq(mock_snake.segments[0].carried_status, "fire", "segment still has fire before cross-type")
 
-	var loop_pos := Vector2i(15, 10)
-	tile_mgr.place_tile(loop_pos, "fire")
+	var reaction_events: Array = []
+	var _on_reaction := func(data: Dictionary) -> void:
+		reaction_events.append(data)
+	EventBus.reaction_triggered.connect(_on_reaction)
 
-	dummy_head.remove_from_grid()
-	dummy_head.place_on_grid(loop_pos)
-
-	var loop_vacated := Vector2i(14, 10)
 	transfer._on_snake_moved({
-		"body": [loop_pos, Vector2i(16, 10), Vector2i(17, 10)],
-		"direction": Vector2i(-1, 0),
-		"head_pos": loop_pos,
-		"old_tail_pos": Vector2i(17, 10),
-		"vacated_pos": loop_vacated,
+		"body": mock_snake.body.duplicate(),
+		"direction": Vector2i(1, 0),
+		"head_pos": mock_snake.body[0],
+		"old_tail_pos": mock_snake.body[-1],
+		"vacated_pos": Vector2i(-1, -1),
 	})
 
-	t.assert_true(effect_mgr.has_status(mock_snake, "fire"), "anti-loop: snake got fire from tile")
-	t.assert_true(not tile_mgr.has_tile(loop_vacated, "fire"), "anti-loop: no fire tile at vacated (freshly applied)")
+	t.assert_eq(mock_snake.segments[0].carried_status, "", "cross-type: segment status cleared")
+	t.assert_true(reaction_events.size() >= 1, "cross-type: reaction_triggered emitted")
+	if reaction_events.size() > 0:
+		t.assert_eq(reaction_events[0].get("reaction_id"), "steam", "cross-type: reaction_id == steam")
 
-	# === trail_interval 测试（毒每 3 格留 1 格）===
+	EventBus.reaction_triggered.disconnect(_on_reaction)
 
+	# === 不同段可独立携带不同状态 ===
+
+	tile_mgr.clear_all()
+	for seg in mock_snake.segments:
+		seg.clear_carried_status()
+
+	# 在不同位置放不同格
+	tile_mgr.place_tile(mock_snake.segments[0].grid_position, "fire")
+	tile_mgr.place_tile(mock_snake.segments[1].grid_position, "ice")
+
+	transfer._on_snake_moved({
+		"body": mock_snake.body.duplicate(),
+		"direction": Vector2i(1, 0),
+		"head_pos": mock_snake.body[0],
+		"old_tail_pos": mock_snake.body[-1],
+		"vacated_pos": Vector2i(-1, -1),
+	})
+
+	t.assert_eq(mock_snake.segments[0].carried_status, "fire", "seg0 gets fire")
+	t.assert_eq(mock_snake.segments[1].carried_status, "ice", "seg1 gets ice")
+
+	# === 状态格永久存在 ===
+
+	t.assert_true(tile_mgr.has_tile(mock_snake.segments[0].grid_position, "fire"), "fire tile still exists after interaction")
+	t.assert_true(tile_mgr.has_tile(mock_snake.segments[1].grid_position, "ice"), "ice tile still exists after interaction")
+
+	# === entity_moved 空间→实体（敌人走 StatusEffectManager）===
+
+	var effect_mgr = StatusEffectManager
 	effect_mgr.clear_all()
 	tile_mgr.clear_all()
-	transfer._freshly_applied.clear()
-	transfer._transfer_counters.clear()
-
-	effect_mgr.apply_status(mock_snake, "poison", "test")
-	t.assert_true(effect_mgr.has_status(mock_snake, "poison"), "snake has poison for trail_interval test")
-
-	var trail_placed: Array = []
-	for i in range(3):
-		var vpos := Vector2i(20 + i, 10)
-		dummy_head.remove_from_grid()
-		dummy_head.place_on_grid(Vector2i(20 + i + 1, 10))
-		transfer._on_snake_moved({
-			"body": [Vector2i(20 + i + 1, 10)],
-			"direction": Vector2i(1, 0),
-			"head_pos": Vector2i(20 + i + 1, 10),
-			"old_tail_pos": Vector2i(20 + i + 1, 10),
-			"vacated_pos": vpos,
-		})
-		if tile_mgr.has_tile(vpos, "poison"):
-			trail_placed.append(vpos)
-
-	t.assert_eq(trail_placed.size(), 1, "trail_interval=3: 1 poison tile in 3 moves")
-
-	# === entity_moved 空间→实体（非蛇实体）===
-
-	effect_mgr.clear_all()
-	tile_mgr.clear_all()
-	transfer._freshly_applied.clear()
 
 	var enemy_pos := Vector2i(5, 5)
 	tile_mgr.place_tile(enemy_pos, "ice")
@@ -196,5 +142,6 @@ func run(t) -> void:
 	# === 清理 ===
 	effect_mgr.clear_all()
 	tile_mgr.clear_all()
+	mock_snake._clear_segments()
 	GridWorld.clear_all()
 	mock_game_world.queue_free()

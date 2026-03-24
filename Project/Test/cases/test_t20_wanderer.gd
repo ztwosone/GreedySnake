@@ -130,7 +130,7 @@ func run(t) -> void:
 	em.clear_enemies()
 
 	# === 无视状态格（ignore 类型）===
-	var cfg_node = Engine.get_main_loop().root.get_node_or_null("ConfigManager")
+	var cfg_node = ConfigManager
 	if cfg_node:
 		var wcfg: Dictionary = cfg_node.get_enemy_type("wanderer")
 		t.assert_eq(wcfg.get("status_response"), "ignore", "wanderer config: status_response == ignore")

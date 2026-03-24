@@ -5,6 +5,7 @@ var max_enemy_count: int = 3
 var current_enemies: Array[Enemy] = []
 var enemy_container: Node2D
 var snake: Snake
+var food_manager: FoodManager = null
 const SPAWN_SAFE_DISTANCE: int = 3
 
 
@@ -50,16 +51,49 @@ func _on_snake_hit_enemy(data: Dictionary) -> void:
 	if not enemy or not is_instance_valid(enemy):
 		return
 
-	# Snake pays attack cost
-	var cost: int = enemy.attack_cost if enemy.get("attack_cost") else 1
-	EventBus.length_decrease_requested.emit({"amount": cost, "source": "enemy_combat"})
+	# === 吞噬 VFX ===
+	# 蛇头 scale bounce
+	if snake and not snake.segments.is_empty() and is_instance_valid(snake.segments[0]):
+		VFXManager.scale_bounce(snake.segments[0], 1.3, 0.15)
+	# 极短暂停（打击感）
+	VFXManager.hit_stop(0.02)
 
-	# Enemy takes damage
-	enemy.take_damage(1)
+	# Snake eats enemy
+	enemy.take_damage(enemy.hp)
+
+
+
+func _spawn_food_drops(center: Vector2i, count: int) -> void:
+	## 在 center 及其周围空格生成食物
+	var candidates: Array[Vector2i] = []
+	# 中心优先
+	if GridWorld.is_within_bounds(center) and GridWorld.get_entities_at(center).is_empty():
+		candidates.append(center)
+	# 四邻
+	for dir in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+		var pos: Vector2i = center + dir
+		if GridWorld.is_within_bounds(pos) and GridWorld.get_entities_at(pos).is_empty():
+			candidates.append(pos)
+	# 对角
+	for dir in [Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1)]:
+		var pos: Vector2i = center + dir
+		if GridWorld.is_within_bounds(pos) and GridWorld.get_entities_at(pos).is_empty():
+			candidates.append(pos)
+	# 打乱顺序
+	candidates.shuffle()
+	var spawned: int = 0
+	for pos in candidates:
+		if spawned >= count:
+			break
+		food_manager.spawn_food_at(pos)
+		spawned += 1
 
 
 func _on_enemy_killed(data: Dictionary) -> void:
 	var enemy = data.get("enemy_def")
+	var pos: Vector2i = data.get("position", Vector2i.ZERO)
+	# 掉落食物（无论何种方式击杀）
+	_drop_food_for_enemy(enemy, pos)
 	if enemy and enemy in current_enemies:
 		current_enemies.erase(enemy)
 	# Respawn to maintain count
@@ -67,11 +101,19 @@ func _on_enemy_killed(data: Dictionary) -> void:
 		spawn_enemy(_pick_random_type())
 
 
+func _drop_food_for_enemy(enemy: Node, pos: Vector2i) -> void:
+	if not food_manager or enemy == null:
+		return
+	var type_id: String = enemy.get("enemy_type") if enemy.get("enemy_type") else "wanderer"
+	var cfg: Dictionary = ConfigManager.get_enemy_type(type_id)
+	var drop_count: int = int(cfg.get("drop_food_count", 0))
+	if drop_count <= 0:
+		return
+	_spawn_food_drops(pos, drop_count)
+
+
 func _pick_random_type() -> String:
-	var cfg_node = Engine.get_main_loop().root.get_node_or_null("ConfigManager")
-	if cfg_node == null:
-		return "wanderer"
-	var enemy_cfg: Dictionary = cfg_node.enemy
+	var enemy_cfg: Dictionary = ConfigManager.enemy
 	var weights: Dictionary = enemy_cfg.get("spawn_weights", {})
 	if weights.is_empty():
 		return "wanderer"
@@ -85,6 +127,17 @@ func _pick_random_type() -> String:
 		if roll < accum:
 			return type_id
 	return "wanderer"
+
+
+func spawn_enemy_at(type_id: String, pos: Vector2i) -> Enemy:
+	var enemy := Enemy.new()
+	enemy.setup_from_config(type_id)
+	enemy.place_on_grid(pos)
+	if enemy_container:
+		enemy_container.add_child(enemy)
+	current_enemies.append(enemy)
+	EventBus.enemy_spawned.emit({"enemy_def": enemy, "position": pos, "type": type_id})
+	return enemy
 
 
 func clear_enemies() -> void:

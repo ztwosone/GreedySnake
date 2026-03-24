@@ -1,33 +1,51 @@
 class_name FreezeAtom
 extends AtomBase
-## Freezes the game by pausing the tick manager.
+## Freezes target entity by setting speed modifier to 0.
 ## Params: duration (float).
-## Unfreeze logic is handled by a separate on_removed chain or the ice effect system.
+## Auto-resumes after duration via SceneTreeTimer.
+## Only affects the target entity, not the global tick.
 
 
 func execute(ctx: AtomContext) -> void:
 	var duration: float = get_param("duration", 0.0)
 
-	if ctx.tick_mgr and ctx.tick_mgr.has_method("pause"):
-		ctx.tick_mgr.pause()
+	if not ctx.effect_mgr or not ctx.target:
+		return
 
-	# Store freeze metadata
-	if ctx.effect_data and ctx.effect_data.has_method("set_meta"):
-		ctx.effect_data.set_meta("_freeze_duration", duration)
-		ctx.effect_data.set_meta("_freeze_elapsed", 0.0)
+	# Set speed to 0 (frozen)
+	ctx.effect_mgr.set_modifier("speed", ctx.target, 0.0)
+
+	# Emit freeze started event
+	EventBus.ice_freeze_started.emit({})
+
+	# Auto-resume after duration using SceneTreeTimer
+	if duration > 0.0:
+		var tree := Engine.get_main_loop() as SceneTree
+		if tree:
+			var timer: SceneTreeTimer = tree.create_timer(duration, true, false, true)
+			var effect_mgr_ref = ctx.effect_mgr
+			var target_ref = ctx.target
+			var effect_ref = ctx.effect_data
+			timer.timeout.connect(func():
+				_on_freeze_ended(effect_mgr_ref, target_ref, effect_ref)
+			)
+
+
+func _on_freeze_ended(effect_mgr, target, effect) -> void:
+	if not effect_mgr or not is_instance_valid(effect_mgr):
+		return
+	if not target or not is_instance_valid(target):
+		return
+
+	# If ice effect is still active (layer > 0), restore to slow speed (0.5)
+	# Otherwise restore to normal speed (1.0)
+	if effect and is_instance_valid(effect) and effect.get("layer") != null and effect.layer > 0:
+		# Ice still on, go back to slowed state
+		effect_mgr.set_modifier("speed", target, 0.5)
+		if effect.layer > 1:
+			effect.layer = 1
 	else:
-		ctx.results["_freeze_duration"] = duration
-		ctx.results["_freeze_elapsed"] = 0.0
+		# Ice gone, restore normal speed
+		effect_mgr.set_modifier("speed", target, 1.0)
 
-	# Emit event if EventBus signal exists
-	var event_bus = _get_event_bus()
-	if event_bus and event_bus.has_signal("ice_freeze_started"):
-		event_bus.ice_freeze_started.emit()
-
-
-func _get_event_bus() -> Node:
-	var ml = Engine.get_main_loop()
-	var root = ml.root if ml else null
-	if root:
-		return root.get_node_or_null("EventBus")
-	return null
+	EventBus.ice_freeze_ended.emit({})

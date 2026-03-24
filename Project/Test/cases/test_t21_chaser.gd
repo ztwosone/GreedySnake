@@ -44,7 +44,7 @@ func run(t) -> void:
 	t.assert_eq(chaser.grid_position, Vector2i(9, 10), "chaser moved to (9,10)")
 
 	# === config 检查 ===
-	var cfg_node = Engine.get_main_loop().root.get_node_or_null("ConfigManager")
+	var cfg_node = ConfigManager
 	if cfg_node:
 		var cfg: Dictionary = cfg_node.get_enemy_type("chaser")
 		t.assert_eq(cfg.get("hp"), 1, "config: hp == 1")
@@ -72,7 +72,7 @@ func run(t) -> void:
 	# === 回避状态格 ===
 	var tile_mgr := StatusTileManager.new()
 	Engine.get_main_loop().root.add_child(tile_mgr)
-	var sem = Engine.get_main_loop().root.get_node_or_null("StatusEffectManager")
+	var sem = StatusEffectManager
 	var old_tile_mgr = null
 	if sem:
 		old_tile_mgr = sem.tile_manager

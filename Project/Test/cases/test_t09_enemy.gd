@@ -97,9 +97,8 @@ func run(runner: Node) -> void:
 
 	EventBus.snake_hit_enemy.emit({"enemy": combat_enemy, "position": Vector2i(12, 5)})
 
-	_runner.assert_eq(decrease_events.size(), 1, "length_decrease_requested emitted on combat")
-	_runner.assert_eq(decrease_events[0].get("amount") if decrease_events.size() > 0 else null, 1, "decrease amount == 1 (attack_cost)")
-	_runner.assert_eq(decrease_events[0].get("source") if decrease_events.size() > 0 else null, "enemy_combat", "decrease source == enemy_combat")
+	# 新机制：蛇头吃敌人无消耗，不应发出 length_decrease_requested
+	_runner.assert_eq(decrease_events.size(), 0, "no length_decrease on eating enemy (new mechanic)")
 
 	# Enemy should be removed from list (killed) and a new one spawned
 	_runner.assert_true(not (combat_enemy in em.current_enemies), "killed enemy removed from list")

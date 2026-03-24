@@ -27,13 +27,13 @@ func run(t) -> void:
 
 	t.assert_true(bc.brain is BogCrawlerBrain, "bog_crawler has BogCrawlerBrain")
 	t.assert_eq(bc.enemy_type, "bog_crawler", "enemy_type == bog_crawler")
-	t.assert_eq(bc.hp, 2, "bog_crawler hp == 2")
+	t.assert_eq(bc.hp, 1, "bog_crawler hp == 1")
 
 	# === config 检查 ===
-	var cfg_node = Engine.get_main_loop().root.get_node_or_null("ConfigManager")
+	var cfg_node = ConfigManager
 	if cfg_node:
 		var cfg: Dictionary = cfg_node.get_enemy_type("bog_crawler")
-		t.assert_eq(cfg.get("hp"), 2, "config: hp == 2")
+		t.assert_eq(cfg.get("hp"), 1, "config: hp == 1")
 		t.assert_eq(cfg.get("attack_cost"), 1, "config: attack_cost == 1")
 		t.assert_eq(cfg.get("poison_speed_bonus"), 2, "config: poison_speed_bonus == 2")
 		t.assert_eq(cfg.get("death_poison_tiles"), 3, "config: death_poison_tiles == 3")
@@ -50,7 +50,7 @@ func run(t) -> void:
 	# === 趋向毒液格 ===
 	var tile_mgr := StatusTileManager.new()
 	Engine.get_main_loop().root.add_child(tile_mgr)
-	var sem = Engine.get_main_loop().root.get_node_or_null("StatusEffectManager")
+	var sem = StatusEffectManager
 	var old_tile_mgr = null
 	if sem:
 		old_tile_mgr = sem.tile_manager
@@ -97,14 +97,11 @@ func run(t) -> void:
 	self_pres = bc.brain.evaluate_self_preservation(bc, ctx)
 	t.assert_true(self_pres.is_empty(), "self-preservation: NOT triggered on poison tile")
 
-	# === HP 为 2：第一次受伤不死 ===
+	# === HP 为 1：一击必杀 ===
 	tile_mgr.clear_all()
 	bc.remove_from_grid()
 	bc.place_on_grid(Vector2i(10, 10))
-	t.assert_eq(bc.hp, 2, "hp starts at 2")
-	bc.take_damage(1)
-	t.assert_eq(bc.hp, 1, "hp after 1 damage == 1")
-	t.assert_true(is_instance_valid(bc), "still alive after 1 damage")
+	t.assert_eq(bc.hp, 1, "hp starts at 1")
 
 	# === 死亡爆裂：留下毒液格 ===
 	# 创建新的 bog_crawler 来测试死亡效果

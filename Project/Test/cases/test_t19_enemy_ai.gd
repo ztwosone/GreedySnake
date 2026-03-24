@@ -73,7 +73,7 @@ func run(t) -> void:
 	t.assert_eq(mock_enemy.attack_cost, 1, "setup wanderer: attack_cost == 1")
 
 	# 颜色从config读取
-	var cfg_node = Engine.get_main_loop().root.get_node_or_null("ConfigManager")
+	var cfg_node = ConfigManager
 	if cfg_node:
 		var wanderer_cfg: Dictionary = cfg_node.get_enemy_type("wanderer")
 		var expected_color := Color.from_string(wanderer_cfg.get("color", "#CC1A4D"), Color.WHITE)

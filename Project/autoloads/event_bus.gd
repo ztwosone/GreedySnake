@@ -22,6 +22,7 @@ signal length_grow_requested(data: Dictionary)     # 请求增长 { amount }
 
 # === Enemy ===
 signal enemy_killed(data: Dictionary)              # 敌人被击杀 { enemy_def, position, method }
+signal snake_body_attacked(data: Dictionary)       # 蛇身被攻击 { position, segment, enemy, status_transferred }
 signal enemy_spawned(data: Dictionary)             # 敌人生成 { enemy_def, position }
 signal enemy_action_decided(data: Dictionary)      # 敌人AI决策 { enemy, action, direction }
 
@@ -45,9 +46,6 @@ signal status_tile_placed(data: Dictionary)        # 状态格放置 { position,
 signal status_tile_removed(data: Dictionary)       # 状态格移除 { position, type }
 signal entity_entered_status_tile(data: Dictionary) # 实体踩入状态格 { entity, tile, position, type }
 
-# === Combat ===
-signal snake_body_crush(data: Dictionary)        # 蛇身碾压 { enemy, position, segment_index, cost, status_transferred }
-
 # === Reactions ===
 signal reaction_triggered(data: Dictionary)      # 反应触发 { reaction_id, position, type_a, type_b, layer_a, layer_b, damage }
 
@@ -55,3 +53,8 @@ signal reaction_triggered(data: Dictionary)      # 反应触发 { reaction_id, p
 signal game_started                                # 游戏开始
 signal game_over(data: Dictionary)                 # 游戏结束 { cause, final_length }
 signal game_restart_requested                      # 请求重新开始
+
+# === No-Body Countdown ===
+signal no_body_countdown_tick(data: Dictionary)    # 每tick广播 { remaining_seconds, total_seconds, ratio }
+signal no_body_countdown_started(data: Dictionary) # 倒计时开始 { total_seconds }
+signal no_body_countdown_cancelled                 # 倒计时取消（恢复了身体段）

@@ -4,7 +4,7 @@ extends RefCounted
 
 func run(t) -> void:
 	# --- ConfigManager autoload 存在 ---
-	var cfg = Engine.get_main_loop().root.get_node_or_null("ConfigManager")
+	var cfg = ConfigManager
 	t.assert_true(cfg != null, "ConfigManager autoload exists")
 	if cfg == null:
 		return
@@ -83,9 +83,9 @@ func run(t) -> void:
 	var r3: Dictionary = cfg.find_reaction("fire", "poison")
 	t.assert_eq(r3.get("display_name"), "毒爆", "fire+poison = 毒爆")
 
-	# --- 不存在的 reaction ---
-	var r_none: Dictionary = cfg.find_reaction("ice", "poison")
-	t.assert_eq(r_none.size(), 0, "ice+poison has no reaction")
+	# --- 冻疫反应 ---
+	var r_frozen: Dictionary = cfg.find_reaction("ice", "poison")
+	t.assert_true(r_frozen.size() > 0, "ice+poison has frozen_plague reaction")
 
 	# --- ID 列表 ---
 	var se_ids: Array = cfg.get_status_effect_ids()

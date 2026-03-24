@@ -23,7 +23,6 @@ func run(t) -> void:
 	_test_build_atoms(t)
 	_test_sem_integration(t)
 	_test_modifier_api(t)
-	_test_legacy_fallback(t)
 
 
 # === 文件结构 ===
@@ -587,7 +586,7 @@ func _test_build_atoms(t) -> void:
 # === SEM Integration ===
 
 func _test_sem_integration(t) -> void:
-	var sem = Engine.get_main_loop().root.get_node_or_null("StatusEffectManager")
+	var sem = StatusEffectManager
 	if sem == null:
 		t.assert_true(false, "StatusEffectManager not found — skipping integration tests")
 		return
@@ -597,7 +596,6 @@ func _test_sem_integration(t) -> void:
 	t.assert_true("_chain_resolver" in sem, "SEM has _chain_resolver")
 	t.assert_true("_trigger_manager" in sem, "SEM has _trigger_manager")
 	t.assert_true("_active_modifiers" in sem, "SEM has _active_modifiers")
-	t.assert_true("_atom_enabled_effects" in sem, "SEM has _atom_enabled_effects")
 
 	# AtomRegistry initialized
 	t.assert_true(sem._atom_registry != null, "SEM._atom_registry initialized")
@@ -626,11 +624,10 @@ func _test_sem_integration(t) -> void:
 	var applied: StatusEffectData = sem.apply_status(dummy, "fire", "test_atom")
 	t.assert_true(applied != null, "apply_status returns effect")
 	t.assert_true(applied.chains.size() > 0, "fire effect has atom chains resolved")
-	t.assert_true(sem._atom_enabled_effects.has(applied.get_instance_id()), "effect registered in _atom_enabled_effects")
 
 	# Remove and verify cleanup
 	sem.remove_status(dummy, "fire", "test")
-	t.assert_true(not sem._atom_enabled_effects.has(applied.get_instance_id()), "effect unregistered after remove")
+	t.assert_true(not sem.has_status(dummy, "fire"), "fire effect removed after remove_status")
 
 	# Apply ice and verify atom chains
 	var ice_effect: StatusEffectData = sem.apply_status(dummy, "ice", "test_atom")
@@ -642,7 +639,6 @@ func _test_sem_integration(t) -> void:
 
 	# clear_all cleans everything
 	sem.clear_all()
-	t.assert_eq(sem._atom_enabled_effects.size(), 0, "clear_all resets _atom_enabled_effects")
 	t.assert_eq(sem._active_modifiers["growth"].size(), 0, "clear_all resets growth modifiers")
 
 	dummy.queue_free()
@@ -651,7 +647,7 @@ func _test_sem_integration(t) -> void:
 # === Modifier API ===
 
 func _test_modifier_api(t) -> void:
-	var sem = Engine.get_main_loop().root.get_node_or_null("StatusEffectManager")
+	var sem = StatusEffectManager
 	if sem == null:
 		return
 
@@ -678,20 +674,3 @@ func _test_modifier_api(t) -> void:
 	sem.clear_all()
 
 
-# === Legacy Fallback ===
-
-func _test_legacy_fallback(t) -> void:
-	var sem = Engine.get_main_loop().root.get_node_or_null("StatusEffectManager")
-	if sem == null:
-		return
-
-	# Old effect processors still exist
-	t.assert_true(sem.fire_effect != null, "SEM still has fire_effect (legacy)")
-	t.assert_true(sem.ice_effect != null, "SEM still has ice_effect (legacy)")
-	t.assert_true(sem.poison_effect != null, "SEM still has poison_effect (legacy)")
-	t.assert_true(sem.fire_effect is FireEffect, "fire_effect is FireEffect")
-	t.assert_true(sem.ice_effect is IceEffect, "ice_effect is IceEffect")
-	t.assert_true(sem.poison_effect is PoisonEffect, "poison_effect is PoisonEffect")
-
-	# _has_legacy_effects method
-	t.assert_true(sem.has_method("_has_legacy_effects"), "SEM has _has_legacy_effects()")

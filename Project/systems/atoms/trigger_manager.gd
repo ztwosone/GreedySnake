@@ -16,6 +16,8 @@ var _delayed_queue: Array = []  # [{ "chain": EffectChain, "ctx": AtomContext, "
 var effect_mgr: Node = null
 var tile_mgr = null
 var tick_mgr: Node = null
+var enemy_mgr: Node = null
+var food_mgr: Node = null
 
 
 func _ready() -> void:
@@ -55,7 +57,7 @@ func clear_all() -> void:
 # === 内部：信号连接 ===
 
 func _connect_signals() -> void:
-	var eb = Engine.get_main_loop().root.get_node_or_null("EventBus")
+	var eb = EventBus
 	if eb == null:
 		return
 
@@ -70,7 +72,6 @@ func _connect_signals() -> void:
 		"snake_food_eaten": "_on_food_eaten",
 		"enemy_killed": "_on_enemy_killed",
 		"snake_died": "_on_snake_died",
-		"snake_body_crush": "_on_crush",
 		"snake_hit_enemy": "_on_head_hit",
 		"length_decrease_requested": "_on_length_decrease",
 		"snake_moved": "_on_snake_moved",
@@ -194,10 +195,6 @@ func _on_snake_died(data: Dictionary) -> void:
 	_fire_trigger("on_death", data)
 
 
-func _on_crush(data: Dictionary) -> void:
-	_fire_trigger("on_crush", data)
-
-
 func _on_head_hit(data: Dictionary) -> void:
 	_fire_trigger("on_head_hit", data)
 
@@ -227,19 +224,35 @@ func _build_context(effect) -> AtomContext:
 	ctx.effect_mgr = effect_mgr
 	ctx.tile_mgr = tile_mgr
 	ctx.tick_mgr = tick_mgr
+	ctx.enemy_mgr = enemy_mgr
+	ctx.food_mgr = food_mgr
 
 	# 从 effect 获取 carrier 信息
 	var carrier = effect.get("carrier") if effect else null
 	if is_instance_valid(carrier):
 		ctx.source = carrier
+		ctx.target = carrier  # 实体效果中，carrier 既是 source 也是 target
 		if carrier.get("grid_position") != null:
 			ctx.source_position = carrier.grid_position
+			ctx.target_position = carrier.grid_position
 
 	# layer 信息
 	if effect and effect.get("layer") != null:
 		ctx.layer_a = effect.layer
 
 	return ctx
+
+
+## 立即触发指定 effect 的 on_removed 链（在注销前调用）
+func fire_on_removed(effect: Object) -> void:
+	var eid: int = effect.get_instance_id()
+	if not _active_entries.has(eid):
+		return
+	var entry: Dictionary = _active_entries[eid]
+	for chain in entry["chains"]:
+		if chain.trigger == "on_removed" and chain._active:
+			var ctx := _build_context(effect)
+			atom_executor.execute_chain(chain, ctx)
 
 
 ## 立即触发指定 effect 的 on_applied 链

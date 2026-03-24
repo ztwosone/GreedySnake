@@ -44,13 +44,6 @@ func _execute_actions(actions: Array, ctx: AtomContext) -> void:
 
 ## 解析位置上的实体
 func _resolve_target_entity(ctx: AtomContext, pos: Vector2i) -> void:
-	var ml = Engine.get_main_loop()
-	if ml == null:
-		return
-	var gw = ml.root.get_node_or_null("GridWorld")
-	if gw == null or not gw.has_method("get_entities_at"):
-		return
-
-	var entities: Array = gw.get_entities_at(pos)
+	var entities: Array = GridWorld.get_entities_at(pos)
 	if entities.size() > 0 and ctx.target == null:
 		ctx.target = entities[0]

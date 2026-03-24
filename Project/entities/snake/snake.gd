@@ -7,10 +7,24 @@ var direction: Vector2i = Constants.DIR_VECTORS[Constants.Direction.RIGHT]
 var input_buffer: Vector2i = Vector2i.ZERO
 var is_alive: bool = false
 var grow_pending: int = 0
+var _move_accumulator: float = 0.0
+var hits_taken: int = 0
+var hits_per_segment_loss: int = 3
+
+var _hurt_tween: Tween
+var _danger_tween: Tween
+var _countdown_tween: Tween
 
 
 func _ready() -> void:
 	EventBus.tick_input_collected.connect(_on_tick)
+	EventBus.snake_length_decreased.connect(_on_hurt)
+	EventBus.no_body_countdown_started.connect(_on_countdown_started)
+	EventBus.no_body_countdown_tick.connect(_on_countdown_tick)
+	EventBus.no_body_countdown_cancelled.connect(_on_countdown_cancelled)
+	# 从配置读取受击阈值
+	var snake_cfg: Dictionary = ConfigManager.snake if ConfigManager else {}
+	hits_per_segment_loss = int(snake_cfg.get("hits_per_segment_loss", 3))
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -34,6 +48,8 @@ func init_snake(start_pos: Vector2i, length: int, dir: Vector2i) -> void:
 	input_buffer = Vector2i.ZERO
 	is_alive = true
 	grow_pending = 0
+	hits_taken = 0
+	_move_accumulator = 0.0
 	body.clear()
 	segments.clear()
 
@@ -86,10 +102,16 @@ func move() -> void:
 		elif entity.get("entity_type") == Constants.EntityType.FOOD:
 			EventBus.snake_food_eaten.emit({"food": entity, "position": new_head_pos, "food_type": "basic"})
 
-	# 6. Insert new head
+	# 6. Insert new head (inherits old head's carried_status)
+	var inherited_status: String = ""
+	if not segments.is_empty():
+		inherited_status = segments[0].carried_status
+
 	body.push_front(new_head_pos)
 	var new_head_seg := _create_segment(new_head_pos, 0)
 	new_head_seg.segment_type = SnakeSegment.HEAD
+	if inherited_status != "":
+		new_head_seg.set_carried_status(inherited_status)
 	new_head_seg.update_visual()
 	segments.push_front(new_head_seg)
 
@@ -100,11 +122,13 @@ func move() -> void:
 
 	# 7. Handle tail
 	var vacated_pos := Vector2i(-1, -1)
+	var vacated_status: String = ""
 	if grow_pending > 0:
 		grow_pending -= 1
 	else:
 		vacated_pos = body.pop_back()
 		var old_tail_seg: SnakeSegment = segments.pop_back()
+		vacated_status = old_tail_seg.carried_status
 		old_tail_seg.remove_from_grid()
 		old_tail_seg.queue_free()
 
@@ -124,6 +148,7 @@ func move() -> void:
 		"head_pos": body[0],
 		"old_tail_pos": body[-1],
 		"vacated_pos": vacated_pos,
+		"vacated_status": vacated_status,
 	})
 
 
@@ -165,8 +190,21 @@ func _buffer_direction(new_dir: Vector2i) -> void:
 
 
 func _on_tick(_tick_index: int) -> void:
-	if is_alive:
+	if not is_alive:
+		return
+	var speed: float = _get_effective_speed()
+	if speed <= 0.0:
+		return  # 冻结状态，不移动
+	_move_accumulator += speed
+	while _move_accumulator >= 1.0:
+		_move_accumulator -= 1.0
+		if not is_alive:
+			break
 		move()
+
+
+func _get_effective_speed() -> float:
+	return 1.0
 
 
 func _create_segment(pos: Vector2i, index: int) -> SnakeSegment:
@@ -185,3 +223,130 @@ func _clear_segments() -> void:
 			seg.queue_free()
 	segments.clear()
 	body.clear()
+
+
+# === Hit counter ===
+
+func take_hit(damage: int = 1) -> void:
+	if not is_alive:
+		return
+	for i in range(damage):
+		hits_taken += 1
+		if hits_taken >= hits_per_segment_loss:
+			hits_taken = 0
+			EventBus.length_decrease_requested.emit({"amount": 1, "source": "body_attack"})
+
+
+func get_segments_in_radius(center: Vector2i, radius: int) -> Array:
+	var result: Array = []
+	for seg in segments:
+		if is_instance_valid(seg):
+			var dist: int = abs(seg.grid_position.x - center.x) + abs(seg.grid_position.y - center.y)
+			if dist <= radius:
+				result.append(seg)
+	return result
+
+
+# === Hurt feedback ===
+
+func _on_hurt(data: Dictionary) -> void:
+	var new_length: int = data.get("new_length", body.size())
+	# 红闪
+	_flash_hurt()
+	# 低血量脉动
+	if new_length <= 3 and new_length > 0:
+		_start_danger_pulse(new_length)
+	else:
+		_stop_danger_pulse()
+
+
+func _flash_hurt() -> void:
+	if _hurt_tween and _hurt_tween.is_valid():
+		_hurt_tween.kill()
+	# 所有蛇段红闪
+	for seg in segments:
+		if is_instance_valid(seg):
+			seg.modulate = Color(1.5, 0.3, 0.3)
+	_hurt_tween = create_tween()
+	_hurt_tween.tween_callback(func():
+		for seg in segments:
+			if is_instance_valid(seg):
+				seg.modulate = Color.WHITE
+	).set_delay(0.15)
+
+
+func _start_danger_pulse(length: int) -> void:
+	_stop_danger_pulse()
+	# 频率随长度降低加快
+	var period: float = 0.3 if length <= 1 else (0.5 if length <= 2 else 0.8)
+	_danger_tween = create_tween().set_loops()
+	_danger_tween.tween_callback(func():
+		for seg in segments:
+			if is_instance_valid(seg):
+				seg.modulate = Color(1.3, 0.5, 0.5)
+	)
+	_danger_tween.tween_interval(period * 0.5)
+	_danger_tween.tween_callback(func():
+		for seg in segments:
+			if is_instance_valid(seg):
+				seg.modulate = Color.WHITE
+	)
+	_danger_tween.tween_interval(period * 0.5)
+
+
+func _stop_danger_pulse() -> void:
+	if _danger_tween and _danger_tween.is_valid():
+		_danger_tween.kill()
+		_danger_tween = null
+	for seg in segments:
+		if is_instance_valid(seg):
+			seg.modulate = Color.WHITE
+
+
+# === No-Body Countdown Visual ===
+
+func _on_countdown_started(_data: Dictionary) -> void:
+	_stop_danger_pulse()
+	_start_countdown_flash(1.0)
+
+
+func _on_countdown_tick(data: Dictionary) -> void:
+	var ratio: float = data.get("ratio", 1.0)
+	# 根据剩余比例加速闪烁：ratio 1.0→0.0 对应 period 0.6s→0.1s
+	_start_countdown_flash(ratio)
+
+
+func _on_countdown_cancelled() -> void:
+	_stop_countdown_flash()
+
+
+func _start_countdown_flash(ratio: float) -> void:
+	if _countdown_tween and _countdown_tween.is_valid():
+		_countdown_tween.kill()
+	# 闪烁频率随倒计时加速：越接近死亡越快
+	var period: float = lerpf(0.1, 0.6, ratio)
+	var half: float = period * 0.5
+	# 颜色随倒计时从黄色渐变到红色
+	var flash_color: Color = Color(1.5, lerpf(0.2, 0.8, ratio), lerpf(0.2, 0.3, ratio))
+	_countdown_tween = create_tween().set_loops()
+	_countdown_tween.tween_callback(func():
+		for seg in segments:
+			if is_instance_valid(seg):
+				seg.modulate = flash_color
+	)
+	_countdown_tween.tween_interval(half)
+	_countdown_tween.tween_callback(func():
+		for seg in segments:
+			if is_instance_valid(seg):
+				seg.modulate = Color(0.4, 0.4, 0.4)
+	)
+	_countdown_tween.tween_interval(half)
+
+
+func _stop_countdown_flash() -> void:
+	if _countdown_tween and _countdown_tween.is_valid():
+		_countdown_tween.kill()
+		_countdown_tween = null
+	for seg in segments:
+		if is_instance_valid(seg):
+			seg.modulate = Color.WHITE

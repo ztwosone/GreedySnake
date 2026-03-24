@@ -51,11 +51,9 @@ func _ready() -> void:
 
 func _load_from_config() -> void:
 	# ConfigManager 在 autoload 顺序中排在 Constants 之前，此时已加载完毕
-	if not Engine.has_singleton("ConfigManager") and not has_node("/root/ConfigManager"):
+	if not is_instance_valid(ConfigManager):
 		return
-	var cfg = get_node_or_null("/root/ConfigManager")
-	if cfg == null:
-		return
+	var cfg = ConfigManager
 
 	# Grid
 	cell_size = cfg.grid.get("cell_size", CELL_SIZE)

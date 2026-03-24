@@ -36,7 +36,7 @@ func run(t) -> void:
 	t.assert_eq(created.source, "test", "create: source == test")
 
 	# --- StatusEffectManager autoload 存在 ---
-	var mgr = Engine.get_main_loop().root.get_node_or_null("StatusEffectManager")
+	var mgr = StatusEffectManager
 	t.assert_true(mgr != null, "StatusEffectManager autoload exists")
 	if mgr == null:
 		dummy.queue_free()

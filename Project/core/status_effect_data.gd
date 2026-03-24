@@ -15,10 +15,7 @@ var chains: Array = []           # 运行时 EffectChain 列表（由 SEM 填充
 
 
 static func create(p_type: String, p_carrier: Object, p_carrier_type: String, p_source: String) -> StatusEffectData:
-	var cfg_node = Engine.get_main_loop().root.get_node_or_null("ConfigManager")
-	var cfg_data: Dictionary = {}
-	if cfg_node:
-		cfg_data = cfg_node.get_status_effect(p_type)
+	var cfg_data: Dictionary = ConfigManager.get_status_effect(p_type)
 
 	var effect := StatusEffectData.new()
 	effect.type = p_type

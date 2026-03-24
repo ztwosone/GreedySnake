@@ -6,21 +6,15 @@ extends AtomBase
 
 func execute(ctx: AtomContext) -> void:
 	var entity_type: String = get_param("entity_type", "enemy")
-	var ml = Engine.get_main_loop()
-	var root = ml.root if ml else null
-	if not root:
-		return
 
 	if entity_type == "enemy":
-		var mgr = root.get_node_or_null("Main/EnemyManager")
-		if mgr and mgr.has_method("spawn_enemy"):
+		if ctx.enemy_mgr and ctx.enemy_mgr.has_method("spawn_enemy"):
 			var enemy_type: String = get_param("enemy_type", "basic")
-			mgr.spawn_enemy(enemy_type)
+			ctx.enemy_mgr.spawn_enemy(enemy_type)
 		else:
-			push_warning("SpawnEntityAtom: EnemyManager not found in scene tree.")
+			push_warning("SpawnEntityAtom: enemy_mgr not available in context.")
 	elif entity_type == "food":
-		var mgr = root.get_node_or_null("Main/FoodManager")
-		if mgr and mgr.has_method("spawn_food"):
-			mgr.spawn_food()
+		if ctx.food_mgr and ctx.food_mgr.has_method("spawn_food"):
+			ctx.food_mgr.spawn_food()
 		else:
-			push_warning("SpawnEntityAtom: FoodManager not found in scene tree.")
+			push_warning("SpawnEntityAtom: food_mgr not available in context.")

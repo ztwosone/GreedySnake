@@ -1,17 +1,12 @@
 extends Node
 ## 状态效果全局管理器
 ## 追踪所有活跃的状态效果实例，处理叠层、过期和载体销毁。
-## 集成 Atom 效果链系统：优先使用 JSON 定义的原子链，无定义时回退旧处理器。
+## 使用 JSON 定义的原子链驱动所有效果行为。
 
 # 存储: { instance_id: int → { type: String → StatusEffectData } }
 var _statuses: Dictionary = {}
 # 反查: { instance_id: int → Object }
 var _id_to_target: Dictionary = {}
-
-# 效果处理器（旧版，用于无原子链定义时的回退）
-var fire_effect: FireEffect = FireEffect.new()
-var ice_effect: IceEffect = IceEffect.new()
-var poison_effect: PoisonEffect = PoisonEffect.new()
 
 # 火焰蔓延需要 tile_manager 引用
 var tile_manager: StatusTileManager = null:
@@ -29,8 +24,6 @@ var _active_modifiers: Dictionary = {
 	"growth": {},
 	"speed": {},
 }
-# 记录哪些 effect 已注册了原子链（用于判断是否回退旧处理器）
-var _atom_enabled_effects: Dictionary = {}  # { effect.get_instance_id() → true }
 
 
 func _ready() -> void:
@@ -45,36 +38,12 @@ func _init_atom_system() -> void:
 	_trigger_manager.name = "TriggerManager"
 	_trigger_manager.effect_mgr = self
 	_trigger_manager.tile_mgr = tile_manager
-	_trigger_manager.tick_mgr = Engine.get_main_loop().root.get_node_or_null("TickManager")
+	_trigger_manager.tick_mgr = TickManager
 	add_child(_trigger_manager)
 
 
 func _process(delta: float) -> void:
 	_tick_update(delta)
-	_process_effects(delta)
-
-
-func _process_effects(delta: float) -> void:
-	# 旧处理器仅处理没有原子链的效果类型
-	if _has_legacy_effects("fire"):
-		fire_effect.process_entity_effects(delta, self)
-		if tile_manager:
-			fire_effect.process_tile_spread(delta, tile_manager)
-	if _has_legacy_effects("ice"):
-		ice_effect.process_entity_effects(delta, self)
-	if _has_legacy_effects("poison"):
-		poison_effect.process_entity_effects(delta, self)
-
-
-func _has_legacy_effects(type: String) -> bool:
-	## 返回是否存在该类型的效果且没有原子链（需要旧处理器）
-	for target_id in _statuses:
-		var effects: Dictionary = _statuses[target_id]
-		if effects.has(type):
-			var effect: StatusEffectData = effects[type]
-			if not _atom_enabled_effects.has(effect.get_instance_id()):
-				return true
-	return false
 
 
 func _tick_update(delta: float) -> void:
@@ -110,9 +79,12 @@ func _tick_update(delta: float) -> void:
 			continue
 
 		var target: Object = _id_to_target.get(target_id)
-		# 注销原子链
+		# 先触发 on_removed 链（在注销前）
 		if target_effects.has(effect_type):
-			_unregister_effect_chains(target_effects[effect_type])
+			var expiring_effect: StatusEffectData = target_effects[effect_type]
+			if _trigger_manager and expiring_effect.chains.size() > 0:
+				_trigger_manager.fire_on_removed(expiring_effect)
+			_unregister_effect_chains(expiring_effect)
 		target_effects.erase(effect_type)
 
 		if target_effects.is_empty():
@@ -187,6 +159,11 @@ func remove_status(target: Object, type: String, source: String = "manual") -> v
 		return
 
 	var effect: StatusEffectData = _statuses[target_id][type]
+
+	# 先触发 on_removed 链（在注销前，否则链已被移除）
+	if _trigger_manager and effect.chains.size() > 0:
+		_trigger_manager.fire_on_removed(effect)
+
 	_unregister_effect_chains(effect)
 
 	_statuses[target_id].erase(type)
@@ -250,7 +227,6 @@ func clear_all() -> void:
 	# 注销所有原子链
 	if _trigger_manager:
 		_trigger_manager.clear_all()
-	_atom_enabled_effects.clear()
 	_active_modifiers = { "growth": {}, "speed": {} }
 
 	# 断开所有载体信号
@@ -287,10 +263,7 @@ func clear_modifier(modifier_type: String, target: Object) -> void:
 func _resolve_and_register_chains(effect: StatusEffectData) -> void:
 	if _chain_resolver == null or _trigger_manager == null:
 		return
-	var cfg_node = Engine.get_main_loop().root.get_node_or_null("ConfigManager")
-	if cfg_node == null:
-		return
-	var cfg_data: Dictionary = cfg_node.get_status_effect(effect.type)
+	var cfg_data: Dictionary = ConfigManager.get_status_effect(effect.type)
 	# 只有配置中有 entity_effects/tile_effects/trail_effects 时才解析
 	if not cfg_data.has("entity_effects") and not cfg_data.has("tile_effects") and not cfg_data.has("trail_effects"):
 		return
@@ -301,17 +274,13 @@ func _resolve_and_register_chains(effect: StatusEffectData) -> void:
 
 	effect.chains = chains
 	_trigger_manager.register_chains(effect, chains)
-	_atom_enabled_effects[effect.get_instance_id()] = true
 
 
 func _unregister_effect_chains(effect: StatusEffectData) -> void:
 	if effect == null:
 		return
-	var eid: int = effect.get_instance_id()
-	if _atom_enabled_effects.has(eid):
-		if _trigger_manager:
-			_trigger_manager.unregister_chains(effect)
-		_atom_enabled_effects.erase(eid)
+	if _trigger_manager and effect.chains.size() > 0:
+		_trigger_manager.unregister_chains(effect)
 	# 清理该 effect carrier 的修改器
 	if effect.carrier and is_instance_valid(effect.carrier):
 		var tid: int = effect.carrier.get_instance_id()

@@ -64,14 +64,17 @@ func move_entity(entity: Node, from: Vector2i, to: Vector2i) -> void:
 	# 6. Emit event
 	EventBus.entity_moved.emit({"entity": entity, "from": from, "to": to})
 
-	# 7. Update visual position
-	if entity.has_method("set") and "global_position" in entity:
-		entity.global_position = grid_to_world(to)
+	# 7. Update visual position (through GridEntity interpolation)
+	var target_world_pos: Vector2 = grid_to_world(to)
+	if entity.has_method("_set_visual_target"):
+		entity._set_visual_target(target_world_pos)
+	elif entity.has_method("set") and "global_position" in entity:
+		entity.global_position = target_world_pos
 
 
 func get_entities_at(pos: Vector2i) -> Array:
 	if cell_map.has(pos):
-		return cell_map[pos].duplicate()
+		return cell_map[pos].filter(func(e): return is_instance_valid(e))
 	return []
 
 
@@ -79,6 +82,8 @@ func get_first_entity_of_type(pos: Vector2i, type: int) -> Node:
 	if not cell_map.has(pos):
 		return null
 	for entity in cell_map[pos]:
+		if not is_instance_valid(entity):
+			continue
 		if entity.get("entity_type") == type:
 			return entity
 	return null
@@ -88,6 +93,8 @@ func is_cell_blocked(pos: Vector2i) -> bool:
 	if not cell_map.has(pos):
 		return false
 	for entity in cell_map[pos]:
+		if not is_instance_valid(entity):
+			continue
 		if entity.get("blocks_movement") == true:
 			return true
 	return false

@@ -1,29 +1,17 @@
 extends RefCounted
-## T17 测试：中毒状态效果
+## T17 测试：中毒状态效果（通过原子系统）
 
 
 func run(t) -> void:
-	# --- 文件存在性 ---
-	t.assert_file_exists("res://systems/status/effects/poison_effect.gd")
-
-	# --- PoisonEffect 基本检查 ---
-	var pe := PoisonEffect.new()
-	t.assert_true(pe is RefCounted, "PoisonEffect is RefCounted")
-	t.assert_true(pe.has_method("process_entity_effects"), "has process_entity_effects")
-	t.assert_true(pe.has_method("get_growth_modifier"), "has get_growth_modifier")
-
 	# --- StatusEffectManager 集成检查 ---
-	var effect_mgr = Engine.get_main_loop().root.get_node_or_null("StatusEffectManager")
+	var effect_mgr = StatusEffectManager
 	t.assert_true(effect_mgr != null, "StatusEffectManager exists")
 	if effect_mgr == null:
 		return
-	t.assert_true(effect_mgr.get("poison_effect") != null, "StatusEffectManager has poison_effect")
 
 	# --- 准备 ---
 	GridWorld.init_grid(40, 22)
 	effect_mgr.clear_all()
-
-	var poison := PoisonEffect.new()
 
 	var mock_snake := Node2D.new()
 	mock_snake.name = "TestSnakePoison"
@@ -38,9 +26,12 @@ func run(t) -> void:
 	t.assert_eq(poison_status.layer, 1, "poison at layer 1")
 	t.assert_eq(poison_status.max_layers, 3, "poison max_layers == 3")
 
-	# === 食物增长量减半 ===
+	# 验证有 atom chains
+	t.assert_true(poison_status.chains.size() > 0, "poison effect has atom chains")
 
-	var modifier: float = poison.get_growth_modifier(effect_mgr, mock_snake)
+	# === 食物增长量减半（通过 atom modify_growth） ===
+
+	var modifier: float = effect_mgr.get_modifier("growth", mock_snake, 1.0)
 	t.assert_eq(modifier, 0.5, "growth modifier == 0.5 when poisoned")
 
 	# floor(1 * 0.5) = 0 → +1 变为 +0
@@ -51,9 +42,9 @@ func run(t) -> void:
 	var modified_amount2: int = int(floor(2.0 * modifier))
 	t.assert_eq(modified_amount2, 1, "floor(2 * 0.5) == 1: +2 food becomes +1")
 
-	# 无中毒时返回 1.0
+	# 移除后 modifier 恢复
 	effect_mgr.remove_status(mock_snake, "poison")
-	var no_poison_modifier: float = poison.get_growth_modifier(effect_mgr, mock_snake)
+	var no_poison_modifier: float = effect_mgr.get_modifier("growth", mock_snake, 1.0)
 	t.assert_eq(no_poison_modifier, 1.0, "growth modifier == 1.0 when no poison")
 
 	# === 毒化触发（3层） ===
@@ -61,9 +52,6 @@ func run(t) -> void:
 	effect_mgr.clear_all()
 	effect_mgr.apply_status(mock_snake, "poison", "test")  # layer 1
 	effect_mgr.apply_status(mock_snake, "poison", "test")  # layer 2
-	effect_mgr.apply_status(mock_snake, "poison", "test")  # layer 3
-	poison_status = effect_mgr.get_status(mock_snake, "poison")
-	t.assert_eq(poison_status.layer, 3, "poison stacked to layer 3")
 
 	# 监听扣长度请求
 	var decrease_events: Array = []
@@ -77,8 +65,8 @@ func run(t) -> void:
 		remove_events.append(data)
 	EventBus.status_removed.connect(_on_remove)
 
-	# process_entity_effects 检测到3层 → 触发毒化
-	poison.process_entity_effects(0.1, effect_mgr)
+	# layer 3 → on_layer_reach 触发 damage + remove_status atoms
+	effect_mgr.apply_status(mock_snake, "poison", "test")  # layer 3
 
 	t.assert_eq(decrease_events.size(), 1, "toxify: length_decrease_requested emitted")
 	if decrease_events.size() > 0:
@@ -88,29 +76,19 @@ func run(t) -> void:
 	# 毒化后毒层被清除
 	t.assert_true(not effect_mgr.has_status(mock_snake, "poison"), "toxify: poison cleared after toxify")
 
-	# 检查 status_removed 信号
-	var found_toxify_remove: bool = false
-	for ev in remove_events:
-		if ev.get("type") == "poison" and ev.get("source") == "toxify":
-			found_toxify_remove = true
-			break
-	t.assert_true(found_toxify_remove, "toxify: status_removed emitted with source=toxify")
-
 	EventBus.length_decrease_requested.disconnect(_on_decrease)
 	EventBus.status_removed.disconnect(_on_remove)
 
 	# === 2层不触发毒化 ===
 
 	effect_mgr.clear_all()
+	decrease_events.clear()
+	EventBus.length_decrease_requested.connect(_on_decrease)
+
 	effect_mgr.apply_status(mock_snake, "poison", "test")  # layer 1
 	effect_mgr.apply_status(mock_snake, "poison", "test")  # layer 2
 	poison_status = effect_mgr.get_status(mock_snake, "poison")
 	t.assert_eq(poison_status.layer, 2, "poison at layer 2")
-
-	decrease_events.clear()
-	EventBus.length_decrease_requested.connect(_on_decrease)
-
-	poison.process_entity_effects(0.1, effect_mgr)
 	t.assert_eq(decrease_events.size(), 0, "no toxify at layer 2")
 	t.assert_true(effect_mgr.has_status(mock_snake, "poison"), "poison still exists at layer 2")
 
@@ -125,12 +103,6 @@ func run(t) -> void:
 	tile_mgr.place_tile(poison_pos, "poison")
 	t.assert_true(tile_mgr.has_tile(poison_pos, "poison"), "poison tile placed")
 
-	# FoodManager 排除毒液格位置
-	var fm := FoodManager.new()
-	fm.tile_manager = tile_mgr
-
-	# 填满网格只留 poison_pos 一个空位
-	# 简化：直接测试 filter 逻辑
 	var test_cells: Array[Vector2i] = [Vector2i(5, 5), Vector2i(6, 6), Vector2i(7, 7)]
 	var filtered: Array[Vector2i] = test_cells.filter(func(pos: Vector2i) -> bool:
 		return not tile_mgr.has_tile(pos, "poison")
@@ -138,20 +110,18 @@ func run(t) -> void:
 	t.assert_eq(filtered.size(), 2, "poison tile position filtered out from spawn candidates")
 	t.assert_true(not filtered.has(Vector2i(5, 5)), "Vector2i(5,5) excluded (has poison tile)")
 
-	fm.queue_free()
-
 	# === config 读取验证 ===
 
-	var cfg_node = Engine.get_main_loop().root.get_node_or_null("ConfigManager")
+	var cfg_node = ConfigManager
 	if cfg_node:
 		var cfg: Dictionary = cfg_node.get_status_effect("poison")
 		t.assert_eq(cfg.get("food_growth_modifier"), 0.5, "config: food_growth_modifier == 0.5")
-		t.assert_eq(cfg.get("entity_duration"), 8.0, "config: entity_duration == 8.0")
 		t.assert_eq(cfg.get("toxify_at_layer"), 3, "config: toxify_at_layer == 3")
 		t.assert_eq(cfg.get("toxify_length_penalty"), 3, "config: toxify_length_penalty == 3")
 		t.assert_eq(cfg.get("max_layers"), 3, "config: max_layers == 3")
-		t.assert_eq(cfg.get("tile_duration"), 10.0, "config: tile_duration == 10.0")
 		t.assert_eq(cfg.get("trail_interval"), 3, "config: trail_interval == 3")
+		t.assert_true(cfg.has("entity_effects"), "config has entity_effects")
+		t.assert_true(cfg.has("tile_effects"), "config has tile_effects")
 
 	# === 清理 ===
 	effect_mgr.clear_all()

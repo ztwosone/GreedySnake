@@ -54,15 +54,46 @@ func evaluate_status_response(enemy: Enemy, _context: Dictionary) -> Dictionary:
 
 
 func evaluate_tracking(enemy: Enemy, context: Dictionary) -> Dictionary:
-	## P4: 向蛇头追踪
-	var snake_head: Vector2i = context.get("snake_head", Vector2i(-1, -1))
-	if snake_head == Vector2i(-1, -1):
-		return {}
+	## P4: 向最近蛇身段追踪（优先身体而非头）
+	var target := _find_nearest_body_target(enemy, context)
+	if target == Vector2i(-1, -1):
+		# 退回到追踪蛇头
+		var snake_head: Vector2i = context.get("snake_head", Vector2i(-1, -1))
+		if snake_head == Vector2i(-1, -1):
+			return {}
+		target = snake_head
 
-	var dir := _get_tracking_direction(enemy.grid_position, snake_head)
+	var dir := _get_tracking_direction(enemy.grid_position, target)
 	if dir != Vector2i.ZERO:
 		return { "action": "move", "direction": dir }
 	return {}
+
+
+func _find_nearest_body_target(enemy: Enemy, context: Dictionary) -> Vector2i:
+	## 找到最近的蛇身段（非HEAD）的相邻空格作为追踪目标
+	var segments: Array = context.get("snake_segments", [])
+	var pos: Vector2i = enemy.grid_position
+	var best_target := Vector2i(-1, -1)
+	var best_dist: int = 9999
+
+	for seg in segments:
+		if not is_instance_valid(seg):
+			continue
+		if seg.segment_type == SnakeSegment.HEAD:
+			continue
+		# 找这个段的相邻空格（敌人可以站的位置）
+		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var adj: Vector2i = seg.grid_position + d
+			if not GridWorld.is_within_bounds(adj):
+				continue
+			if GridWorld.is_cell_blocked(adj):
+				continue
+			var dist: int = abs(adj.x - pos.x) + abs(adj.y - pos.y)
+			if dist < best_dist:
+				best_dist = dist
+				best_target = adj
+
+	return best_target
 
 
 func evaluate_default(enemy: Enemy, _context: Dictionary) -> Dictionary:
@@ -97,14 +128,8 @@ func _get_tracking_direction(from: Vector2i, to: Vector2i) -> Vector2i:
 
 
 func _get_tile_manager() -> StatusTileManager:
-	var sem = Engine.get_main_loop().root.get_node_or_null("StatusEffectManager")
-	if sem:
-		return sem.tile_manager
-	return null
+	return StatusEffectManager.tile_manager
 
 
 func _get_config() -> Dictionary:
-	var cfg_node = Engine.get_main_loop().root.get_node_or_null("ConfigManager")
-	if cfg_node:
-		return cfg_node.get_enemy_type("chaser")
-	return {}
+	return ConfigManager.get_enemy_type("chaser")

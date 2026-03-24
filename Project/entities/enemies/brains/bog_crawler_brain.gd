@@ -53,7 +53,4 @@ func evaluate_default(enemy: Enemy, _context: Dictionary) -> Dictionary:
 
 
 func _get_tile_manager() -> StatusTileManager:
-	var sem = Engine.get_main_loop().root.get_node_or_null("StatusEffectManager")
-	if sem:
-		return sem.tile_manager
-	return null
+	return StatusEffectManager.tile_manager
