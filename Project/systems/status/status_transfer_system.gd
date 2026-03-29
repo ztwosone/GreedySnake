@@ -73,5 +73,32 @@ func _on_entity_moved(data: Dictionary) -> void:
 func _try_spatial_to_entity(entity: Node, pos: Vector2i) -> void:
 	var tiles: Array = tile_manager.get_tiles_at(pos)
 	for tile in tiles:
-		if tile is StatusTile:
-			StatusEffectManager.apply_status(entity, tile.status_type, "tile")
+		if not tile is StatusTile:
+			continue
+		var tile_type: String = tile.status_type
+
+		# 非 Enemy 实体走原有 StatusEffectManager 路径
+		if not entity is Enemy:
+			StatusEffectManager.apply_status(entity, tile_type, "tile")
+			continue
+
+		var enemy: Enemy = entity as Enemy
+		if enemy.carried_status == "":
+			# 无状态 → 获得格子状态
+			enemy.set_carried_status_visual(tile_type)
+		elif enemy.carried_status == tile_type:
+			# 同类 → 无事发生
+			pass
+		else:
+			# 异类 → 触发反应，双方清除
+			var reaction_id := Enemy._get_reaction_id(enemy.carried_status, tile_type)
+			if reaction_id != "":
+				EventBus.reaction_triggered.emit({
+					"reaction_id": reaction_id,
+					"position": pos,
+					"type_a": enemy.carried_status,
+					"type_b": tile_type,
+				})
+			enemy.clear_carried_status()
+			tile_manager.remove_tile(pos, tile_type)
+			break

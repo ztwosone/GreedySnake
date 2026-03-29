@@ -57,6 +57,39 @@ func _ready() -> void:
 	screen_shake.setup(camera)
 	add_child(screen_shake)
 
+	# 火光环范围指示器
+	var AuraIndicatorScript: GDScript = preload("res://systems/vfx/aura_indicator.gd")
+	var aura_indicator: Node2D = AuraIndicatorScript.new()
+	aura_indicator.name = "AuraIndicator"
+	aura_indicator.snake = snake
+	add_child(aura_indicator)
+
+	# 敌人攻击范围指示器
+	var DangerIndicatorScript: GDScript = preload("res://systems/vfx/danger_indicator.gd")
+	var danger_indicator: Node2D = DangerIndicatorScript.new()
+	danger_indicator.name = "DangerIndicator"
+	danger_indicator.enemy_manager = enemy_manager
+	danger_indicator.snake = snake
+	add_child(danger_indicator)
+
+	# 击杀/事件简讯
+	var KillFeedScript: GDScript = preload("res://ui/kill_feed.gd")
+	var kill_feed: VBoxContainer = KillFeedScript.new()
+	kill_feed.name = "KillFeed"
+	$UI.add_child(kill_feed)
+
+	# 无身体倒计时全屏效果
+	var CountdownOverlayScript: GDScript = preload("res://ui/countdown_overlay.gd")
+	var countdown_overlay: CanvasLayer = CountdownOverlayScript.new()
+	countdown_overlay.name = "CountdownOverlay"
+	add_child(countdown_overlay)
+
+	# 游戏开始/结束过渡效果
+	var GameTransitionScript: GDScript = preload("res://systems/vfx/game_transition.gd")
+	var game_transition: CanvasLayer = GameTransitionScript.new()
+	game_transition.name = "GameTransition"
+	add_child(game_transition)
+
 	# Debug 面板（按 C 切换）
 	var DebugPanelScript: GDScript = preload("res://ui/debug_panel.gd")
 	var debug_panel: PanelContainer = DebugPanelScript.new()

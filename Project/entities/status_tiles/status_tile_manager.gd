@@ -143,9 +143,14 @@ func get_tile_count() -> int:
 
 
 func _enforce_tile_cap() -> void:
-	while get_tile_count() >= max_tiles and not _tile_order.is_empty():
+	var safety: int = max_tiles + 10
+	while get_tile_count() >= max_tiles and not _tile_order.is_empty() and safety > 0:
+		safety -= 1
 		var oldest: Array = _tile_order[0]
 		_remove_tile_internal(oldest[0], oldest[1], "cap_exceeded")
+		# 若 _tile_order 首项未被移除（陈旧条目），强制弹出防止死循环
+		if not _tile_order.is_empty() and _tile_order[0] == oldest:
+			_tile_order.remove_at(0)
 
 
 func clear_all() -> void:

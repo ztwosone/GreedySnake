@@ -28,7 +28,7 @@
 
 | 理念 | 含义 | 在本项目中的体现 |
 |------|------|----------------|
-| **Grid-based** | 所有游戏逻辑在离散网格上运行 | 64×64 像素/格；所有位置用 `Vector2i` 表示；不存在亚格级运动 |
+| **Grid-based** | 所有游戏逻辑在离散网格上运行 | 32×32 像素/格；所有位置用 `Vector2i` 表示；不存在亚格级运动 |
 | **Tick-driven** | 游戏按固定节拍推进 | 基础 tick = 0.25s；所有移动、状态结算在 tick 边界发生 |
 | **Event-driven** | 系统间通过事件解耦 | 中央 EventBus 单例；系统只监听/发射事件，不直接引用其他系统 |
 | **Data-driven** | 内容通过数据定义，不硬编码 | Resource (.tres) 定义实体类型；JSON 文件管理数值调参 |
@@ -285,7 +285,7 @@ TickManager 控制游戏的离散时间推进。
 
 | 常量 | 值 | 说明 |
 |------|-----|------|
-| `CELL_SIZE` | `64` | 格子像素大小 |
+| `CELL_SIZE` | `32` | 格子像素大小 |
 | `BASE_TICK_INTERVAL` | `0.25` | 基础 tick 间隔 |
 | `GRID_WIDTH` | 可配置 | 地图宽度（格数） |
 | `GRID_HEIGHT` | 可配置 | 地图高度（格数） |
@@ -339,8 +339,8 @@ Snake:
 SnakeSegment (extends GridEntity):
   segment_index: int             # 在蛇身中的索引（0=头，N=尾）
   segment_type: SegmentType      # HEAD / BODY / TAIL
-  equipped_scale: ScaleDef       # 此段装备的蛇鳞（可为 null）
-  status_effects: Array          # 此段携带的状态效果
+  carried_status: String         # 此段独立携带的状态（"fire"/"ice"/"poison"/""）
+  # 注：蛇鳞装在抽象槽位中，不对应具体身体段（见 ScaleSystem）
 ```
 
 #### 3.1.3 Tick 内移动流程
@@ -506,53 +506,68 @@ on length_increased → if body.size() > 1:
 
 #### 3.3.2 核心数据结构
 
-**StatusEffectDef (Resource)：**
+> **L1 变更：** 状态效果定义已从 Resource (.tres) 迁移至 `game_config.json`，使用 T25 Effect Atom System 的 JSON 驱动模型。蛇身段使用简化的 `carried_status: String` 而非 StatusInstance。
+
+**状态效果定义（game_config.json → status_effects）：**
+
+L1 仅实现 `fire`、`ice`、`poison` 三种状态。每种状态通过 `entity_effects` 和 `tile_effects` 配置 Atom Chain：
+
+```json
+"fire": {
+  "display_name": "灼烧",
+  "entity_effects": [
+    { "trigger": "on_interval", "interval": 2.0,
+      "atoms": [{ "atom": "damage", "amount_per_layer": 1 }],
+      "pattern": "self" }
+  ],
+  "tile_effects": [
+    { "trigger": "on_interval", "interval": 1.0,
+      "atoms": [{ "atom": "place_tile", "type": "fire" }],
+      "pattern": "neighbors", "chance": 0.2 },
+    { "trigger": "on_entity_enter",
+      "atoms": [{ "atom": "apply_status", "type": "fire", "layers": 1 }],
+      "pattern": "target" }
+  ]
+}
+```
+
+**蛇身段状态模型（L1 简化版）：**
 
 ```
-StatusEffectDef:
-  id: StringName                     # "fire", "ice", "poison", "acid", "electric", "void"
-  display_name: String
-  entity_effect: EntityEffectConfig  # 实体上的效果配置
-  spatial_effect: SpatialEffectConfig # 空间上的效果配置
-  transfer_rule: TransferRule        # 实体→空间 / 空间→实体转化规则
-  visual: StatusVisualConfig         # 视觉配置（颜色、粒子）
+SnakeSegment:
+  carried_status: String    # "fire" / "ice" / "poison" / ""
+  # 每段独立携带一种状态，二值模式（有/无），不使用层数
+  # 状态继承：新蛇头自动继承旧蛇头的 carried_status
 
-EntityEffectConfig:
-  tick_damage: int                   # 每 N tick 造成的长度伤害（0=不伤害）
-  tick_interval: int                 # 伤害间隔（tick 数）
-  duration_ticks: int                # 持续时间（tick 数）
-  max_layers: int                    # 最大层数
-  special_rules: Array[String]       # 特殊规则标识符（由系统代码解释）
-
-SpatialEffectConfig:
-  duration_seconds: float            # 空间状态格持续时间
-  spread_chance: float               # 每秒蔓延概率（0.0~1.0）
-  blocks_food_spawn: bool            # 是否阻止食物生成
+Enemy:
+  carried_status: String    # 敌人也独立携带状态
 ```
 
-**StatusInstance（运行时实例）：**
+**StatusTile（状态格）：**
 
 ```
-StatusInstance:
-  def: StatusEffectDef               # 引用的定义
-  layers: int                        # 当前层数
-  remaining_ticks: int               # 剩余持续 tick
-  carrier: GridEntity                # 附着的实体（实体载体时）
-  grid_position: Vector2i            # 所在格子（空间载体时）
+StatusTile:
+  status_type: String       # "fire" / "ice" / "poison"
+  # L1 中状态格永久存在，无持续时间递减
+  # 同位置异类型状态格互斥：放置时已有不同类型 → 触发反应 + 双方消除
 ```
+
+> **L2+ 扩展：** 酸(acid)、电(electric)、虚(void) 三种状态定义在设计文档中，待 L2 实现时添加到 game_config.json。
 
 #### 3.3.3 状态反应系统
 
-**反应表（reaction_table.json）：**
+**反应配置（game_config.json → reactions，L1 仅 3 种）：**
 
 ```json
-{
-  "fire+ice": { "reaction": "evaporation", "coefficient": 0.5, "result_effect": "steam_cloud" },
-  "fire+poison": { "reaction": "toxic_explosion", "coefficient": 1.0, "result_effect": "burn_poison_aoe" },
-  "ice+electric": { "reaction": "superconduct", "coefficient": 1.5, "result_effect": "chain_lightning" },
-  ...
+"reactions": {
+  "steam":            { "type_a": "fire", "type_b": "ice",    "enemy_damage": 2, "self_hit_count": 1 },
+  "toxic_explosion":  { "type_a": "fire", "type_b": "poison", "enemy_damage": 3, "self_hit_count": 2 },
+  "frozen_plague":    { "type_a": "ice",  "type_b": "poison", "enemy_damage": 0, "self_hit_count": 0,
+                        "apply_poison_layers": 1 }
 }
 ```
+
+> **L1 变更：** 反应配置已内联到 `game_config.json` 的 `reactions` 节，不再使用独立 `reaction_table.json`。原设计的 15 种反应（6×6 矩阵）精简为 3 种，对应 L1 仅有的 fire/ice/poison 状态。
 
 **反应检测时机：**
 1. 实体获得新状态时 → 检查该实体身上是否有其他类型状态
@@ -730,27 +745,24 @@ P5 默认行为: 随机移动 / 碰壁反弹
 
 **AI 寻路使用 `GridWorld.find_path()`**，传入自定义的 cost 函数以实现不同的状态响应行为。
 
-#### 3.4.4 战斗判定
+#### 3.4.4 战斗判定（L1 修订版）
 
-**蛇头撞击敌人：**
+**蛇头吞噬敌人（无消耗）：**
 ```
 on EventBus.snake_hit_enemy { enemy, position }:
-  attack_cost = enemy.get_attack_cost()  # 默认 1，有护甲则更多
-  发射 EventBus.length_decrease_requested { amount: attack_cost, source: "combat" }
-  enemy.take_damage(1)
-  if enemy.hp <= 0:
-    enemy.die()
-    发射 EventBus.enemy_killed { enemy, position, method: "head_strike" }
+  enemy.die()                              # 直接击杀，不消耗蛇身长度
+  发射 EventBus.enemy_killed { enemy_def, position, method: "head_strike" }
+  # 食物掉落：统一在 enemy_killed 信号处理器中执行
+  # 所有击杀方式（蛇头吞噬、火光环、反应伤害）均掉食物
+  var drop_count = enemy.drop_food_count   # 来自 enemy_types 配置
+  var empty_cells = GridWorld.get_empty_neighbors(position)
+  for i in min(drop_count, empty_cells.size()):
+    FoodManager.spawn_food_at(empty_cells[i])
 ```
 
-**蛇身碾压敌人（蛇身段移动到敌人格子）：**
-```
-SnakeSegment._on_entity_enter(other):
-  if other is Enemy and segment_type == BODY:
-    发射 EventBus.snake_body_crush_enemy { enemy, segment_index }
-```
+> **L1 变更：** 蛇身碾压（crush）机制已移除。蛇身段不再主动攻击敌人。敌人改为主动攻击蛇身段（见 3.4.A.3）。`snake_body_crush_enemy` 信号已废弃。
 
-#### 3.4.5 部位系统（精英/Boss 专用）
+#### 3.4.5 部位系统（精英/Boss 专用，L2+ 未实现）
 
 ```
 EnemyPartDef:
@@ -992,71 +1004,194 @@ on EventBus.reaction_triggered { reaction_type, position, radius }:
 
 ---
 
-### 3.5 🟡 P2 — 蛇头/蛇尾系统 (SnakePartsSystem)
+### 3.5 🟡 P2 — 蛇头/蛇尾/蛇鳞统一系统 (SnakePartsSystem)
 
-**对应设计文档：** 系统四（第5章）
+**对应设计文档：** 系统四（第5章）、系统五（第6章）
 **目录：** `systems/snake_parts/`
-**职责：** 管理蛇头/蛇尾的「规则层」改写效果
+**职责：** 管理蛇头/蛇尾/蛇鳞的规则改写效果
+**L2 修订：** 三套系统统一使用 T25 Effect Atom System，共享同一执行管线
 
-#### 3.5.1 设计关键：规则改写机制
+#### 3.5.1 设计关键：统一 Atom Chain 架构
 
-蛇头/蛇尾的核心功能是**改写其他系统的行为规则**，而非简单地加减数值。
-
-**实现方式 — Hook 模式：**
-
-在关键系统的关键流程中，预留 Hook 点。蛇头/蛇尾通过注册 Hook 来改写流程。
+蛇头、蛇尾、蛇鳞**全部使用 T25 Atom Chain 系统**，共享同一执行管线：
 
 ```
-Hook 点示例：
-  MovementSystem:
-    hook_pre_collision(collision_data) -> collision_data    # 碰撞判定前（可修改碰撞结果）
-    hook_post_move(move_data) -> move_data                 # 移动后（可追加效果）
+game_config.json
+├── status_effects     → 状态链（已有，T25）
+├── reactions          → 反应链（已有，T25）
+├── snake_heads        → 蛇头链（新增，复用 T25 管线）
+├── snake_tails        → 蛇尾链（新增，复用 T25 管线）
+└── snake_scales       → 蛇鳞链（新增，复用 T25 管线 + Build 原子）
 
-  LengthSystem:
-    hook_on_length_decrease(decrease_data) -> decrease_data  # 长度减少前（可修改减少量/追加触发）
-    hook_on_length_increase(increase_data) -> increase_data  # 长度增加前
-
-  ScaleSystem:
-    hook_on_scale_trigger(trigger_data) -> trigger_data     # 鳞片触发前（可修改触发条件/效果）
+所有链 → EffectChainResolver → TriggerManager → AtomExecutor
 ```
 
-**SnakeHeadDef (Resource)：**
+**统一的好处：**
+- 状态原子 × 蛇头原子可以交叉组合（如 `if_has_status` 条件可用于蛇尾链）
+- 新增蛇头/蛇尾 = JSON 配置 + 可能需要的新原子，不改 Snake 核心代码
+- 蛇鳞的 `modify_effect_value` 可增幅蛇头链中 `direct_grow` 的 amount
+- 所有效果共享同一条件系统、模式系统和触发器基础设施
+
+#### 3.5.2 新增原子类型（~6 个）
+
+| 原子名 | 类别 | 作用 | 用于 |
+|--------|------|------|------|
+| `modify_food_drop` | Value | 改写击杀后食物掉落数量 | 蛇头 |
+| `direct_grow` | Value | 直接增长蛇身（跳过食物流程） | 蛇头、蛇尾 |
+| `steal_status` | Status | 从被吃敌人偷取 carried_status 到蛇头 | 蛇头 |
+| `modify_hit_threshold` | Value | 改写 hits_per_segment_loss 上限 | 蛇头 |
+| `delay_loss` | Temporal | 延迟丢段 N tick，期间满足条件可取消 | 蛇尾 |
+| `grant_invincibility` | Control | N tick 内受击不计入计数器 | 蛇头 |
+
+所有新原子均为标准 `AtomBase` 子类，实现 `execute(ctx)` 即可。注册方式与 T25 已有原子相同。
+
+#### 3.5.3 蛇头配置（JSON + Atom Chain）
+
+```json
+// game_config.json → snake_heads
+"snake_heads": {
+  "hydra": {
+    "display_name": "九头蛇",
+    "description": "贪婪型：吃敌人直接+长度，但更脆弱",
+    "chains": [
+      {
+        "trigger": "on_applied",
+        "atoms": [
+          { "atom": "modify_hit_threshold", "value": -1 }
+        ]
+      },
+      {
+        "trigger": "on_kill",
+        "atoms": [
+          { "atom": "modify_food_drop", "amount": 0 },
+          { "atom": "direct_grow", "amount": 1 },
+          { "atom": "steal_status" }
+        ]
+      }
+    ],
+    "level_configs": [
+      { "direct_grow_amount": 1 },
+      { "direct_grow_amount": 2 },
+      { "direct_grow_amount": 2, "echo_bite_range": 1, "echo_bite_damage": 1 }
+    ]
+  },
+  "bai_she": {
+    "display_name": "白蛇",
+    "description": "稳健型：吃敌人获得安全窗口，但成长慢",
+    "chains": [
+      {
+        "trigger": "on_kill",
+        "atoms": [
+          { "atom": "modify_food_drop", "amount": -1 },
+          { "atom": "grant_invincibility", "ticks": 3 }
+        ]
+      }
+    ],
+    "level_configs": [
+      { "invincible_ticks": 3, "food_modifier": -1 },
+      { "invincible_ticks": 3, "food_modifier": -1, "counter_ice": true },
+      { "invincible_ticks": 5, "food_modifier": -1, "counter_ice": true,
+        "expire_status_burst": true }
+    ]
+  }
+}
+```
+
+#### 3.5.4 蛇尾配置（JSON + Atom Chain）
+
+```json
+// game_config.json → snake_tails
+"snake_tails": {
+  "salamander": {
+    "display_name": "再生尾",
+    "description": "防守恢复型：丢段后窗口内自动恢复",
+    "chains": [
+      {
+        "trigger": "on_length_decrease",
+        "atoms": [
+          { "atom": "mark_recovery_window", "duration": 5.0 }
+        ]
+      },
+      {
+        "trigger": "on_interval",
+        "interval": 5.0,
+        "conditions": [
+          { "atom": "if_in_recovery_window" }
+        ],
+        "atoms": [
+          { "atom": "direct_grow", "amount": 1 }
+        ]
+      }
+    ],
+    "level_configs": [
+      { "recover_delay": 5.0 },
+      { "recover_delay": 7.0 },
+      { "recover_delay": 7.0, "recover_status": "ice" }
+    ]
+  },
+  "lag_tail": {
+    "display_name": "时滞尾",
+    "description": "进攻取消型：丢段可被击杀取消",
+    "chains": [
+      {
+        "trigger": "on_length_decrease",
+        "atoms": [
+          { "atom": "delay_loss", "ticks": 3, "cancel_on": "eat_enemy" }
+        ]
+      }
+    ],
+    "level_configs": [
+      { "delay_ticks": 3, "cancel_on": "eat_enemy" },
+      { "delay_ticks": 3, "cancel_on": "eat_enemy", "bonus_counter_reduction": 1 },
+      { "delay_ticks": 3, "cancel_on": "any_kill" }
+    ]
+  }
+}
+```
+
+#### 3.5.5 蛇头/蛇尾与 Snake 核心代码的对接
+
+Snake 核心代码通过 SnakePartsManager 注册/注销蛇头/蛇尾链：
+
+```gdscript
+# SnakePartsManager.gd（伪代码）
+func equip_head(head_id: String, level: int) -> void:
+    var config = GameConfig.get_snake_head(head_id)
+    var chains = EffectChainResolver.resolve_snake_part(config, level)
+    TriggerManager.register_chains(snake, chains)
+
+func equip_tail(tail_id: String, level: int) -> void:
+    var config = GameConfig.get_snake_tail(tail_id)
+    var chains = EffectChainResolver.resolve_snake_part(config, level)
+    TriggerManager.register_chains(snake, chains)
+```
+
+蛇头/蛇尾的原子通过 `AtomContext` 访问 Snake 实例和所有系统引用，执行时直接修改游戏状态（与状态原子相同模式）。
+
+#### 3.5.6 扩展流程（添加新蛇头）
 
 ```
-SnakeHeadDef:
-  id: StringName                   # "hydra", "bai_she", ...
-  display_name: String
-  level: int                       # I / II / III
-  hooks: Dictionary                # { hook_name: hook_config }
-  level_configs: Array[Dictionary] # 每个等级的 hook 参数
+1. 在 game_config.json → snake_heads 中添加新配置（chains + level_configs）
+2. 如果需要新行为，创建 systems/atoms/atoms/<category>/new_atom.gd extends AtomBase
+3. 在 atom_registry.gd 注册新原子
+4. 完成。Snake.gd 和 SnakePartsManager 无需修改。
 ```
 
-**示例 — 九头蛇 Hydra：**
+#### 3.5.7 交叉组合能力
 
 ```
-hooks:
-  "hook_on_length_decrease":
-    action: "also_trigger_back_slot"     # 长度缩短 = 同时触发后段槽
-    level_params:
-      1: { trigger_count: 1, save_chance: 0.0 }
-      2: { trigger_count: 1, save_chance: 0.3 }
-      3: { trigger_count: 2, save_chance: 0.3 }
-```
+统一 Atom Chain 的核心价值：不同来源的链共享同一执行器和条件系统
 
-#### 3.5.2 蛇头/蛇尾的吞噬/锚定操作
+示例 1：状态原子 × 蛇头原子
+  蛇吃掉带火的敌人 → steal_status 原子 → 蛇头获得火 → 火的 on_interval 链自动激活
 
-```
-吞噬（蛇头）：
-  蛇头可吞噬紧接在后的第一片鳞片
-  → 该鳞片效果融入蛇头（成为蛇头的附加 Hook）
-  → 蛇头转向判定变为 2 格
-  → 在 SnakeHeadDef 运行时数据中记录 absorbed_scale_id
+示例 2：条件原子 × 蛇尾链
+  if_has_status("ice") 可作为 Salamander 恢复链的额外条件
+  → "只有携带冰状态时才能触发自动恢复"
 
-锚定（蛇尾）：
-  蛇尾可锚定紧接在前的最后一片鳞片
-  → 该鳞片在长度缩短时最后才失去
-  → 蛇尾被动效果触发概率降低 50%
-  → 在 SnakeTailDef 运行时数据中记录 anchored_scale_id
+示例 3：蛇鳞增幅蛇头
+  蛇鳞 modify_effect_value 原子可增幅蛇头链中 direct_grow 的 amount
+  → 贪食鳞 + Hydra = 吃敌人 +2 长度（原本 +1）
 ```
 
 ---
@@ -1066,91 +1201,113 @@ hooks:
 **对应设计文档：** 系统五（第6章）
 **目录：** `systems/scales/`
 **职责：** 管理蛇鳞（遗物）的装备、触发、升级、邻接共鸣
+**L2 修订：** 蛇鳞是抽象规则修改器，使用 T25 Atom Chain 管线，与 per-segment status 独立
 
-#### 3.6.1 核心概念：槽位 + 触发
+> **架构变更：** 蛇鳞系统已与蛇头/蛇尾统一纳入 T25 Atom Chain 架构（见 3.5 节）。蛇鳞的 Condition / Action 复用 T25 的条件原子和动作原子。
 
-蛇身分为前段、中段、后段三个区域，每个区域有固定数量的槽位。鳞片装入槽位后，其触发方式由**段位**决定：
+#### 3.6.1 核心概念：抽象槽位 + Atom Chain
 
-| 段位 | 默认触发条件 | 可被改写者 |
-|------|-------------|-----------|
-| 前段 | 蛇头发生接触行为时 | 蛇头 Hook |
-| 中段 | 持续被动（只要装着就运作） | — |
-| 后段 | 蛇身受到影响时（长度缩短、被攻击） | 蛇尾 Hook |
+蛇鳞装在前段、中段、后段三个**抽象段位**的槽位中。段位决定**什么触发器激活链条**，与蛇身体的物理位置无关。
+
+```
+两套独立系统：
+  per-segment status（战场层）：每个身体段独立携带 fire/ice/poison → 产生火光环/毒尾迹/冰防御
+  蛇鳞（Build 层）：装在抽象槽位 → 修改规则参数（如"火光环伤害+1"作用于所有火段）
+
+蛇鳞使用 T25 Atom Chain 管线：
+  game_config.json → snake_scales → EffectChainResolver → TriggerManager → AtomExecutor
+  鳞片效果通过 trigger + conditions + atoms 组合定义，与状态链/蛇头链共享执行器
+```
+
+| 段位 | 绑定触发器 | 可被改写者 |
+|------|-----------|-----------|
+| 前段 | `on_kill`、`on_enter_status_tile` | 蛇头链 |
+| 中段 | `on_tick`（被动）、`on_applied` | — |
+| 后段 | `on_hit_received`、`on_length_decrease` | 蛇尾链 |
+
+**鳞片效果范围分类：**
+
+| 范围 | 说明 | 例子 |
+|------|------|------|
+| 全蛇 | 修改整条蛇的某个规则参数 | "受击计数器上限+1"、"火光环范围+1格" |
+| 动作 | 修改某个动作的效果 | "吃敌人额外掉1食物"、"毒尾迹间隔-1步" |
+| 条件 | 满足条件时触发一次性效果 | "被攻击时击退攻击者"、"丢段时反伤" |
 
 #### 3.6.2 核心数据结构
 
-**ScaleDef (Resource)：**
+**ScaleDef（JSON 配置，非 Resource）：**
 
+```json
+// game_config.json → snake_scales
+"snake_scales": {
+  "fire_scale": {
+    "display_name": "火焰鳞",
+    "tags": ["fire"],
+    "slot_type": "mid",
+    "effect_scope": "whole_snake",
+    "chains": [
+      {
+        "trigger": "on_applied",
+        "atoms": [
+          { "atom": "modify_rule", "rule": "fire_aura_damage", "modifier": 1 }
+        ]
+      }
+    ],
+    "level_configs": [
+      { "fire_aura_damage_mod": 1 },
+      { "fire_aura_damage_mod": 1 },
+      { "fire_aura_range": 2 }
+    ],
+    "resonance_partners": ["poison_scale"]
+  }
+}
 ```
-ScaleDef:
-  id: StringName                  # "fire_scale", "poison_scale", ...
-  display_name: String
-  tags: Array[StringName]         # ["fire"], ["poison", "terrain"], ...
-  category: ScaleCategory         # PATTERN / FORM / CURSE
 
-  effects: Array[ScaleEffect]     # 各等级效果
-  level_3_mutation: ScaleEffect   # III 级质变效果（独立定义）
+> **关键设计：** 鳞片效果通过 T25 Atom Chain 的 trigger + conditions + atoms 组合定义。条件原子（`if_has_status`、`if_min_length` 等）和动作原子（`modify_rule`、`push`、`damage_area` 等）全部复用 T25 已注册的原子。
 
-  resonance_partners: Array[StringName]  # 可共鸣的鳞片 ID 列表
+#### 3.6.3 内置条件原子（与 T25 共享注册表）
 
-ScaleEffect:
-  trigger_event: StringName       # 监听的事件名（如 "snake_hit_enemy"）
-  conditions: Array[Condition]    # 触发条件数组
-  actions: Array[Action]          # 触发时执行的动作数组
-  cooldown_ticks: int             # 冷却 tick 数
-
-Condition:
-  type: String                    # "min_length", "has_status", "target_type", ...
-  params: Dictionary
-
-Action:
-  type: String                    # "apply_status", "create_tile", "heal", "damage_area", ...
-  params: Dictionary
-```
-
-> **关键设计：** ScaleDef 的 `effects` 通过通用的 Condition + Action 系统描述，而非为每个鳞片硬编码。这使得新鳞片可以纯数据驱动地添加，无需写新的 GDScript。
-
-#### 3.6.3 Condition / Action 系统
-
-**内置 Condition 类型：**
-
-| type | params | 说明 |
+| 原子 | params | 说明 |
 |------|--------|------|
-| `always` | — | 无条件触发 |
-| `min_length` | `{ value: int }` | 当前长度 ≥ value |
-| `max_length` | `{ value: int }` | 当前长度 ≤ value |
-| `has_status` | `{ target: "self"/"enemy", status: "fire" }` | 目标有指定状态 |
-| `scale_level` | `{ min: int }` | 鳞片等级 ≥ min |
-| `random_chance` | `{ chance: float }` | 随机概率 |
+| `if_always` | — | 无条件通过 |
+| `if_min_length` | `{ value: int }` | 当前长度 ≥ value |
+| `if_max_length` | `{ value: int }` | 当前长度 ≤ value |
+| `if_has_status` | `{ status: "fire" }` | 蛇有任意段携带指定状态 |
+| `if_enemy_has_status` | `{ status: "ice" }` | 目标敌人携带指定状态 |
+| `if_scale_level` | `{ min: int }` | 鳞片等级 ≥ min |
+| `if_random` | `{ chance: float }` | 随机概率 |
+| `if_hit_counter_at` | `{ value: int }` | 受击计数器 == value |
 
-**内置 Action 类型：**
+#### 3.6.4 内置动作原子（与 T25 + 蛇头/蛇尾共享注册表）
 
-| type | params | 说明 |
+| 原子 | params | 说明 |
 |------|--------|------|
-| `apply_status` | `{ target, status_type, layers }` | 施加状态效果 |
-| `create_status_tile` | `{ offset, status_type, duration }` | 生成状态格 |
-| `heal` | `{ amount }` | 恢复长度 |
+| `modify_rule` | `{ rule, modifier }` | 修改规则参数（如 fire_aura_damage +1） |
+| `apply_carried_status` | `{ target, status_type }` | 施加 carried_status 给蛇段或敌人 |
+| `create_status_tile` | `{ offset, status_type }` | 生成状态格 |
+| `direct_grow` | `{ amount }` | 恢复长度（与蛇头共享原子） |
 | `damage_area` | `{ center, radius, amount }` | 范围伤害 |
 | `push` | `{ target, direction, distance }` | 击退 |
-| `spawn_projectile` | `{ type, direction }` | 生成投射物 |
-| `modify_tick_speed` | `{ multiplier, duration }` | 修改 tick 速度 |
+| `modify_hit_counter` | `{ delta }` | 修改受击计数器 |
+| `extra_food_drop` | `{ count }` | 额外掉落食物 |
+| `modify_effect_value` | `{ chain_id, param, delta }` | 增幅其他链的原子参数 |
 
-#### 3.6.4 鳞片触发流程
+#### 3.6.5 鳞片触发流程
 
 ```
-1. EventBus 上某事件触发（如 snake_hit_enemy）
-2. ScaleSystem 收到事件
-3. 遍历所有已装备的鳞片：
-   a. 检查该鳞片的 trigger_event 是否匹配
-   b. 检查该鳞片所在段位的触发条件是否满足（前段 = 头接触、中段 = 持续、后段 = 受攻击）
-   c. 检查蛇头/蛇尾 Hook 是否改写了触发条件
-   d. 检查鳞片自身的 conditions 是否全部通过
-   e. 检查冷却是否结束
-4. 对通过检查的鳞片，按 actions 数组依次执行
-5. 发射 EventBus.scale_triggered { scale_def, slot, actions_executed }
+1. TriggerManager 收到事件（如 on_kill、on_hit_received）
+2. 查找当前注册的所有鳞片链
+3. 对每条链：
+   a. 检查该鳞片所在段位的触发器是否匹配
+   b. 按 conditions 数组依次执行条件原子（AND 组合）
+   c. 检查冷却是否结束
+4. 对通过检查的链，AtomExecutor 按 atoms 数组依次执行
+5. 发射 EventBus.scale_triggered { scale_def, slot, atoms_executed }
 ```
 
-#### 3.6.5 邻接共鸣
+> **与蛇头/蛇尾链的交互：** 蛇鳞链中的 `modify_effect_value` 原子可以增幅蛇头/蛇尾链的参数（如增加 Hydra 的 `direct_grow.amount`）。蛇头/蛇尾链的 `modify_rule` 原子可以改变鳞片触发条件（如改变前段槽的触发事件）。所有交互通过 Atom Chain 管线自然发生，无需特殊耦合代码。
+
+#### 3.6.6 邻接共鸣
 
 两片相邻槽位的鳞片，如果 `resonance_partners` 中包含对方的 id，则触发共鸣：
 
@@ -1158,11 +1315,12 @@ Action:
 on 鳞片装备/移动:
   遍历所有相邻槽位对
   if scale_a.resonance_partners.has(scale_b.id):
-    激活共鸣效果（定义在 resonance_table.json 中）
+    激活共鸣链（定义在 resonance_table.json 中的 Atom Chain）
+    共鸣链通过 TriggerManager 注册，使用与普通链相同的执行流程
     发射 EventBus.scale_resonance_activated { scale_a, scale_b, resonance_effect }
 ```
 
-#### 3.6.6 关键事件
+#### 3.6.7 关键事件
 
 | 事件（发射） | 触发时机 | 参数 |
 |-------------|---------|------|
@@ -1411,12 +1569,12 @@ on EventBus.run_ended { stats }:
 | `snake_hit_boundary` | `{ position, direction }` | MovementSystem | GameManager, SnakePartsSystem |
 | `snake_hit_self` | `{ position, segment_index }` | MovementSystem | GameManager, SnakePartsSystem |
 | `snake_hit_enemy` | `{ enemy, position }` | MovementSystem | EnemySystem, ScaleSystem, LengthSystem |
-| `snake_body_crush_enemy` | `{ enemy, segment_index }` | SnakeSegment | EnemySystem, ScaleSystem |
+| ~~`snake_body_crush_enemy`~~ | ~~已在 L1 中移除~~ | — | — |
 | `snake_food_eaten` | `{ food, position, food_type }` | MovementSystem | LengthSystem, ScaleSystem, GrowthSystem |
 | `snake_length_increased` | `{ amount, source, new_length }` | LengthSystem | ScaleSystem, DifficultySystem |
 | `snake_length_decreased` | `{ amount, source, new_length }` | LengthSystem | ScaleSystem, SnakePartsSystem |
 | `snake_died` | `{ cause }` | LengthSystem | GameManager, MetaGrowthSystem |
-| `snake_body_attacked` | `{ position, segment, enemy, status_transferred }` | Enemy | SegmentEffectSystem, HUD |
+| `snake_body_attacked` | `{ position, segment, enemy, enemy_status, seg_status }` | Enemy | SegmentEffectSystem, VFXManager, HUD |
 | `no_body_countdown_started` | `{ total_seconds }` | LengthSystem | HUD |
 | `no_body_countdown_tick` | `{ remaining_seconds, total_seconds, ratio }` | LengthSystem | HUD |
 | `no_body_countdown_cancelled` | — | LengthSystem | HUD |
@@ -1514,34 +1672,51 @@ on EventBus.run_ended { stats }:
 
 ### 5.1 配置分层原则
 
-| 层级 | 格式 | 用途 | 示例 |
-|------|------|------|------|
-| **定义层** | Resource (.tres) | 定义实体**是什么**，包含结构化数据和类型安全 | ScaleDef、EnemyDef、SnakeHeadDef |
-| **数值层** | JSON | 定义实体**有多强**，便于批量调参和外部工具编辑 | balance.json、loot_tables.json |
-| **关系层** | JSON | 定义实体**之间的关系**，如反应表、共鸣表 | reaction_table.json、resonance_table.json |
+> **L1 修订：** L1 阶段大幅简化配置方案——所有核心数据统一放入 `game_config.json`，使用 T25 Atom System 的 JSON 驱动模型。Resource (.tres) 文件暂未使用，待 L2+ 内容量增大后按需引入。
 
-### 5.2 Resource 定义清单
+| 层级 | 格式 | 用途 | L1 现状 |
+|------|------|------|---------|
+| **定义+数值+关系层** | JSON | 统一管理所有游戏配置 | `game_config.json`（已实现） |
+| **定义层** | Resource (.tres) | 类型安全的实体定义 | L2+ 按需引入 |
 
-| Resource 类型 | 目录 | 关键字段 |
-|--------------|------|---------|
-| `ScaleDef` | `data/resources/scales/` | id, tags, effects (Condition+Action), level_3_mutation |
-| `EnemyDef` | `data/resources/enemies/` | id, tier, hp, status_response, behavior_config, parts |
-| `SnakeHeadDef` | `data/resources/snake_heads/` | id, hooks, level_configs |
-| `SnakeTailDef` | `data/resources/snake_tails/` | id, hooks, level_configs |
-| `StatusEffectDef` | `data/resources/status_effects/` | id, entity_effect, spatial_effect, transfer_rule |
-| `RoomTemplateDef` | `data/resources/rooms/` | terrain_grid, spawn_points, modifier_slots |
-| `FloorThemeDef` | `data/resources/floors/` | env_tag, pressure_tag, room_weights |
-| `EventEncounterDef` | `data/resources/encounters/` | type, interaction_config, rewards |
+### 5.2 game_config.json 结构（L1 已实现）
 
-### 5.3 JSON 调参文件清单
+```json
+{
+  "grid": { "cell_size": 32, "width": 40, "height": 22 },
+  "tick": { "base_interval": 0.25 },
+  "snake": { "initial_length": 6, "hits_per_segment_loss": 3, "no_body_grace_seconds": 10 },
+  "food": { "max_count": 3, "growth_amount": 1 },
+  "enemy": { "max_count": 3, "spawn_weights": {...}, "max_status_tiles": 100 },
+  "status_effects": {
+    "fire": { "entity_effects": [...], "tile_effects": [...], "visual": {...} },
+    "ice": { ... },
+    "poison": { ... }
+  },
+  "reactions": {
+    "steam": { "type_a": "fire", "type_b": "ice", ... },
+    "toxic_explosion": { ... },
+    "frozen_plague": { ... }
+  },
+  "enemy_types": {
+    "wanderer": { "hp": 1, "attack_cooldown": 3, "drop_food_count": 2, ... },
+    "chaser": { ... },
+    "bog_crawler": { ... }
+  },
+  "length_thresholds": { "danger": [1,4], "survival": [5,10], ... }
+}
+```
 
-| 文件 | 路径 | 内容 |
-|------|------|------|
-| `balance.json` | `data/json/balance.json` | 所有数值常量：初始长度、层级缩放、安全阈值等 |
-| `reaction_table.json` | `data/json/reaction_table.json` | 6×6 状态反应矩阵及效果定义 |
-| `resonance_table.json` | `data/json/resonance_table.json` | 鳞片邻接共鸣对照表 |
-| `loot_tables.json` | `data/json/loot_tables.json` | 各场景掉落概率表 |
-| `unlock_conditions.json` | `data/json/unlock_conditions.json` | 蛇头/蛇尾解锁条件 |
+### 5.3 L2+ 扩展配置（待实现）
+
+| 配置节 | 位置 | 内容 | 状态 |
+|--------|------|------|------|
+| `snake_heads` | game_config.json | 蛇头 Atom Chain 定义 + level_configs | L2 待添加 |
+| `snake_tails` | game_config.json | 蛇尾 Atom Chain 定义 + level_configs | L2 待添加 |
+| `snake_scales` | game_config.json | 蛇鳞 Atom Chain 定义 + 共鸣表 | L2 待添加 |
+| `resonance_table` | game_config.json | 鳞片邻接共鸣关系 | L2 待添加 |
+| `loot_tables` | game_config.json | 各场景掉落概率表 | L2+ |
+| `unlock_conditions` | game_config.json | 蛇头/蛇尾解锁条件 | L2+ |
 
 ### 5.4 配置热加载
 
@@ -1556,68 +1731,78 @@ on EventBus.run_ended { stats }:
    - 跳转到指定房间
    - 触发指定鳞片效果
 
-### 5.5 Condition / Action 注册表
+### 5.5 T25 Atom 注册表（统一注册）
 
-ScaleSystem 的 Condition 和 Action 通过**注册表模式**实现可扩展性：
+> **L1 修订：** 原独立的 ConditionRegistry / ActionRegistry 已统一为 T25 的 `AtomRegistry`。所有条件原子和动作原子（包括蛇头/蛇尾/蛇鳞新增的原子）在同一注册表中注册。
 
 ```
-ConditionRegistry:
-  "always" → AlwaysCondition
-  "min_length" → MinLengthCondition
-  "has_status" → HasStatusCondition
-  ...（可在运行时注册新类型）
-
-ActionRegistry:
-  "apply_status" → ApplyStatusAction
-  "create_status_tile" → CreateStatusTileAction
-  "heal" → HealAction
-  ...（可在运行时注册新类型）
+AtomRegistry（systems/atoms/atom_registry.gd）:
+  # T25 已有原子
+  "damage" → DamageAtom
+  "modify_speed" → ModifySpeedAtom
+  "freeze" → FreezeAtom
+  "place_tile" → PlaceTileAtom
+  "apply_status" → ApplyStatusAtom
+  "remove_status" → RemoveStatusAtom
+  "modify_growth" → ModifyGrowthAtom
+  # 条件原子（is_condition() -> true）
+  "if_has_status" → IfHasStatusAtom
+  "if_min_length" → IfMinLengthAtom
+  "if_random" → IfRandomAtom
+  # L2 新增原子（蛇头/蛇尾/蛇鳞系统）
+  "modify_food_drop" → ModifyFoodDropAtom
+  "direct_grow" → DirectGrowAtom
+  "steal_status" → StealStatusAtom
+  "modify_hit_threshold" → ModifyHitThresholdAtom
+  "delay_loss" → DelayLossAtom
+  "grant_invincibility" → GrantInvincibilityAtom
+  "modify_rule" → ModifyRuleAtom
+  "modify_effect_value" → ModifyEffectValueAtom
+  ...（可通过新增 .gd 文件 + 注册一行代码扩展）
 ```
 
-这允许在不修改核心系统代码的情况下，通过注册新的 Condition/Action 类型来扩展鳞片能力。
+添加新原子：创建 `systems/atoms/atoms/<category>/<name>_atom.gd` → extends AtomBase → 注册到 `_register_all()`。
 
 ---
 
 ## 6. MVP 里程碑定义
 
-### 6.1 MVP（最小可运行原型）范围
+### 6.1 L0 MVP（最小可运行原型）✅ 已完成
 
-**目标：** 一条蛇在一个房间里能移动、吃食物、撞敌人、死亡。
+**目标：** 一条蛇在一个房间里能移动、吃食物、死亡。
 
-**包含的系统（🔴 P0）：**
+| 系统 | 范围 | 状态 |
+|------|------|------|
+| 核心抽象层 | GridEntity, GridWorld, EventBus, TickManager | ✅ |
+| 基础移动 | 蛇移动、转向、碰撞检测、输入队列 | ✅ |
+| 长度系统 | 吃食物增长、碰撞死亡、No-Body Countdown | ✅ |
+| 食物 | 食物 GridEntity，随机/击杀掉落生成 | ✅ |
+| 单房间 | 固定大小矩形房间（40×22 格） | ✅ |
+| 渲染 | 彩色方块：蛇白灰色、敌人红色系、状态格对应颜色 | ✅ |
 
-| 系统 | MVP 范围 | 不包含 |
-|------|---------|--------|
-| 核心抽象层 | GridEntity, GridWorld, EventBus, TickManager | StateMachine（P1 才需要） |
-| 基础移动 | 蛇移动、转向、碰撞检测 | 输入队列优化 |
-| 长度系统 | 吃食物增长、碰撞死亡 | 长度缩短（P1 的战斗消耗） |
-| 食物 | 基础食物 GridEntity，随机生成 | 特殊食物、移动食物 |
-| 简单敌人 | 1 种静止敌人（占格子，碰到就死+消耗 1 格） | AI 移动、状态响应 |
-| 渲染 | 最简视觉：彩色方块表示蛇/食物/敌人/墙壁 | 精灵、动画、粒子 |
-| 单房间 | 固定大小的矩形房间 | PCG、多房间、通道 |
+### 6.2 L1 战斗循环 ✅ 已完成（1017 测试通过）
 
-### 6.2 MVP 验收标准
+**目标：** 蛇吃敌人 → 掉食物 → per-segment status → 敌人攻击蛇身 → 状态反应
 
-- [ ] 蛇在 Grid 上按 0.25s tick 移动
-- [ ] 方向键/WASD 控制转向，不允许 180° 反向
-- [ ] 蛇头碰墙壁或自身 → 游戏结束
-- [ ] 食物随机出现在空格上
-- [ ] 蛇头碰食物 → 长度 +1，新食物生成
-- [ ] 静止敌人存在于地图上
-- [ ] 蛇头碰敌人 → 敌人消失，蛇长度 -1
-- [ ] 蛇长度降为 0 → 游戏结束
-- [ ] EventBus 事件正常发射和监听（可通过日志验证）
-- [ ] GridWorld 正确追踪所有实体位置
+| 系统 | 范围 | 状态 |
+|------|------|------|
+| 敌人系统 | 3 种敌人 AI（wanderer/chaser/bog_crawler）+ 攻击蛇身 | ✅ |
+| Per-Segment Status | SnakeSegment.carried_status + 状态继承 | ✅ |
+| 敌人攻击 | 受击计数器（3 hit = -1 段）+ 双向状态转移 | ✅ |
+| 状态格交互 | 逐段检测 + 永久状态格 + 同位异类互斥 | ✅ |
+| 段效果系统 | 火光环/毒尾迹/冰防御 | ✅ |
+| 反应系统 | 蒸腾/毒爆/冻疫 3 种反应 | ✅ |
+| T25 Atom System | JSON 驱动可组合效果框架（49 原子，17 触发器） | ✅ |
+| 视觉反馈 | 状态覆盖层 + VFX + 攻击闪烁 + 受击计数器 HUD | ✅ |
 
 ### 6.3 后续里程碑
 
 | 里程碑 | 包含 | 验收标准 |
 |--------|------|---------|
-| **M1 战斗可玩** (P1) | 状态效果系统 + 敌人 AI + 碾压机制 | 蛇可以利用状态格和移动路线击败多种敌人 |
-| **M2 Build 系统** (P2) | 蛇头/尾 + 蛇鳞 + Condition/Action | 可以装备鳞片组建 Build，感受到不同组合的差异 |
-| **M3 完整一局** (P3) | 地图 PCG + 房间类型 + 腐化 | 可以完整打完一局 Run（多层多房间到 Boss） |
-| **M4 成长循环** (P4) | 奖励 + 商人 + 数值框架 | 有完整的成长曲线和难度递进 |
-| **M5 元成长** (P5) | 解锁 + 遗愿 + 事件遭遇 | 多局 Run 之间有连续性和解锁动力 |
+| **L2 Build 系统** (P2) | 蛇头/尾/鳞 统一 Atom Chain + 装备/升级 UI | 可以装备蛇头/鳞片组建 Build，不同组合有明显差异 |
+| **L3 完整一局** (P3) | 地图 PCG + 房间类型 + 腐化 | 可以完整打完一局 Run（多层多房间到 Boss） |
+| **L4 成长循环** (P4) | 奖励 + 商人 + 数值框架 | 有完整的成长曲线和难度递进 |
+| **L5 元成长** (P5) | 解锁 + 遗愿 + 事件遭遇 | 多局 Run 之间有连续性和解锁动力 |
 
 ---
 
@@ -1655,10 +1840,9 @@ ActionRegistry:
                             │
                 ┌───────────┼───────────┐
                 │                       │
-         SnakePartsSystem         ScaleSystem
-         [🟡 P2]                  [🟡 P2]
-                │                       │
-                └───────────┬───────────┘
+         SnakePartsSystem (统一 Atom Chain)
+         蛇头/蛇尾/蛇鳞 [🟡 P2]
+         复用 T25 AtomRegistry + TriggerManager
                             │
                        MapSystem
                        [🟢 P3]

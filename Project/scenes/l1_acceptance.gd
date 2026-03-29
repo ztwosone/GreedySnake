@@ -16,6 +16,7 @@ var _zone_labels: Array[Label] = []
 var _enemy_types_seen: Dictionary = {}
 var _food_eaten_count: int = 0
 var _initial_length: int = 0
+var _poison_spread_detected: bool = false
 
 
 func _ready() -> void:
@@ -231,18 +232,6 @@ func _connect_checklist_signals() -> void:
 
 
 func _on_check_snake_moved(data: Dictionary) -> void:
-	var vacated_pos: Vector2i = data.get("vacated_pos", Vector2i(-1, -1))
-	var vacated_status: String = data.get("vacated_status", "")
-
-	# #6 毒尾迹：蛇尾离开时携带毒，且该位置现在有毒格
-	if vacated_status == "poison" and vacated_pos != Vector2i(-1, -1):
-		# segment_effect_system 在本回调之前已执行，格子可能已放置
-		var tiles: Array = status_tile_manager.get_tiles_at(vacated_pos) if status_tile_manager else []
-		for tile in tiles:
-			if is_instance_valid(tile) and tile.status_type == "poison":
-				_mark_passed("06_poison_trail")
-				break
-
 	# #1 蛇段携带状态
 	var status_types: Dictionary = {}
 	for seg in snake.segments:
@@ -281,9 +270,20 @@ func _on_check_food_eaten(_data: Dictionary) -> void:
 		_mark_passed("04_food_drop")
 
 
-func _on_check_tile_placed(_data: Dictionary) -> void:
-	# 毒尾迹检测已移至 _on_check_snake_moved（信号时序更可靠）
-	pass
+func _on_check_tile_placed(data: Dictionary) -> void:
+	# #6 毒蔓延：毒段附近出现毒格即算通过
+	var tile_type: String = data.get("type", "")
+	if tile_type == "poison" and not _poison_spread_detected:
+		# 检查是否有毒段在附近（蔓延源）
+		var tile_pos: Vector2i = data.get("position", Vector2i(-1, -1))
+		for seg in snake.segments:
+			if not is_instance_valid(seg) or seg.carried_status != "poison":
+				continue
+			var dist: int = abs(seg.grid_position.x - tile_pos.x) + abs(seg.grid_position.y - tile_pos.y)
+			if dist <= 1:
+				_poison_spread_detected = true
+				_mark_passed("06_poison_trail")
+				break
 
 
 func _on_check_body_attacked(_data: Dictionary) -> void:
@@ -337,7 +337,7 @@ func _update_checklist_display() -> void:
 		"03_eat_enemy": "#3  [color=gray]B[/color] 蛇头吃敌人",
 		"04_food_drop": "#4  [color=gray]B[/color] 敌人掉落食物被吃到",
 		"05_fire_aura": "#5  [color=gray]B1[/color] 火光环伤敌",
-		"06_poison_trail": "#6  [color=gray]B3[/color] 毒尾迹留格",
+		"06_poison_trail": "#6  [color=gray]B3[/color] 毒蔓延",
 		"07_body_attack": "#7  [color=gray]B2[/color] 敌人攻击蛇身",
 		"08_hit_tail_loss": "#8  [color=gray]B2[/color] 受击累积掉尾",
 		"09_steam": "#9  [color=gray]C[/color] 蒸腾反应 (火+冰)",

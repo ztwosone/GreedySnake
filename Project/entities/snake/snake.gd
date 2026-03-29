@@ -102,46 +102,39 @@ func move() -> void:
 		elif entity.get("entity_type") == Constants.EntityType.FOOD:
 			EventBus.snake_food_eaten.emit({"food": entity, "position": new_head_pos, "food_type": "basic"})
 
-	# 6. Insert new head (inherits old head's carried_status)
-	var inherited_status: String = ""
-	if not segments.is_empty():
-		inherited_status = segments[0].carried_status
+	# 6. Capture tail info BEFORE moving
+	var vacated_pos: Vector2i = body[-1]
+	var vacated_status: String = segments[-1].carried_status
 
-	body.push_front(new_head_pos)
-	var new_head_seg := _create_segment(new_head_pos, 0)
-	new_head_seg.segment_type = SnakeSegment.HEAD
-	if inherited_status != "":
-		new_head_seg.set_carried_status(inherited_status)
-	new_head_seg.update_visual()
-	segments.push_front(new_head_seg)
+	# 7. Calculate all new positions (shift forward)
+	var new_positions: Array[Vector2i] = []
+	new_positions.resize(body.size())
+	new_positions[0] = new_head_pos
+	for i in range(1, body.size()):
+		new_positions[i] = body[i - 1]
 
-	# Old head becomes body
-	if segments.size() > 1:
-		segments[1].segment_type = SnakeSegment.BODY
-		segments[1].update_visual()
+	# 8. Move all segments to new positions
+	for i in range(body.size()):
+		body[i] = new_positions[i]
+		segments[i].move_to(body[i])
 
-	# 7. Handle tail
-	var vacated_pos := Vector2i(-1, -1)
-	var vacated_status: String = ""
+	# 9. Handle growth
 	if grow_pending > 0:
 		grow_pending -= 1
-	else:
-		vacated_pos = body.pop_back()
-		var old_tail_seg: SnakeSegment = segments.pop_back()
-		vacated_status = old_tail_seg.carried_status
-		old_tail_seg.remove_from_grid()
-		old_tail_seg.queue_free()
+		# Create new segment at old tail position (no status — fresh growth)
+		var new_tail_seg := _create_segment(vacated_pos, body.size())
+		body.append(vacated_pos)
+		segments.append(new_tail_seg)
+		# No cell was actually vacated during growth
+		vacated_pos = Vector2i(-1, -1)
+		vacated_status = ""
 
-	# 8. Update tail type
-	if segments.size() > 1:
-		segments[-1].segment_type = SnakeSegment.TAIL
-		segments[-1].update_visual()
-
-	# 9. Update segment indices
+	# 10. Update segment types and indices
+	_update_segment_types()
 	for i in range(segments.size()):
 		segments[i].segment_index = i
 
-	# 10. Emit move event
+	# 11. Emit move event
 	EventBus.snake_moved.emit({
 		"body": body.duplicate(),
 		"direction": direction,
@@ -205,6 +198,20 @@ func _on_tick(_tick_index: int) -> void:
 
 func _get_effective_speed() -> float:
 	return 1.0
+
+
+func _update_segment_types() -> void:
+	for i in range(segments.size()):
+		var new_type: int
+		if i == 0:
+			new_type = SnakeSegment.HEAD
+		elif i == segments.size() - 1:
+			new_type = SnakeSegment.TAIL
+		else:
+			new_type = SnakeSegment.BODY
+		if segments[i].segment_type != new_type:
+			segments[i].segment_type = new_type
+			segments[i].update_visual()
 
 
 func _create_segment(pos: Vector2i, index: int) -> SnakeSegment:

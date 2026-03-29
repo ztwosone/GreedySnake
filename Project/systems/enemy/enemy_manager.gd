@@ -51,6 +51,23 @@ func _on_snake_hit_enemy(data: Dictionary) -> void:
 	if not enemy or not is_instance_valid(enemy):
 		return
 
+	# === 吞噬状态反应 ===
+	if snake and not snake.segments.is_empty() and is_instance_valid(snake.segments[0]):
+		var head_seg: SnakeSegment = snake.segments[0]
+		var head_status: String = head_seg.carried_status
+		var enemy_status: String = enemy.carried_status if enemy.carried_status else ""
+		if head_status != "" and enemy_status != "" and head_status != enemy_status:
+			var reaction_id: String = Enemy._get_reaction_id(head_status, enemy_status)
+			if reaction_id != "":
+				EventBus.reaction_triggered.emit({
+					"reaction_id": reaction_id,
+					"position": enemy.grid_position,
+					"type_a": head_status,
+					"type_b": enemy_status,
+				})
+			head_seg.clear_carried_status()
+			enemy.clear_carried_status()
+
 	# === 吞噬 VFX ===
 	# 蛇头 scale bounce
 	if snake and not snake.segments.is_empty() and is_instance_valid(snake.segments[0]):

@@ -13,6 +13,10 @@ func run(t) -> void:
 	_test_enemy_shape_wanderer(t)
 	_test_enemy_shape_chaser(t)
 	_test_enemy_shape_bog_crawler(t)
+	_test_enemy_status_visual_fire(t)
+	_test_enemy_status_visual_ice(t)
+	_test_enemy_status_visual_poison(t)
+	_test_enemy_status_visual_clear(t)
 	_test_enemy_death_animation(t)
 	_test_snake_hurt_flash(t)
 	_test_screen_shake_creation(t)
@@ -103,7 +107,7 @@ func _test_segment_poison_visual(t) -> void:
 func _test_status_visual_priority(t) -> void:
 	# 状态优先级已移除（每段独立携带状态），验证基本状态视觉即可
 	var seg := SnakeSegment.new()
-	seg._build_visual()
+	Engine.get_main_loop().root.add_child(seg)
 
 	# fire 覆盖表现
 	seg.apply_status_visual("fire", 1)
@@ -160,6 +164,61 @@ func _test_enemy_shape_bog_crawler(t) -> void:
 			rect_count += 1
 	# cross shape: 2 arm rects + _border_rect + _status_overlay = 4
 	t.assert_eq(rect_count, 4, "[T26] bog_crawler has 4 ColorRects (cross + status layers)")
+
+
+func _test_enemy_status_visual_fire(t) -> void:
+	var enemy := Enemy.new()
+	enemy.enemy_shape = "square"
+	enemy._build_visual()
+
+	enemy.set_carried_status_visual("fire")
+	t.assert_eq(enemy.carried_status, "fire", "[T26] enemy carried_status set to fire")
+	t.assert_true(enemy._border_rect.color.a > 0.0, "[T26] enemy fire border visible (alpha=%.2f)" % enemy._border_rect.color.a)
+	t.assert_true(enemy._status_overlay.color.a > 0.0, "[T26] enemy fire overlay visible")
+
+	enemy.queue_free()
+
+
+func _test_enemy_status_visual_ice(t) -> void:
+	var enemy := Enemy.new()
+	enemy.enemy_shape = "diamond"
+	enemy._build_visual()
+
+	enemy.set_carried_status_visual("ice")
+	t.assert_eq(enemy.carried_status, "ice", "[T26] enemy carried_status set to ice")
+	t.assert_true(enemy._status_overlay.color.a > 0.4, "[T26] enemy ice overlay visible (alpha=%.2f)" % enemy._status_overlay.color.a)
+	t.assert_true(enemy._status_overlay.color.b > 0.8, "[T26] enemy ice overlay is blue-ish")
+
+	enemy.queue_free()
+
+
+func _test_enemy_status_visual_poison(t) -> void:
+	var enemy := Enemy.new()
+	enemy.enemy_shape = "cross"
+	enemy._build_visual()
+
+	enemy.set_carried_status_visual("poison")
+	t.assert_eq(enemy.carried_status, "poison", "[T26] enemy carried_status set to poison")
+	t.assert_true(enemy._status_overlay.color.a > 0.0, "[T26] enemy poison overlay visible")
+	t.assert_true(enemy._status_overlay.color.g > 0.5, "[T26] enemy poison overlay is green-ish")
+
+	enemy.queue_free()
+
+
+func _test_enemy_status_visual_clear(t) -> void:
+	var enemy := Enemy.new()
+	enemy.enemy_shape = "square"
+	enemy._build_visual()
+
+	enemy.set_carried_status_visual("fire")
+	t.assert_true(enemy._border_rect.color.a > 0.0, "[T26] enemy fire border before clear")
+
+	enemy.clear_carried_status()
+	t.assert_eq(enemy.carried_status, "", "[T26] enemy carried_status cleared")
+	t.assert_true(enemy._status_overlay.color.a < 0.01, "[T26] enemy overlay hidden after clear")
+	t.assert_true(enemy._border_rect.color.a < 0.01, "[T26] enemy border hidden after clear")
+
+	enemy.queue_free()
 
 
 func _test_enemy_death_animation(t) -> void:

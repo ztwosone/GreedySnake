@@ -61,6 +61,20 @@ func run(t) -> void:
 	t.assert_eq(snake.body.size(), 3, "body size still 3 (no growth)")
 	t.assert_eq(moved.size(), 1, "snake_moved event emitted")
 
+	# Test segment persistence: head object survives move
+	var head_ref: SnakeSegment = snake.segments[0]
+	var body_ref: SnakeSegment = snake.segments[1]
+	snake.move()
+	t.assert_eq(snake.segments[0], head_ref, "head segment persists after move")
+	t.assert_eq(snake.segments[1], body_ref, "body segment persists after move")
+
+	# Test status persistence: status follows segment
+	head_ref.set_carried_status("fire")
+	snake.move()
+	t.assert_eq(snake.segments[0], head_ref, "head ref still same after 2nd move")
+	t.assert_eq(snake.segments[0].carried_status, "fire", "head status persists after move")
+	head_ref.clear_carried_status()
+
 	# Test grow
 	snake.grow_pending = 1
 	snake.move()

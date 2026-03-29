@@ -1,0 +1,24 @@
+{
+  "_comment": "项目环境路径配置，供 AI 和工具链使用",
+
+  "godot": {
+    "editor": "F:/GodotMCP/Godot_v4.6.1-stable_win64.exe/Godot_v4.6.1-stable_win64.exe",
+    "console": "F:/GodotMCP/Godot_v4.6.1-stable_win64.exe/Godot_v4.6.1-stable_win64_console.exe",
+    "version": "4.6.1-stable"
+  },
+
+  "godot_mcp": {
+    "root": "F:/GodotMCP/godot-mcp"
+  },
+
+  "project": {
+    "root": "F:/GreedySnake",
+    "godot_project": "F:/GreedySnake/Project",
+    "game_config": "F:/GreedySnake/Project/data/json/game_config.json",
+    "test_scene": "F:/GreedySnake/Project/Test/test_runner.tscn"
+  },
+
+  "commands": {
+    "run_tests": "\"F:/GodotMCP/Godot_v4.6.1-stable_win64.exe/Godot_v4.6.1-stable_win64_console.exe\" --headless --path \"F:/GreedySnake/Project\" Test/test_runner.tscn"
+  }
+}
