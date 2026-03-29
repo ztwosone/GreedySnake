@@ -1196,6 +1196,93 @@ func equip_tail(tail_id: String, level: int) -> void:
 
 ---
 
+### 3.5.8 🟡 T27 — EffectWindow 时间窗口框架
+
+**对应设计文档：** 12B 节
+**目录：** `systems/atoms/`
+**职责：** 为 Atom System 提供"持续 N tick 的效果窗口"能力
+**前置条件：** T25 Atom System（已完成）
+**后续依赖：** T28（L2 新原子）、T29-T30（蛇头/蛇尾系统）
+
+#### 架构分层
+
+```
+AtomBase（不变，无状态即时执行器）
+    ↓ open_window 原子的 execute() 调用
+EffectWindowManager（新增，有状态管理器）
+    ↓ 管理 N 个并存窗口实例
+EffectWindow（新增，RefCounted 数据对象）
+    ↓ tick 递减 / 到期回调 / 条件取消
+```
+
+#### 新增文件
+
+| 文件 | 类型 | 职责 |
+|------|------|------|
+| `systems/atoms/effect_window.gd` | RefCounted | 单个窗口数据 |
+| `systems/atoms/effect_window_manager.gd` | Node | 管理所有活跃窗口 |
+| `systems/atoms/atoms/temporal/open_window_atom.gd` | AtomBase | 开窗口动作原子 |
+| `systems/atoms/atoms/condition/if_in_window_atom.gd` | AtomBase | 窗口查询条件原子 |
+
+#### EffectWindowManager 核心 API
+
+```gdscript
+class_name EffectWindowManager
+extends Node
+
+func open_window(config: Dictionary, owner: Object) -> void
+    # 同 id 已存在 → 刷新 remaining_ticks
+func cancel_window(window_id: String) -> void
+    # 取消，不触发 on_expire
+func is_active(window_id: String) -> bool
+func get_rule(window_id: String, rule_key: String, default_value = null)
+    # 便捷查询：各系统调用此方法读取窗口规则
+
+func _on_tick(_tick_index: int) -> void
+    # tick_post_process 连接：递减所有窗口，到期执行 on_expire 链
+```
+
+#### cancel_on 动态信号连接
+
+```gdscript
+# open_window 时，如果 cancel_on 非空：
+func _connect_cancel(window_id: String, trigger_name: String) -> void:
+    # 映射 trigger_name → EventBus 信号
+    # 例："on_kill" → EventBus.enemy_killed
+    # 连接 callback → cancel_window(window_id)
+```
+
+#### AtomContext 变更
+
+```gdscript
+# atom_context.gd 新增：
+var window_mgr: EffectWindowManager = null
+```
+
+TriggerManager._build_context() 注入 window_mgr（与 effect_mgr、tile_mgr 同模式）。
+
+#### EventBus 新增信号
+
+```gdscript
+signal window_opened(data: Dictionary)    # { window_id, owner, duration_ticks }
+signal window_expired(data: Dictionary)   # { window_id, owner }
+signal window_cancelled(data: Dictionary) # { window_id, owner, reason }
+```
+
+#### 对接现有系统
+
+| 文件 | 改动 |
+|------|------|
+| `atom_context.gd` | +1 字段 window_mgr |
+| `atom_registry.gd` | 注册 open_window + if_in_window |
+| `trigger_manager.gd` | _build_context 注入 window_mgr |
+| `game_world.gd` | 实例化 EffectWindowManager |
+| `EventBus` | +3 信号 |
+| `enemy.gd:_attack_segment` | 查询 ignore_hit_counter 规则 |
+| `snake.gd:remove_tail_segment` | 查询 block_segment_loss 规则 |
+
+---
+
 ### 3.6 🟡 P2 — 蛇鳞系统 (ScaleSystem)
 
 **对应设计文档：** 系统五（第6章）

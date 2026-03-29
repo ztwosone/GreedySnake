@@ -357,13 +357,22 @@ Grid 地图
 
   所有链 → EffectChainResolver → TriggerManager → AtomExecutor
 
-新增原子（~6个）：
+新增即时原子（4个）：
   modify_food_drop    — 改写击杀后食物掉落数量
   direct_grow         — 直接增长蛇身（跳过食物）
   steal_status        — 从被吃敌人偷取 carried_status
   modify_hit_threshold — 改写掉段所需的攻击次数
-  delay_loss          — 延迟丢段 N tick
-  grant_invincibility — N tick 内免受攻击
+
+EffectWindow 时间窗口框架（T27 基础设施）：
+  delay_loss / grant_invincibility / mark_recovery_window 等需要"持续 N tick"的效果
+  不继承 AtomBase（原子无状态单例，窗口有生命周期）
+  新增 EffectWindowManager（有状态管理器）+ 2 个原子：
+    open_window         — 开启时间窗口（duration_ticks / rules / on_expire / cancel_on）
+    if_in_window        — 条件原子，查询窗口是否活跃
+  窗口期内规则覆写由各系统主动查询（如 ignore_hit_counter / block_segment_loss）
+  到期时执行 on_expire 原子链（复用 AtomExecutor），取消时不触发
+  完全 JSON 配置，新增窗口型效果零代码
+  预留扩展点：on_tick 每tick链（L2+）、窗口叠加策略（refresh/extend/stack）
 
 蛇头/尾等级：
   Ⅰ级（初始）
@@ -1463,6 +1472,104 @@ L1 实现从原设计 15 种反应中精简为 3 种：
 | bog_crawler | 2 | 1 | 4 ticks | 4 |
 
 所有敌人 HP 统一为 1（蛇头一口吞噬），通过攻击冷却和移动模式区分威胁度。
+
+---
+
+## 12B. L2 前置基础设施：EffectWindow 时间窗口框架（T27）
+
+L2 蛇头/蛇尾系统需要"持续 N tick 的效果窗口"能力。此节记录 T27 的设计决策。
+
+### 12B.1 问题与动机
+
+T25 Atom System 的原子是**无状态即时执行**（AtomBase.execute() 调一次完成）。L2 蛇头/蛇尾需要有生命周期的效果：
+
+| L2 需求 | 窗口行为 |
+|---------|---------|
+| 白蛇吃后无敌 | 开 invincible 窗口 3 tick → 期间受击不计数 → 到期释放状态 |
+| 时滞尾延迟丢段 | 开 delay_loss 窗口 3 tick → 期间阻止丢段 → 到期执行丢段 → 击杀取消 |
+| 再生尾恢复窗口 | 开 recovery 窗口 20 tick → 到期自动 +1 段 → 再次受击取消 |
+
+共同模式：**开窗口 → 存续期间改规则 → 到期/取消执行不同逻辑**。
+
+### 12B.2 架构决策
+
+**不继承 AtomBase**。原因：
+- AtomBase 实例是单例（注册在 atom_registry 中共享），不能持有状态
+- 窗口是有生命周期的对象（创建→存续→销毁），属于不同抽象层
+- 分层更清晰：原子负责"开窗口"这个动作，窗口管理器负责生命周期
+
+**分层关系：**
+```
+AtomBase（不变，无状态即时执行器）
+    ↓ open_window 原子的 execute() 调用
+EffectWindowManager（新增，有状态管理器，挂在 GameWorld 上）
+    ↓ 管理 N 个并存窗口实例
+EffectWindow（新增，RefCounted 数据对象）
+    ↓ tick 递减 / 到期回调 / 条件取消
+```
+
+### 12B.3 EffectWindow 数据模型
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| window_id | String | 唯一标识（"invincible"、"delay_loss"、"recovery"） |
+| owner | Object | 窗口持有者（Snake 实例） |
+| remaining_ticks | int | 剩余 tick 数 |
+| rules | Dictionary | 窗口期内规则覆写（被动数据，各系统主动查询） |
+| on_expire_defs | Array | 到期时执行的原子链定义（JSON Array） |
+| on_tick_defs | Array | [L2+ 预留] 每 tick 执行的原子链定义 |
+| cancel_on | String | 取消触发器 ID（复用已有触发器名，如 "on_kill"） |
+
+### 12B.4 新增原子
+
+| 原子 | 类型 | JSON 参数 | 作用 |
+|------|------|-----------|------|
+| open_window | 动作 | window_id, duration_ticks, rules, on_expire, on_tick, cancel_on | 开启/刷新时间窗口 |
+| if_in_window | 条件 | window_id | 查询指定窗口是否活跃 |
+
+### 12B.5 JSON 配置模式
+
+```json
+{
+  "atom": "open_window",
+  "window_id": "invincible",
+  "duration_ticks": 3,
+  "rules": { "ignore_hit_counter": true },
+  "on_expire": [
+    { "atom": "burst_status", "range": 1 }
+  ],
+  "on_tick": [],
+  "cancel_on": ""
+}
+```
+
+**JSON 驱动能力：** 新增窗口型效果只需配置 JSON，无需编写 GDScript。
+
+### 12B.6 规则覆写消费方
+
+窗口的 `rules` 是被动数据，由各系统主动查询 `EffectWindowManager.get_rule()`：
+
+| rule key | 消费者 | 效果 |
+|----------|--------|------|
+| ignore_hit_counter | enemy.gd:_attack_segment | 受击不计入计数器 |
+| block_segment_loss | snake.gd:remove_tail_segment | 阻止实际丢段 |
+
+### 12B.7 生命周期
+
+1. **开启**：`open_window` 原子执行 → EffectWindowManager 创建/刷新窗口 → 发射 `window_opened` 信号
+2. **存续**：每 tick 递减 remaining_ticks；各系统查询 rules 获取覆写值
+3. **到期**：remaining_ticks ≤ 0 → 执行 on_expire 原子链 → 移除窗口 → 发射 `window_expired` 信号
+4. **取消**：cancel_on 对应的事件触发 → 移除窗口（不执行 on_expire）→ 发射 `window_cancelled` 信号
+5. **刷新**：同 id 重复开窗口 → 刷新 remaining_ticks（不叠加，不重新触发 on_expire）
+
+### 12B.8 L2+ 预留扩展点
+
+| 扩展点 | 当前状态 | 激活方式 |
+|--------|---------|---------|
+| on_tick 每tick原子链 | 解析但走空路径 | on_tick_defs 非空时执行 |
+| on_window_expire 触发器 | 信号已有，未注册为触发器 | TriggerManager 监听 window_expired |
+| 窗口叠加策略 | 默认 refresh | 新增 stack_mode 参数（refresh/extend/stack） |
+| duration 修改 | 前置原子组合 | 同链内 modify_effect_value 修改 ctx.results |
 
 ---
 
