@@ -4,7 +4,7 @@ extends "res://scenes/game_world.gd"
 ##
 ## 地图布局 (40×22):
 ##   y=1-3:   Zone A  状态拾取走廊 (火|冰|毒)
-##   y=5-8:   Zone B  增益验证 (火光环|冰防御+体攻|毒尾迹)
+##   y=5-8:   Zone B  增益验证 (火光环|冰防御+体攻|毒蔓延)
 ##   y=10-13: Zone C  反应触发 (蒸腾|毒爆|冻疫)
 ##   y=15-21: Zone D  综合战场 (自由战斗完整循环)
 ##
@@ -97,7 +97,7 @@ func _setup_zone_b_buff_verification() -> void:
 	if ice_chaser:
 		ice_chaser.set_carried_status_visual("ice")
 
-	# B3: 毒尾迹场 (x=28-38)
+	# B3: 毒蔓延场 (x=28-38)
 	# 1只游荡者+开阔空间，玩家带毒尾移动留格
 	enemy_manager.spawn_enemy_at("wanderer", Vector2i(33, 7))
 
@@ -198,7 +198,7 @@ func _setup_zone_label_hud() -> void:
 		# Zone B
 		{"text": "B1-FireAura", "pos": Vector2(1 * Constants.CELL_SIZE, 4.5 * Constants.CELL_SIZE)},
 		{"text": "B2-IceDef+Atk", "pos": Vector2(14 * Constants.CELL_SIZE, 4.5 * Constants.CELL_SIZE)},
-		{"text": "B3-PoisonTrail", "pos": Vector2(28 * Constants.CELL_SIZE, 4.5 * Constants.CELL_SIZE)},
+		{"text": "B3-PoisonSpread", "pos": Vector2(28 * Constants.CELL_SIZE, 4.5 * Constants.CELL_SIZE)},
 		# Zone C
 		{"text": "C-Steam", "pos": Vector2(2 * Constants.CELL_SIZE, 10 * Constants.CELL_SIZE)},
 		{"text": "C-ToxicExp", "pos": Vector2(14 * Constants.CELL_SIZE, 10 * Constants.CELL_SIZE)},
