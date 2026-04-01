@@ -506,7 +506,8 @@ on length_increased → if body.size() > 1:
 
 #### 3.3.2 核心数据结构
 
-> **L1 变更：** 状态效果定义已从 Resource (.tres) 迁移至 `game_config.json`，使用 T25 Effect Atom System 的 JSON 驱动模型。蛇身段使用简化的 `carried_status: String` 而非 StatusInstance。
+> **L1 变更：** 状态效果定义已从 Resource (.tres) 迁移至 `game_config.json`，使用 T25 Effect Atom System 的 JSON 驱动模型。
+> **L2 演进（T27A）：** 所有载体统一实现 StatusCarrier 接口，支持多状态共存；反应规则由 ReactionResolver JSON 驱动。详见 §3.5.9。
 
 **状态效果定义（game_config.json → status_effects）：**
 
@@ -517,7 +518,7 @@ L1 仅实现 `fire`、`ice`、`poison` 三种状态。每种状态通过 `entity
   "display_name": "灼烧",
   "entity_effects": [
     { "trigger": "on_interval", "interval": 2.0,
-      "atoms": [{ "atom": "damage", "amount_per_layer": 1 }],
+      "atoms": [{ "atom": "damage", "amount": 1 }],
       "pattern": "self" }
   ],
   "tile_effects": [
@@ -525,30 +526,33 @@ L1 仅实现 `fire`、`ice`、`poison` 三种状态。每种状态通过 `entity
       "atoms": [{ "atom": "place_tile", "type": "fire" }],
       "pattern": "neighbors", "chance": 0.2 },
     { "trigger": "on_entity_enter",
-      "atoms": [{ "atom": "apply_status", "type": "fire", "layers": 1 }],
+      "atoms": [{ "atom": "apply_status", "type": "fire" }],
       "pattern": "target" }
   ]
 }
 ```
 
-**蛇身段状态模型（L1 简化版）：**
+**统一载体模型（StatusCarrier 接口，T27A）：**
 
 ```
-SnakeSegment:
-  carried_status: String    # "fire" / "ice" / "poison" / ""
-  # 每段独立携带一种状态，二值模式（有/无），不使用层数
-  # 状态继承：新蛇头自动继承旧蛇头的 carried_status
-
-Enemy:
-  carried_status: String    # 敌人也独立携带状态
+所有载体（SnakeSegment / Enemy / StatusTile）实现：
+  _statuses: Array[String]   # 如 ["fire", "poison"]，每种类型最多一个
+  get_statuses() -> Array[String]
+  has_status(type: String) -> bool
+  add_status(type: String) -> bool
+  remove_status(type: String) -> void
+  clear_all_statuses() -> void
+  get_carrier_type() -> String   # "snake_segment" / "enemy" / "status_tile"
+  carried_status: String         # 兼容 getter，返回 _statuses[0] 或 ""
 ```
 
 **StatusTile（状态格）：**
 
 ```
-StatusTile:
-  status_type: String       # "fire" / "ice" / "poison"
+StatusTile（StatusCarrier）:
+  _statuses: Array[String]  # 通常只有一个元素，如 ["fire"]
   # L1 中状态格永久存在，无持续时间递减
+  # 无叠层：同类型同位置忽略
   # 同位置异类型状态格互斥：放置时已有不同类型 → 触发反应 + 双方消除
 ```
 
@@ -563,7 +567,7 @@ StatusTile:
   "steam":            { "type_a": "fire", "type_b": "ice",    "enemy_damage": 2, "self_hit_count": 1 },
   "toxic_explosion":  { "type_a": "fire", "type_b": "poison", "enemy_damage": 3, "self_hit_count": 2 },
   "frozen_plague":    { "type_a": "ice",  "type_b": "poison", "enemy_damage": 0, "self_hit_count": 0,
-                        "apply_poison_layers": 1 }
+                        "apply_poison": true }
 }
 ```
 
@@ -611,9 +615,9 @@ StatusTile (extends GridEntity):
 
 | 事件（发射） | 触发时机 | 参数 |
 |-------------|---------|------|
-| `status_applied` | 实体获得状态 | `{ target, status_type, layers, source }` |
+| `status_applied` | 实体获得状态 | `{ target, status_type, source }` |
 | `status_removed` | 实体失去状态 | `{ target, status_type, reason }` |
-| `status_layer_changed` | 状态层数变化 | `{ target, status_type, old_layers, new_layers }` |
+| `status_added_to_carrier` | 载体状态变化（T27A） | `{ carrier, type, carrier_type }` |
 | `status_tile_created` | 状态格生成 | `{ position, status_type, duration }` |
 | `status_tile_expired` | 状态格消失 | `{ position, status_type }` |
 | `status_reaction_triggered` | 状态反应触发 | `{ type_a, type_b, position, damage, reaction_name }` |
@@ -638,7 +642,7 @@ StatusTile (extends GridEntity):
 |------|------|
 | **Atom（原子）** | 最小效果单元（如 damage、modify_speed、place_tile），由 JSON 配置驱动 |
 | **EffectChain（效果链）** | trigger + conditions + actions + pattern 的组合，运行时执行单元 |
-| **Trigger（触发器）** | 链的激活条件（on_interval、on_applied、on_layer_reach、on_move 等 17 种） |
+| **Trigger（触发器）** | 链的激活条件（on_interval、on_applied、on_status_gained、on_move 等 17 种） |
 | **Pattern（范围模式）** | 效果作用的空间范围（self、radius、neighbors、line、cone 等 11 种） |
 | **Condition（条件原子）** | if_* 原子，evaluate() 返回 bool，AND 组合后决定是否执行动作 |
 
@@ -669,7 +673,7 @@ AtomBase.execute(AtomContext)
 {
   "entity_effects": [
     { "trigger": "on_interval", "interval": 2.0,
-      "atoms": [{ "atom": "damage", "amount_per_layer": 1 }],
+      "atoms": [{ "atom": "damage", "amount": 1 }],
       "pattern": "self" }
   ]
 }
@@ -826,52 +830,44 @@ on EventBus.snake_hit_enemy { enemy, position }:
 
 #### 3.4.A.2 Per-Segment Status（SnakeSegment 改动）
 
-蛇身段状态不再由 StatusEffectManager 管理，而是**每个 SnakeSegment 独立携带一种状态**：
+> **L2 演进（T27A）：** 升级为 StatusCarrier 接口，支持多状态共存。详见 §3.5.9。
+
+蛇身段状态不再由 StatusEffectManager 管理，而是**每个 SnakeSegment 实现 StatusCarrier 接口**：
 
 ```
-SnakeSegment:
-  carried_status: String = ""     # "fire" / "ice" / "poison" / ""
+SnakeSegment（StatusCarrier）:
+  _statuses: Array[String] = []   # 如 ["fire", "poison"]，每种类型最多一个
+  carried_status: String          # 兼容 getter → _statuses[0] 或 ""
 
-  set_carried_status(type: String):
-    carried_status = type
-    _update_visual()              # 更新身段颜色/特效
-
-  clear_carried_status():
-    carried_status = ""
-    _update_visual()
+  add_status(type: String) -> bool
+  remove_status(type: String) -> void
+  has_status(type: String) -> bool
+  get_statuses() -> Array[String]
+  clear_all_statuses() -> void
 ```
 
 **关键变更：**
 - 蛇不再使用 StatusEffectManager（该系统仅用于敌人）
 - `Snake._get_effective_speed()` 固定返回 `1.0`（蛇不受状态速度修正）
-- 身段状态完全独立——同一条蛇的不同身段可携带不同状态
-- **状态继承**：蛇移动时创建新蛇头，自动继承旧蛇头的 `carried_status`，确保状态不因蛇移动丢失
+- 身段状态完全独立——同一条蛇的不同身段可携带不同状态，且支持多状态共存
+- **状态继承**：蛇移动时创建新蛇头，自动继承旧蛇头的 statuses，确保状态不因蛇移动丢失
 - **蛇基础颜色改为白/灰**（HEAD=0.95, BODY=0.78, TAIL=0.6 灰度），与毒绿色形成对比
-- **敌人也有 `carried_status`** + 状态视觉（`set_carried_status_visual` / `_apply_status_visual`），支持覆盖层和边框动画
+- **敌人同样实现 StatusCarrier 接口** + 状态视觉，支持覆盖层和边框动画
 
 #### 3.4.A.3 Enemy Attack System（Enemy + EnemyBrain 改动）
 
 敌人获得主动攻击蛇身段的能力：
 
 ```
-Enemy:
-  carried_status: String = ""            # 敌人自身携带的状态
+Enemy（StatusCarrier）:
+  _statuses: Array[String] = []          # 敌人状态列表
   attack_cooldown_remaining: int = 0     # 攻击冷却剩余 tick
 
   _attack_segment(segment: SnakeSegment):
     snake.take_hit(damage)
-    # 双向状态转移：
-    var seg_status = segment.carried_status
-    var enemy_status = carried_status
-    if seg_status != "" and enemy_status == "":
-      set_carried_status_visual(seg_status)       # 敌人沾染蛇段状态
-    elif seg_status == "" and enemy_status != "":
-      segment.set_carried_status(enemy_status)     # 蛇段获得敌人状态
-    elif seg_status != "" and enemy_status != "":
-      if seg_status != enemy_status:
-        trigger_reaction(enemy_status, seg_status) # 异类 → 反应 + 双方清除
-        segment.clear_carried_status()
-        clear_carried_status()
+    # 双向状态转移由 CollisionHandler 处理（enemy_hit_segment 规则）：
+    # empty_carrier → transfer, same_type → swap, diff_type → add_and_check
+    CollisionHandler.handle_collision("enemy_hit_segment", self, segment)
 ```
 
 **EnemyBrain 优先级栈（L1 更新）：**
@@ -912,28 +908,25 @@ Snake:
 }
 ```
 
-#### 3.4.A.5 Status Tile Interaction Rewrite（StatusTransferSystem 改动）
+#### 3.4.A.5 Status Tile Interaction Rewrite（StatusTransferSystem → CollisionHandler）
 
-状态格交互逻辑从「实体级施加」改为**逐身段检测**：
+> **L2 演进（T27A）：** 硬编码逻辑由 CollisionHandler + ReactionResolver 替代，规则走 JSON。详见 §3.5.9。
+
+状态格交互逻辑从「实体级施加」改为**逐身段检测**，碰撞规则由 collision_rules JSON 配置：
 
 ```
-on tick_post_process:
-  for segment in snake.segments:
-    var tile = StatusTileManager.get_tile_at(segment.grid_position)
-    if tile == null:
-      continue
-    match _get_interaction_type(segment.carried_status, tile.status_type):
-      "gain":     segment.set_carried_status(tile.status_type)   # 无状态 → 获得
-      "same":     pass                                            # 同状态 → 无变化
-      "reaction": _trigger_reaction(segment, tile)                # 异状态 → 反应 + 清除身段状态
+CollisionHandler 处理 segment_on_tile 碰撞：
+  empty_carrier: "transfer"   — 无状态段 → 获得格子状态
+  same_type:     "ignore"     — 同状态 → 无变化
+  diff_type:     "add_and_check" — 异状态 → 加入 + ReactionResolver 按 policy 检查反应
 ```
 
 **关键变更：**
 - 每 tick 遍历**所有蛇身段**，检测其所在位置的状态格
 - 状态格在 L1 中为**永久存在**（不再有持续时间递减，不再 tick_update）
-- **反应清除身段状态 + 消除该位置状态格**（调用 `tile_manager.remove_tile()`）
+- 碰撞行为统一由 CollisionHandler 处理，不再在 StatusTransferSystem 硬编码
 - **同位置异类型状态格互斥**：`StatusTileManager.place_tile()` 检测到异类已存在时触发反应 + 双方消除，不放置新格子
-- 所有 `GridWorld.get_entities_at()` / `cell_map` 遍历均需 `is_instance_valid()` 防护（已被 queue_free 的节点可能残留在 cell_map 中）
+- 所有 `GridWorld.get_entities_at()` / `cell_map` 遍历均需 `is_instance_valid()` 防护
 
 #### 3.4.A.6 Segment Effect System（新增：SegmentEffectSystem）
 
@@ -1280,6 +1273,110 @@ signal window_cancelled(data: Dictionary) # { window_id, owner, reason }
 | `EventBus` | +3 信号 |
 | `enemy.gd:_attack_segment` | 查询 ignore_hit_counter 规则 |
 | `snake.gd:remove_tail_segment` | 查询 block_segment_loss 规则 |
+
+---
+
+### 3.5.9 🟡 T27A — StatusCarrier 统一载体 + ReactionResolver 反应规则引擎
+
+**对应设计文档：** 12C 节
+**新增目录：** `systems/status/`
+**职责：** 统一蛇段/敌人/状态格的状态数据模型，JSON 驱动碰撞和反应规则
+**前置条件：** T25 Atom System（已完成）
+
+#### 三层架构
+
+```
+数据层：StatusCarrier（duck typing 接口）
+    蛇段/敌人/状态格统一实现
+    ↓
+规则层：ReactionResolver + CollisionHandler（JSON 驱动）
+    ↓
+执行层：Atom Chain（T25 已有）
+```
+
+#### 新增文件
+
+| 文件 | 类型 | 职责 |
+|------|------|------|
+| `systems/status/reaction_resolver.gd` | Node | JSON 驱动反应规则引擎 |
+| `systems/status/collision_handler.gd` | Node | 载体碰撞统一处理器 |
+
+#### StatusCarrier 接口（duck typing）
+
+```gdscript
+## 所有载体实现：
+func get_statuses() -> Array[String]
+func has_status(type: String) -> bool
+func add_status(type: String) -> bool     # 已存在返回 false
+func remove_status(type: String) -> void
+func clear_all_statuses() -> void
+func get_carrier_type() -> String         # "snake_segment" / "enemy" / "status_tile"
+```
+
+#### CollisionHandler 碰撞配置
+
+```json
+{
+  "collision_rules": {
+    "segment_on_tile":   { "empty_carrier": "transfer", "same_type": "ignore", "diff_type": "add_and_check" },
+    "enemy_on_tile":     { "empty_carrier": "transfer", "same_type": "ignore", "diff_type": "add_and_check" },
+    "tile_on_tile":      { "empty_carrier": "place",    "same_type": "ignore", "diff_type": "add_and_check" },
+    "head_eat_enemy":    { "empty_carrier": "transfer", "same_type": "ignore", "diff_type": "add_and_check" },
+    "enemy_hit_segment": { "empty_carrier": "transfer", "same_type": "swap",   "diff_type": "add_and_check" }
+  }
+}
+```
+
+#### ReactionResolver 反应配置
+
+```json
+{
+  "reaction_rules": {
+    "steam": {
+      "types": ["fire", "ice"],
+      "triggers": ["on_status_added", "on_entity_enter"],
+      "policy": "immediate",
+      "clear_statuses": true,
+      "reaction_chain": "steam"
+    }
+  }
+}
+```
+
+policy: `immediate`（立即反应，L1 行为）/ `stable`（多状态共存，等指定事件才触发）
+
+#### EventBus 新增信号
+
+```gdscript
+signal status_added_to_carrier(data: Dictionary)
+    # { carrier: Object, type: String, carrier_type: String }
+signal status_removed_from_carrier(data: Dictionary)
+    # { carrier: Object, type: String, carrier_type: String }
+```
+
+#### 删除/替代清单
+
+| 删除 | 替代 |
+|------|------|
+| `StatusTile.layer` + `add_layer()` | 移除 |
+| `StatusTileManager._get_reaction_id()` | ReactionResolver |
+| `Enemy._get_reaction_id()` | ReactionResolver |
+| `StatusTransferSystem` 硬编码碰撞逻辑 | CollisionHandler |
+| `EnemyManager` 中的反应检查 | CollisionHandler |
+
+#### 对接现有系统
+
+| 文件 | 改动 |
+|------|------|
+| `entities/snake/snake_segment.gd` | 实现 StatusCarrier 接口 |
+| `entities/enemies/enemy.gd` | 实现 StatusCarrier 接口，删除 `_get_reaction_id` |
+| `entities/status_tiles/status_tile.gd` | 实现 StatusCarrier 接口，移除 layer |
+| `entities/status_tiles/status_tile_manager.gd` | 删除 `_get_reaction_id`，委托 CollisionHandler |
+| `systems/status/status_transfer_system.gd` | 大幅简化，委托 CollisionHandler |
+| `systems/enemy/enemy_manager.gd` | 删除反应检查，委托 CollisionHandler |
+| `data/json/game_config.json` | 新增 reaction_rules + collision_rules |
+| `autoloads/event_bus.gd` | +2 信号 |
+| `scenes/game_world.gd` | 实例化 ReactionResolver + CollisionHandler |
 
 ---
 
