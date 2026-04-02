@@ -15,7 +15,7 @@
 
 | 任务 | 名称 | 优先级 | 粒度 | 前置 | 状态 |
 |------|------|--------|------|------|------|
-| T27A | StatusCarrier + ReactionResolver | P0 前置 | L | T25 | 🟡 设计完成 |
+| T27A | StatusCarrier + ReactionResolver | P0 前置 | L | T25 | ✅ 已实现（1082 测试） |
 | T27 | EffectWindow 时间窗口框架 | P0 前置 | M | T25 | 🟡 设计完成 |
 | T28A | 新增触发器（7 个） | P1 核心 | S | T25 | 🟡 设计完成 |
 | T28B | 新增即时原子（4 个） | P1 核心 | M | T27 | 🟡 设计完成 |
