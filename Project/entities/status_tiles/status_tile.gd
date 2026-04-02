@@ -4,11 +4,13 @@ extends GridEntity
 ## 空间状态格 — 地板上的状态效果区域。
 ## 实体踩入时触发状态转化（T14），到期自动消失。
 
-var status_type: String = ""
-var layer: int = 1
-var duration: float = 0.0
-var max_duration: float = 0.0
+## StatusCarrier 内部存储
+var _statuses: Array[String] = []
 var tile_color: Color = Color.WHITE
+
+## 兼容 getter — 外部读 status_type 仍可用
+var status_type: String:
+	get: return _statuses[0] if not _statuses.is_empty() else ""
 
 var _color_rect: ColorRect
 
@@ -35,29 +37,60 @@ func _setup_visual() -> void:
 func _update_visual() -> void:
 	if _color_rect == null:
 		return
-	var alpha: float = clampf(0.3 + 0.1 * layer, 0.3, 0.6)
-	_color_rect.color = Color(tile_color.r, tile_color.g, tile_color.b, alpha)
+	_color_rect.color = Color(tile_color.r, tile_color.g, tile_color.b, 0.4)
 
 
-func setup(p_type: String, p_layer: int, p_duration: float, p_color: Color) -> void:
-	status_type = p_type
-	layer = p_layer
-	duration = p_duration
-	max_duration = p_duration
+func setup(p_type: String, p_color: Color) -> void:
+	_statuses.clear()
+	if p_type != "":
+		_statuses.append(p_type)
 	tile_color = p_color
 	_update_visual()
 
 
-func add_layer() -> void:
-	layer += 1
-	duration = max_duration
+# === StatusCarrier 接口 ===
+
+func get_statuses() -> Array[String]:
+	return _statuses.duplicate()
+
+
+func has_status(type: String) -> bool:
+	return type in _statuses
+
+
+func add_status(type: String) -> bool:
+	if type in _statuses:
+		return false
+	_statuses.append(type)
 	_update_visual()
+	EventBus.status_added_to_carrier.emit({
+		"carrier": self, "type": type, "carrier_type": "status_tile"
+	})
+	return true
 
 
-func tick_duration(delta: float) -> bool:
-	## 返回 true 表示已过期
-	duration -= delta
-	return duration <= 0.0
+func remove_status(type: String) -> void:
+	if type not in _statuses:
+		return
+	_statuses.erase(type)
+	_update_visual()
+	EventBus.status_removed_from_carrier.emit({
+		"carrier": self, "type": type, "carrier_type": "status_tile"
+	})
+
+
+func clear_all_statuses() -> void:
+	var old := _statuses.duplicate()
+	_statuses.clear()
+	_update_visual()
+	for type in old:
+		EventBus.status_removed_from_carrier.emit({
+			"carrier": self, "type": type, "carrier_type": "status_tile"
+		})
+
+
+func get_carrier_type() -> String:
+	return "status_tile"
 
 
 func _on_stepped_on(stepper: Node) -> void:

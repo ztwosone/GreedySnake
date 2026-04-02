@@ -280,6 +280,13 @@
       "shape": "cross"
     }
   },
+  "collision_rules": {
+    "segment_on_tile":   { "empty_carrier": "transfer", "same_type": "ignore", "diff_type": "add_and_check" },
+    "enemy_on_tile":     { "empty_carrier": "transfer", "same_type": "ignore", "diff_type": "add_and_check" },
+    "tile_on_tile":      { "empty_carrier": "place",    "same_type": "ignore", "diff_type": "add_and_check" },
+    "head_eat_enemy":    { "empty_carrier": "transfer", "same_type": "ignore", "diff_type": "add_and_check" },
+    "enemy_hit_segment": { "empty_carrier": "transfer", "same_type": "swap",   "diff_type": "add_and_check" }
+  },
   "length_thresholds": {
     "danger": [1, 4],
     "survival": [5, 10],

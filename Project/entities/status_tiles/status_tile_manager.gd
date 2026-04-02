@@ -9,29 +9,24 @@ var _tiles: Dictionary = {}
 var max_tiles: int = 100
 var _tile_order: Array = []  # 按创建顺序排列的 [pos, type] 对
 
+## ReactionResolver 引用（由 game_world 注入）
+var reaction_resolver: Node = null
+
 
 ## 状态格永久存在，不再 tick duration
 
 
-func place_tile(pos: Vector2i, type: String, p_layer: int = 1) -> StatusTile:
-	# 同位置同类型 → 叠层
+func place_tile(pos: Vector2i, type: String, _p_layer: int = 1) -> StatusTile:
+	# 同位置同类型 → 忽略（不再叠层）
 	if _tiles.has(pos) and _tiles[pos].has(type):
-		var existing: StatusTile = _tiles[pos][type]
-		var old_layer: int = existing.layer
-		existing.add_layer()
-		EventBus.status_tile_placed.emit({
-			"position": pos,
-			"type": type,
-			"layer": existing.layer,
-		})
-		return existing
+		return _tiles[pos][type]
 
 	# 同位置异类型 → 触发反应，双方消除
 	if _tiles.has(pos) and not _tiles[pos].is_empty():
 		var conflicting_types: Array = _tiles[pos].keys()
 		for other_type in conflicting_types:
 			if other_type != type:
-				var reaction_id := _get_reaction_id(type, other_type)
+				var reaction_id: String = _find_reaction(type, other_type)
 				if reaction_id != "":
 					EventBus.reaction_triggered.emit({
 						"reaction_id": reaction_id,
@@ -50,12 +45,11 @@ func place_tile(pos: Vector2i, type: String, p_layer: int = 1) -> StatusTile:
 	# 新建 StatusTile
 	var cfg_data: Dictionary = ConfigManager.get_status_effect(type)
 
-	var tile_duration: float = float(cfg_data.get("tile_duration", 8.0))
 	var color_hex: String = cfg_data.get("color", "#FFFFFF")
 	var tile_color := Color.from_string(color_hex, Color.WHITE)
 
 	var tile := StatusTile.new()
-	tile.setup(type, p_layer, tile_duration, tile_color)
+	tile.setup(type, tile_color)
 
 	if not _tiles.has(pos):
 		_tiles[pos] = {}
@@ -69,21 +63,16 @@ func place_tile(pos: Vector2i, type: String, p_layer: int = 1) -> StatusTile:
 	EventBus.status_tile_placed.emit({
 		"position": pos,
 		"type": type,
-		"layer": tile.layer,
+		"layer": 1,
 	})
 
 	return tile
 
 
-static func _get_reaction_id(type_a: String, type_b: String) -> String:
-	var pair: Array = [type_a, type_b]
-	pair.sort()
-	if pair == ["fire", "ice"]:
-		return "steam"
-	elif pair == ["fire", "poison"]:
-		return "toxic_explosion"
-	elif pair == ["ice", "poison"]:
-		return "frozen_plague"
+func _find_reaction(type_a: String, type_b: String) -> String:
+	## 通过 ReactionResolver 查找反应（如果已注入），否则返回空
+	if reaction_resolver and reaction_resolver.has_method("find_reaction"):
+		return reaction_resolver.find_reaction(type_a, type_b)
 	return ""
 
 

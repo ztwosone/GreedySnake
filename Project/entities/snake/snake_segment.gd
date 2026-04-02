@@ -11,7 +11,18 @@ const COLOR_TAIL := Color(0.6, 0.6, 0.6)
 
 var segment_index: int = 0
 var segment_type: int = BODY
-var carried_status: String = ""  # 独立携带的状态类型（fire/ice/poison/""）
+
+## StatusCarrier 内部存储（每种状态类型最多一个）
+var _statuses: Array[String] = []
+
+## 兼容 getter/setter — 外部读取 carried_status 仍可用
+var carried_status: String:
+	get: return _statuses[0] if not _statuses.is_empty() else ""
+	set(value):
+		_statuses.clear()
+		if value != "":
+			_statuses.append(value)
+		_update_status_visual()
 
 var _color_rect: ColorRect
 var _status_overlay: ColorRect  # 状态叠加层
@@ -68,7 +79,76 @@ func update_visual() -> void:
 			_color_rect.color = COLOR_TAIL
 
 
-func apply_status_visual(status_type: String, layer: int) -> void:
+# === StatusCarrier 接口 ===
+
+func get_statuses() -> Array[String]:
+	return _statuses.duplicate()
+
+
+func has_status(type: String) -> bool:
+	return type in _statuses
+
+
+func add_status(type: String) -> bool:
+	if type in _statuses:
+		return false
+	_statuses.append(type)
+	_update_status_visual()
+	EventBus.status_added_to_carrier.emit({
+		"carrier": self, "type": type, "carrier_type": "snake_segment"
+	})
+	return true
+
+
+func remove_status(type: String) -> void:
+	if type not in _statuses:
+		return
+	_statuses.erase(type)
+	_update_status_visual()
+	EventBus.status_removed_from_carrier.emit({
+		"carrier": self, "type": type, "carrier_type": "snake_segment"
+	})
+
+
+func clear_all_statuses() -> void:
+	var old := _statuses.duplicate()
+	_statuses.clear()
+	_update_status_visual()
+	for type in old:
+		EventBus.status_removed_from_carrier.emit({
+			"carrier": self, "type": type, "carrier_type": "snake_segment"
+		})
+
+
+func get_carrier_type() -> String:
+	return "snake_segment"
+
+
+# === 兼容方法 ===
+
+func set_carried_status(type: String) -> void:
+	_statuses.clear()
+	if type != "":
+		_statuses.append(type)
+	_update_status_visual()
+
+
+func clear_carried_status() -> void:
+	_statuses.clear()
+	_update_status_visual()
+
+
+# === 视觉 ===
+
+func _update_status_visual() -> void:
+	var primary: String = _statuses[0] if not _statuses.is_empty() else ""
+	if primary == "":
+		clear_status_visual()
+	else:
+		apply_status_visual(primary, 1)
+
+
+func apply_status_visual(status_type: String, _layer: int) -> void:
 	## 根据最高优先级状态设置视觉效果
 	_clear_status_visual()
 	_current_status_visual = status_type
@@ -78,10 +158,7 @@ func apply_status_visual(status_type: String, layer: int) -> void:
 
 	match status_type:
 		"ice":
-			if layer >= 2:
-				_status_overlay.color = Color(0.9, 0.95, 1.0, 0.7)
-			else:
-				_status_overlay.color = Color(0.4, 0.6, 1.0, 0.55)
+			_status_overlay.color = Color(0.4, 0.6, 1.0, 0.55)
 		"fire":
 			if _border_rect:
 				_border_rect.color = Color(1.0, 0.3, 0.0, 0.9)
@@ -116,16 +193,3 @@ func _clear_status_visual() -> void:
 
 func get_current_status_visual() -> String:
 	return _current_status_visual
-
-
-func set_carried_status(type: String) -> void:
-	carried_status = type
-	if type == "":
-		clear_status_visual()
-	else:
-		apply_status_visual(type, 1)
-
-
-func clear_carried_status() -> void:
-	carried_status = ""
-	clear_status_visual()

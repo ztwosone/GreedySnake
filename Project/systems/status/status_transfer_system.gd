@@ -1,12 +1,12 @@
 class_name StatusTransferSystem
 extends Node
 
-## 状态转化系统（重写版）
-## 蛇：逐段检测所在格状态格，按规则处理
-## 敌人：踩格子仍走 StatusEffectManager
+## 状态转化系统（T27A 重构版）
+## 委托 CollisionHandler 处理所有碰撞逻辑
 
 var tile_manager: StatusTileManager = null
 var snake: Node = null
+var collision_handler: Node = null  ## CollisionHandler
 
 
 func _ready() -> void:
@@ -19,7 +19,6 @@ func _ready() -> void:
 func _on_snake_moved(_data: Dictionary) -> void:
 	if tile_manager == null or snake == null:
 		return
-	# 遍历所有蛇身段
 	for seg in snake.segments:
 		if not is_instance_valid(seg):
 			continue
@@ -34,31 +33,32 @@ func _check_segment_tile(seg: SnakeSegment) -> void:
 	for tile in tiles:
 		if not is_instance_valid(tile):
 			continue
-		var tile_type: String = tile.status_type
-
-		if seg.carried_status == "":
-			# 段无状态 → 获得格子状态
-			seg.set_carried_status(tile_type)
+		if collision_handler:
+			var result: Dictionary = collision_handler.handle_collision("segment_on_tile", seg, tile)
 			# VFX: 段获得状态弹跳
-			VFXManager.scale_bounce(seg, 1.2, 0.1)
-		elif seg.carried_status == tile_type:
-			# 同类 → 无事发生
-			pass
+			if result.get("action") == "transfer" or (not seg.get_statuses().is_empty()):
+				VFXManager.scale_bounce(seg, 1.2, 0.1)
+			if result.get("reaction_id", "") != "":
+				break  # 反应后格子已移除，不再遍历
 		else:
-			# 异类 → 触发反应，段状态清除 + 格子消除
-			var reaction_id := Enemy._get_reaction_id(seg.carried_status, tile_type)
-			EventBus.reaction_triggered.emit({
-				"reaction_id": reaction_id,
-				"position": seg.grid_position,
-				"type_a": seg.carried_status,
-				"type_b": tile_type,
-			})
-			seg.clear_carried_status()
-			tile_manager.remove_tile(seg.grid_position, tile_type)
-			break  # 格子已移除，不再遍历该位置的其他格子
+			# fallback: 无 CollisionHandler 时直接处理
+			_check_segment_tile_legacy(seg, tile)
 
 
-# === 敌人：踩格子走 StatusEffectManager ===
+func _check_segment_tile_legacy(seg: SnakeSegment, tile: StatusTile) -> void:
+	## Legacy fallback（测试环境中可能未注入 CollisionHandler）
+	var tile_type: String = tile.status_type
+	if seg.carried_status == "":
+		seg.set_carried_status(tile_type)
+		VFXManager.scale_bounce(seg, 1.2, 0.1)
+	elif seg.carried_status == tile_type:
+		pass
+	else:
+		seg.clear_carried_status()
+		tile_manager.remove_tile(seg.grid_position, tile_type)
+
+
+# === 敌人：踩格子 ===
 
 func _on_entity_moved(data: Dictionary) -> void:
 	var entity: Node = data.get("entity")
@@ -75,30 +75,27 @@ func _try_spatial_to_entity(entity: Node, pos: Vector2i) -> void:
 	for tile in tiles:
 		if not tile is StatusTile:
 			continue
-		var tile_type: String = tile.status_type
 
 		# 非 Enemy 实体走原有 StatusEffectManager 路径
 		if not entity is Enemy:
-			StatusEffectManager.apply_status(entity, tile_type, "tile")
+			StatusEffectManager.apply_status(entity, tile.status_type, "tile")
 			continue
 
-		var enemy: Enemy = entity as Enemy
-		if enemy.carried_status == "":
-			# 无状态 → 获得格子状态
-			enemy.set_carried_status_visual(tile_type)
-		elif enemy.carried_status == tile_type:
-			# 同类 → 无事发生
-			pass
+		if collision_handler:
+			var result: Dictionary = collision_handler.handle_collision("enemy_on_tile", entity, tile)
+			if result.get("reaction_id", "") != "":
+				break
 		else:
-			# 异类 → 触发反应，双方清除
-			var reaction_id := Enemy._get_reaction_id(enemy.carried_status, tile_type)
-			if reaction_id != "":
-				EventBus.reaction_triggered.emit({
-					"reaction_id": reaction_id,
-					"position": pos,
-					"type_a": enemy.carried_status,
-					"type_b": tile_type,
-				})
-			enemy.clear_carried_status()
-			tile_manager.remove_tile(pos, tile_type)
-			break
+			_try_enemy_tile_legacy(entity as Enemy, tile)
+
+
+func _try_enemy_tile_legacy(enemy: Enemy, tile: StatusTile) -> void:
+	## Legacy fallback
+	var tile_type: String = tile.status_type
+	if enemy.carried_status == "":
+		enemy.set_carried_status_visual(tile_type)
+	elif enemy.carried_status == tile_type:
+		pass
+	else:
+		enemy.clear_carried_status()
+		tile_manager.remove_tile(tile.grid_position, tile_type)

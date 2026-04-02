@@ -26,6 +26,18 @@ func run(t) -> void:
 	var tile_mgr := StatusTileManager.new()
 	mock_game_world.add_child(tile_mgr)
 
+	# T27A: 注入 ReactionResolver + CollisionHandler（手动初始化）
+	var ResolverScript: GDScript = preload("res://systems/status/reaction_resolver.gd")
+	var resolver: Node = ResolverScript.new()
+	resolver._build_reaction_map()
+	tile_mgr.reaction_resolver = resolver
+
+	var HandlerScript: GDScript = preload("res://systems/status/collision_handler.gd")
+	var col_handler: Node = HandlerScript.new()
+	col_handler.reaction_resolver = resolver
+	col_handler.tile_manager = tile_mgr
+	col_handler._collision_rules = ConfigManager._data.get("collision_rules", {})
+
 	var mock_snake := Snake.new()
 	mock_game_world.add_child(mock_snake)
 	mock_snake.init_snake(Vector2i(10, 10), 4, Vector2i(1, 0))
@@ -33,6 +45,7 @@ func run(t) -> void:
 	var transfer := StatusTransferSystem.new()
 	transfer.tile_manager = tile_mgr
 	transfer.snake = mock_snake
+	transfer.collision_handler = col_handler
 	mock_game_world.add_child(transfer)
 
 	# === 空间→段：无状态段踩火格 → 获得火 ===

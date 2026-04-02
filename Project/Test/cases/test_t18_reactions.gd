@@ -103,12 +103,16 @@ func run(t) -> void:
 	t.assert_true(effect_mgr.has_status(enemy2, "ice"), "frozen_plague: enemy gets ice")
 	t.assert_true(effect_mgr.has_status(enemy2, "poison"), "frozen_plague: enemy gets poison")
 
-	# === _get_reaction_id 工具方法 ===
-	t.assert_eq(Enemy._get_reaction_id("fire", "ice"), "steam", "_get_reaction_id fire+ice == steam")
-	t.assert_eq(Enemy._get_reaction_id("ice", "fire"), "steam", "_get_reaction_id ice+fire == steam (order-independent)")
-	t.assert_eq(Enemy._get_reaction_id("fire", "poison"), "toxic_explosion", "_get_reaction_id fire+poison == toxic_explosion")
-	t.assert_eq(Enemy._get_reaction_id("ice", "poison"), "frozen_plague", "_get_reaction_id ice+poison == frozen_plague")
-	t.assert_eq(Enemy._get_reaction_id("fire", "fire"), "", "_get_reaction_id same type == empty")
+	# === ReactionResolver 反应查表（替代已删除的 Enemy._get_reaction_id） ===
+	var ResolverScript: GDScript = preload("res://systems/status/reaction_resolver.gd")
+	var resolver: Node = ResolverScript.new()
+	resolver._build_reaction_map()
+	t.assert_eq(resolver.find_reaction("fire", "ice"), "steam", "ReactionResolver fire+ice == steam")
+	t.assert_eq(resolver.find_reaction("ice", "fire"), "steam", "ReactionResolver ice+fire == steam (order-independent)")
+	t.assert_eq(resolver.find_reaction("fire", "poison"), "toxic_explosion", "ReactionResolver fire+poison == toxic_explosion")
+	t.assert_eq(resolver.find_reaction("ice", "poison"), "frozen_plague", "ReactionResolver ice+poison == frozen_plague")
+	t.assert_eq(resolver.find_reaction("fire", "fire"), "", "ReactionResolver same type == empty")
+	resolver.queue_free()
 
 	# === 清理 ===
 	effect_mgr.clear_all()

@@ -18,14 +18,28 @@ func _ready() -> void:
 	var cy: float = Constants.GRID_HEIGHT * Constants.CELL_SIZE / 2.0
 	camera.position = Vector2(cx, cy)
 
+	# T27A: ReactionResolver + CollisionHandler
+	var reaction_resolver: Node = load("res://systems/status/reaction_resolver.gd").new()
+	reaction_resolver.name = "ReactionResolver"
+	add_child(reaction_resolver)
+
+	var collision_handler: Node = load("res://systems/status/collision_handler.gd").new()
+	collision_handler.name = "CollisionHandler"
+	collision_handler.reaction_resolver = reaction_resolver
+	collision_handler.tile_manager = status_tile_manager
+	add_child(collision_handler)
+
 	# Wire up references
 	length_system.snake = snake
 	food_manager.food_container = food_container
 	enemy_manager.enemy_container = enemy_container
 	enemy_manager.snake = snake
 	enemy_manager.food_manager = food_manager
+	enemy_manager.collision_handler = collision_handler
 	status_transfer_system.tile_manager = status_tile_manager
 	status_transfer_system.snake = snake
+	status_transfer_system.collision_handler = collision_handler
+	status_tile_manager.reaction_resolver = reaction_resolver
 	reaction_system.tile_manager = status_tile_manager
 	food_manager.tile_manager = status_tile_manager
 	# StatusEffectManager 需要 tile_manager 用于火焰蔓延
@@ -40,6 +54,7 @@ func _ready() -> void:
 	seg_effect_system.snake = snake
 	seg_effect_system.enemy_manager = enemy_manager
 	seg_effect_system.tile_manager = status_tile_manager
+	seg_effect_system.reaction_resolver = reaction_resolver
 	add_child(seg_effect_system)
 
 	# 反应视觉效果

@@ -32,7 +32,7 @@ func _refresh() -> void:
 	# Collect all aura positions with overlap count
 	var aura_counts: Dictionary = {}  # Vector2i -> int
 	for seg in snake.segments:
-		if not is_instance_valid(seg) or seg.carried_status != "fire":
+		if not is_instance_valid(seg) or not seg.has_status("fire"):
 			continue
 		var pos: Vector2i = seg.grid_position
 		for dir in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:

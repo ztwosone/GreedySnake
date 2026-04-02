@@ -18,42 +18,39 @@ func run(t) -> void:
 	t.assert_true(tile is GridEntity, "StatusTile extends GridEntity")
 	t.assert_true(tile is Node2D, "StatusTile is Node2D (via GridEntity)")
 	t.assert_true("status_type" in tile, "has status_type field")
-	t.assert_true("layer" in tile, "has layer field")
-	t.assert_true("duration" in tile, "has duration field")
 	t.assert_true("tile_color" in tile, "has tile_color field")
 	t.assert_eq(tile.entity_type, Constants.EntityType.STATUS_TILE, "entity_type == STATUS_TILE")
 	t.assert_eq(tile.blocks_movement, false, "blocks_movement == false")
 	t.assert_eq(tile.is_solid, false, "is_solid == false")
 	t.assert_eq(tile.cell_layer, 0, "cell_layer == 0 (ground layer)")
+	# StatusCarrier 接口
+	t.assert_true(tile.has_method("get_statuses"), "has get_statuses()")
+	t.assert_true(tile.has_method("has_status"), "has has_status()")
+	t.assert_true(tile.has_method("add_status"), "has add_status()")
+	t.assert_true(tile.has_method("remove_status"), "has remove_status()")
+	t.assert_true(tile.has_method("get_carrier_type"), "has get_carrier_type()")
+	t.assert_eq(tile.get_carrier_type(), "status_tile", "carrier_type == status_tile")
 	tile.queue_free()
 
 	# --- StatusTile.setup ---
 	var tile2 := StatusTile.new()
 	Engine.get_main_loop().root.add_child(tile2)
-	tile2.setup("fire", 1, 8.0, Color.RED)
+	tile2.setup("fire", Color.RED)
 	t.assert_eq(tile2.status_type, "fire", "setup: status_type == fire")
-	t.assert_eq(tile2.layer, 1, "setup: layer == 1")
-	t.assert_eq(tile2.duration, 8.0, "setup: duration == 8.0")
-	t.assert_eq(tile2.max_duration, 8.0, "setup: max_duration == 8.0")
 	t.assert_eq(tile2.tile_color, Color.RED, "setup: tile_color == RED")
-
-	# --- StatusTile.add_layer ---
-	tile2.add_layer()
-	t.assert_eq(tile2.layer, 2, "add_layer: layer == 2")
-	t.assert_eq(tile2.duration, 8.0, "add_layer: duration refreshed to max")
-
-	# --- StatusTile.tick_duration ---
-	tile2.duration = 2.0
-	var expired: bool = tile2.tick_duration(1.0)
-	t.assert_eq(expired, false, "tick_duration 1.0: not expired (1.0 remaining)")
-	t.assert_eq(tile2.duration, 1.0, "tick_duration: duration decremented to 1.0")
-	expired = tile2.tick_duration(1.5)
-	t.assert_eq(expired, true, "tick_duration 1.5: expired")
+	t.assert_eq(tile2.get_statuses().size(), 1, "setup: 1 status")
+	t.assert_true(tile2.has_status("fire"), "setup: has_status fire")
 	tile2.queue_free()
 
 	# --- StatusTileManager ---
 	var mgr := StatusTileManager.new()
 	Engine.get_main_loop().root.add_child(mgr)
+
+	# T27A: 注入 ReactionResolver（手动初始化，add_child 在 _ready 期间可能失败）
+	var ResolverScript: GDScript = preload("res://systems/status/reaction_resolver.gd")
+	var resolver: Node = ResolverScript.new()
+	resolver._build_reaction_map()
+	mgr.reaction_resolver = resolver
 
 	# 方法存在性
 	t.assert_true(mgr.has_method("place_tile"), "has place_tile()")
@@ -73,8 +70,7 @@ func run(t) -> void:
 	var t1: StatusTile = mgr.place_tile(pos1, "fire")
 	t.assert_true(t1 != null, "place_tile returns StatusTile")
 	t.assert_eq(t1.status_type, "fire", "placed tile type == fire")
-	t.assert_eq(t1.layer, 1, "placed tile layer == 1")
-	t.assert_true(t1.duration > 0.0, "placed tile duration > 0")
+	t.assert_true(t1.has_status("fire"), "placed tile has fire status")
 	t.assert_eq(t1.grid_position, pos1, "placed tile grid_position == (5,5)")
 	t.assert_eq(placed_events.size(), 1, "status_tile_placed emitted once")
 	if placed_events.size() > 0:
@@ -95,12 +91,10 @@ func run(t) -> void:
 	var tiles_at: Array = mgr.get_tiles_at(pos1)
 	t.assert_eq(tiles_at.size(), 1, "get_tiles_at size == 1")
 
-	# --- 同位置同类型叠层 ---
+	# --- 同位置同类型 → 返回已有实例（不再叠层） ---
 	placed_events.clear()
 	var t1_again: StatusTile = mgr.place_tile(pos1, "fire")
 	t.assert_eq(t1_again, t1, "place_tile same pos+type returns same instance")
-	t.assert_eq(t1.layer, 2, "same-type stacks: layer == 2")
-	t.assert_eq(placed_events.size(), 1, "stacking emits status_tile_placed")
 
 	# --- 同位置不同类型 → 触发反应，双方消除 ---
 	var reaction_events: Array = []

@@ -9,6 +9,7 @@ extends Node
 var snake: Snake = null
 var enemy_manager: EnemyManager = null
 var tile_manager: StatusTileManager = null
+var reaction_resolver: Node = null  ## ReactionResolver
 
 var _aura_damage: int = 1
 var _spread_interval: int = 3
@@ -39,7 +40,7 @@ func _process_fire_aura() -> void:
 	for seg in snake.segments:
 		if not is_instance_valid(seg):
 			continue
-		if seg.carried_status != "fire":
+		if not seg.has_status("fire"):
 			continue
 		var pos: Vector2i = seg.grid_position
 		for dir in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
@@ -50,7 +51,9 @@ func _process_fire_aura() -> void:
 					# 火属性伤害：若敌人携带异类状态则触发反应
 					var enemy_status: String = e.carried_status if e.carried_status else ""
 					if enemy_status != "" and enemy_status != "fire":
-						var reaction_id: String = Enemy._get_reaction_id("fire", enemy_status)
+						var reaction_id: String = ""
+						if reaction_resolver:
+							reaction_id = reaction_resolver.find_reaction("fire", enemy_status)
 						if reaction_id != "":
 							EventBus.reaction_triggered.emit({
 								"reaction_id": reaction_id,
@@ -76,14 +79,14 @@ func _process_poison_spread() -> void:
 	# 清理已失效的计数器
 	var to_erase: Array = []
 	for seg in _spread_counters:
-		if not is_instance_valid(seg) or seg.carried_status != "poison":
+		if not is_instance_valid(seg) or not seg.has_status("poison"):
 			to_erase.append(seg)
 	for seg in to_erase:
 		_spread_counters.erase(seg)
 
 	# 处理每个毒段
 	for seg in snake.segments:
-		if not is_instance_valid(seg) or seg.carried_status != "poison":
+		if not is_instance_valid(seg) or not seg.has_status("poison"):
 			continue
 
 		if not _spread_counters.has(seg):

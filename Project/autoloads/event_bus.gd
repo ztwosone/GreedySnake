@@ -58,3 +58,7 @@ signal game_restart_requested                      # 请求重新开始
 signal no_body_countdown_tick(data: Dictionary)    # 每tick广播 { remaining_seconds, total_seconds, ratio }
 signal no_body_countdown_started(data: Dictionary) # 倒计时开始 { total_seconds }
 signal no_body_countdown_cancelled                 # 倒计时取消（恢复了身体段）
+
+# === StatusCarrier ===
+signal status_added_to_carrier(data: Dictionary)   # 载体获得状态 { carrier, type, carrier_type }
+signal status_removed_from_carrier(data: Dictionary) # 载体移除状态 { carrier, type, carrier_type }

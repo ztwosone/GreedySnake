@@ -7,7 +7,17 @@ var enemy_type: String = "wanderer"
 var enemy_shape: String = "square"
 var brain: EnemyBrain = EnemyBrain.new()
 var enemy_color: Color = Color(0.8, 0.1, 0.3)
-var carried_status: String = ""  # 敌人携带的状态
+## StatusCarrier 内部存储
+var _statuses: Array[String] = []
+## 兼容 getter/setter
+var carried_status: String:
+	get: return _statuses[0] if not _statuses.is_empty() else ""
+	set(value):
+		_statuses.clear()
+		if value != "":
+			_statuses.append(value)
+		_apply_status_visual()
+var collision_handler: Node = null  ## CollisionHandler 引用（由 EnemyManager 注入）
 var attack_cooldown_remaining: int = 0
 var _color_rect: ColorRect
 var _status_overlay: ColorRect
@@ -102,23 +112,73 @@ func setup_from_config(type_id: String) -> void:
 		_color_rect.color = enemy_color
 
 
+# === StatusCarrier 接口 ===
+
+func get_statuses() -> Array[String]:
+	return _statuses.duplicate()
+
+
+func has_status(type: String) -> bool:
+	return type in _statuses
+
+
+func add_status(type: String) -> bool:
+	if type in _statuses:
+		return false
+	_statuses.append(type)
+	_apply_status_visual()
+	EventBus.status_added_to_carrier.emit({
+		"carrier": self, "type": type, "carrier_type": "enemy"
+	})
+	return true
+
+
+func remove_status(type: String) -> void:
+	if type not in _statuses:
+		return
+	_statuses.erase(type)
+	_apply_status_visual()
+	EventBus.status_removed_from_carrier.emit({
+		"carrier": self, "type": type, "carrier_type": "enemy"
+	})
+
+
+func clear_all_statuses() -> void:
+	var old := _statuses.duplicate()
+	_statuses.clear()
+	_clear_status_visual()
+	for type in old:
+		EventBus.status_removed_from_carrier.emit({
+			"carrier": self, "type": type, "carrier_type": "enemy"
+		})
+
+
+func get_carrier_type() -> String:
+	return "enemy"
+
+
+# === 兼容方法 ===
+
 func set_carried_status_visual(type: String) -> void:
 	## 设置携带状态并更新视觉
-	carried_status = type
+	_statuses.clear()
+	if type != "":
+		_statuses.append(type)
 	_apply_status_visual()
 
 
 func clear_carried_status() -> void:
-	carried_status = ""
+	_statuses.clear()
 	_clear_status_visual()
 
 
 func _apply_status_visual() -> void:
 	_clear_status_visual()
-	if carried_status == "":
+	var primary: String = _statuses[0] if not _statuses.is_empty() else ""
+	if primary == "":
 		return
 
-	match carried_status:
+	match primary:
 		"fire":
 			if _border_rect:
 				_border_rect.color = Color(1.0, 0.3, 0.0, 0.9)
@@ -268,28 +328,20 @@ func _attack_segment(segment: SnakeSegment) -> void:
 	if snake_node:
 		snake_node.take_hit(damage)
 
-	# 双向状态传播：蛇段↔敌人
+	# 记录状态（用于信号 emit）
 	var seg_status: String = segment.carried_status
 	var enemy_status: String = carried_status
 
-	if seg_status != "" and enemy_status == "":
-		# 蛇段有状态 + 敌人无状态 → 敌人沾染蛇段状态
-		set_carried_status_visual(seg_status)
-	elif seg_status == "" and enemy_status != "":
-		# 敌人有状态 + 段无状态 → 段获得敌人状态
-		segment.set_carried_status(enemy_status)
-	elif seg_status != "" and enemy_status != "":
-		if seg_status == enemy_status:
-			# 同类 → 无事发生
-			pass
-		else:
-			# 异类 → 触发反应，双方状态清除
-			EventBus.reaction_triggered.emit({
-				"reaction_id": _get_reaction_id(enemy_status, seg_status),
-				"position": segment.grid_position,
-				"type_a": enemy_status,
-				"type_b": seg_status,
-			})
+	# 双向状态传播：委托 CollisionHandler
+	if collision_handler:
+		collision_handler.handle_collision("enemy_hit_segment", self, segment)
+	else:
+		# Legacy fallback
+		if seg_status != "" and enemy_status == "":
+			set_carried_status_visual(seg_status)
+		elif seg_status == "" and enemy_status != "":
+			segment.set_carried_status(enemy_status)
+		elif seg_status != "" and enemy_status != "" and seg_status != enemy_status:
 			segment.clear_carried_status()
 			clear_carried_status()
 
@@ -304,19 +356,6 @@ func _attack_segment(segment: SnakeSegment) -> void:
 		"enemy_status": enemy_status,
 		"seg_status": seg_status,
 	})
-
-
-static func _get_reaction_id(type_a: String, type_b: String) -> String:
-	## 根据两种状态类型返回反应 ID
-	var pair: Array = [type_a, type_b]
-	pair.sort()
-	if pair == ["fire", "ice"]:
-		return "steam"
-	elif pair == ["fire", "poison"]:
-		return "toxic_explosion"
-	elif pair == ["ice", "poison"]:
-		return "frozen_plague"
-	return ""
 
 
 func take_damage(amount: int) -> void:
