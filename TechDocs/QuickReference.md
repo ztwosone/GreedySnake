@@ -14,7 +14,7 @@ Godot 4.6 + GDScript 贪吃蛇 Roguelite。Grid-based、Tick-driven、Event-driv
 | L0 | 基础移动 + 长度 + 食物 | ✅ 完成 |
 | L1 | 战斗循环 + per-segment status + T25 Atom System | ✅ 完成（1030 测试） |
 | L2-Phase0 | T27A StatusCarrier + ReactionResolver + CollisionHandler | ✅ 完成（1082 测试） |
-| L2 | 蛇头/蛇尾/蛇鳞统一 Atom Chain | 🟡 设计完成，T27A 已实现 |
+| L2 | 蛇头/蛇尾/蛇鳞统一 Atom Chain | 🟡 设计完成，T27A/T27/T28A/T28B 已实现（1167 测试） |
 | L3+ | 地图 PCG / 成长 / 元成长 | 🔮 待设计 |
 
 ## 核心配置
@@ -22,7 +22,7 @@ Godot 4.6 + GDScript 贪吃蛇 Roguelite。Grid-based、Tick-driven、Event-driv
 ```
 Project/data/json/game_config.json    # 核心配置（grid/tick/snake/food/enemy/status/reactions）
 Project/autoloads/event_bus.gd        # 全局事件定义
-Project/systems/atoms/atom_registry.gd # T25 原子注册表（49 原子，17 触发器）
+Project/systems/atoms/atom_registry.gd # T25 原子注册表（55 原子，24 触发器）
 Project/systems/status/reaction_resolver.gd  # T27A 反应查表引擎
 Project/systems/status/collision_handler.gd  # T27A 碰撞统一处理器
 ```
@@ -55,15 +55,15 @@ Project/systems/status/collision_handler.gd  # T27A 碰撞统一处理器
   - EventBus 新增 `status_added_to_carrier` / `status_removed_from_carrier` 信号
 - **统一 Atom Chain** — 蛇头/蛇尾/蛇鳞三套系统统一使用 T25 Effect Atom System
 - 复用 EffectChainResolver → TriggerManager → AtomExecutor 管线
-- **EffectWindow 时间窗口框架（T27）** — 为 Atom System 新增"持续 N tick"能力
+- **EffectWindow 时间窗口框架（T27）** ✅ 已实现 — 为 Atom System 新增"持续 N tick"能力
   - 新增 EffectWindowManager（有状态管理器）+ open_window / if_in_window 原子
   - 窗口期内规则覆写（ignore_hit_counter / block_segment_loss 等）由各系统主动查询
   - 到期执行 on_expire 原子链，cancel_on 条件取消不触发到期链
-  - 完全 JSON 配置，零代码扩展
-- **新增触发器 7 个（T28A）** — 补全操作维度和资源维度
+  - 完全 JSON 配置，零代码扩展；新增 3 个 EventBus 信号
+- **新增触发器 7 个（T28A）** ✅ 已实现 — 补全操作维度和资源维度
   - 高：on_length_change（长度增减）、on_turn（转弯）、on_near_death（濒死）
   - 中：on_streak（连杀）、on_enemy_approach（敌人靠近）、on_status_gained（获得状态）、on_tile_placed（状态格放置）
-- 新增即时原子 4 个（T28B）：modify_food_drop, direct_grow, steal_status, modify_hit_threshold
+- **新增即时原子 4 个（T28B）** ✅ 已实现：modify_food_drop, direct_grow, steal_status, modify_hit_threshold；Snake.request_grow() 新增；原子总数 55
 - 蛇鳞效果也走 Atom Chain，不再有独立的 Condition/Action 系统
 
 ## 敌人类型（L1）
