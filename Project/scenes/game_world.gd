@@ -44,9 +44,18 @@ func _ready() -> void:
 	food_manager.tile_manager = status_tile_manager
 	# StatusEffectManager 需要 tile_manager 用于火焰蔓延
 	StatusEffectManager.tile_manager = status_tile_manager
+	# T27: EffectWindowManager
+	var WindowMgrScript: GDScript = load("res://systems/atoms/effect_window_manager.gd")
+	var window_mgr: Node = WindowMgrScript.new()
+	window_mgr.name = "EffectWindowManager"
+	window_mgr.atom_executor = StatusEffectManager._trigger_manager.atom_executor if StatusEffectManager._trigger_manager else null
+	window_mgr.atom_registry = StatusEffectManager._atom_registry
+	add_child(window_mgr)
+
 	if StatusEffectManager._trigger_manager:
 		StatusEffectManager._trigger_manager.enemy_mgr = enemy_manager
 		StatusEffectManager._trigger_manager.food_mgr = food_manager
+		StatusEffectManager._trigger_manager.window_mgr = window_mgr
 
 	# 蛇段增益效果系统
 	var seg_effect_system := SegmentEffectSystem.new()

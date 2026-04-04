@@ -62,3 +62,8 @@ signal no_body_countdown_cancelled                 # 倒计时取消（恢复了
 # === StatusCarrier ===
 signal status_added_to_carrier(data: Dictionary)   # 载体获得状态 { carrier, type, carrier_type }
 signal status_removed_from_carrier(data: Dictionary) # 载体移除状态 { carrier, type, carrier_type }
+
+# === EffectWindow ===
+signal window_opened(data: Dictionary)             # 窗口开启 { window_id, duration_ticks, owner }
+signal window_expired(data: Dictionary)            # 窗口到期 { window_id, owner }
+signal window_cancelled(data: Dictionary)          # 窗口取消 { window_id, owner, reason }

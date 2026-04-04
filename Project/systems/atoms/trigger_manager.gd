@@ -18,6 +18,14 @@ var tile_mgr = null
 var tick_mgr: Node = null
 var enemy_mgr: Node = null
 var food_mgr: Node = null
+var window_mgr: Node = null        # EffectWindowManager
+
+# === T28A 触发器状态 ===
+var _turn_count: int = 0
+var _near_death_fired: Dictionary = {}  # { effect_instance_id -> bool }
+var _kill_streak: int = 0
+var _last_kill_tick: int = -1
+var _current_tick_index: int = 0
 
 
 func _ready() -> void:
@@ -47,6 +55,7 @@ func register_chains(effect: Object, chains: Array) -> void:
 func unregister_chains(effect: Object) -> void:
 	var eid: int = effect.get_instance_id()
 	_active_entries.erase(eid)
+	_near_death_fired.erase(eid)
 
 
 func clear_all() -> void:
@@ -77,6 +86,12 @@ func _connect_signals() -> void:
 		"snake_moved": "_on_snake_moved",
 		"entity_moved": "_on_entity_moved",
 		"reaction_triggered": "_on_reaction_triggered",
+		# T28A 新触发器
+		"snake_length_increased": "_on_length_increased",
+		"snake_length_decreased": "_on_length_decreased",
+		"snake_turned": "_on_snake_turned",
+		"status_added_to_carrier": "_on_status_gained",
+		"status_tile_placed": "_on_tile_placed",
 	}
 
 	for sig_name in signals_to_connect:
@@ -139,6 +154,7 @@ func _fire_trigger(trigger_name: String, data: Dictionary, filter_fn: Callable =
 
 
 func _on_tick(tick_index: int) -> void:
+	_current_tick_index = tick_index
 	_fire_trigger("on_tick", { "tick_index": tick_index })
 
 
@@ -189,6 +205,16 @@ func _on_food_eaten(data: Dictionary) -> void:
 func _on_enemy_killed(data: Dictionary) -> void:
 	_fire_trigger("on_death", data)
 	_fire_trigger("on_kill", data)
+	# T28A: on_streak — 连杀追踪
+	var streak_timeout: int = 3  # default ticks
+	if (_current_tick_index - _last_kill_tick) <= streak_timeout and _last_kill_tick >= 0:
+		_kill_streak += 1
+	else:
+		_kill_streak = 1
+	_last_kill_tick = _current_tick_index
+	var streak_data: Dictionary = data.duplicate()
+	streak_data["streak_count"] = _kill_streak
+	_fire_trigger("on_streak", streak_data)
 
 
 func _on_snake_died(data: Dictionary) -> void:
@@ -210,10 +236,93 @@ func _on_snake_moved(data: Dictionary) -> void:
 
 func _on_entity_moved(data: Dictionary) -> void:
 	_fire_trigger("on_move", data)
+	# T28A: on_enemy_approach — 敌人靠近蛇段
+	var entity = data.get("entity")
+	if entity and entity is Enemy:
+		var to_pos: Vector2i = data.get("to", Vector2i.ZERO)
+		_check_enemy_approach(entity, to_pos, data)
 
 
 func _on_reaction_triggered(data: Dictionary) -> void:
 	_fire_trigger("on_status_react", data)
+
+
+# === T28A 新触发器处理 ===
+
+func _on_length_increased(data: Dictionary) -> void:
+	var fire_data: Dictionary = data.duplicate()
+	fire_data["direction"] = "grow"
+	_fire_trigger("on_length_change", fire_data)
+
+
+func _on_length_decreased(data: Dictionary) -> void:
+	var fire_data: Dictionary = data.duplicate()
+	fire_data["direction"] = "shrink"
+	_fire_trigger("on_length_change", fire_data)
+	# on_near_death 检查
+	var new_length: int = int(data.get("new_length", 999))
+	_check_near_death(data, new_length)
+
+
+func _on_snake_turned(data: Dictionary) -> void:
+	_turn_count += 1
+	var fire_data: Dictionary = data.duplicate()
+	fire_data["turn_count"] = _turn_count
+	_fire_trigger("on_turn", fire_data)
+
+
+func _on_status_gained(data: Dictionary) -> void:
+	_fire_trigger("on_status_gained", data)
+
+
+func _on_tile_placed(data: Dictionary) -> void:
+	_fire_trigger("on_tile_placed", data)
+
+
+func _check_near_death(data: Dictionary, new_length: int) -> void:
+	for eid in _active_entries:
+		var entry: Dictionary = _active_entries[eid]
+		var effect = entry["effect"]
+		if not is_instance_valid(effect):
+			continue
+		for chain in entry["chains"]:
+			if chain.trigger != "on_near_death" or not chain._active:
+				continue
+			var threshold: int = int(chain.trigger_params.get("threshold", 2))
+			if new_length <= threshold:
+				if _near_death_fired.get(eid, false):
+					continue
+				_near_death_fired[eid] = true
+				var ctx := _build_context(effect)
+				ctx.params.merge(data, true)
+				ctx.params["threshold"] = threshold
+				atom_executor.execute_chain(chain, ctx)
+
+
+func _check_enemy_approach(enemy: Object, enemy_pos: Vector2i, data: Dictionary) -> void:
+	for eid in _active_entries:
+		var entry: Dictionary = _active_entries[eid]
+		var effect = entry["effect"]
+		if not is_instance_valid(effect):
+			continue
+		for chain in entry["chains"]:
+			if chain.trigger != "on_enemy_approach" or not chain._active:
+				continue
+			var range_val: int = int(chain.trigger_params.get("range", 2))
+			var carrier = effect.get("carrier") if effect else null
+			if not is_instance_valid(carrier):
+				continue
+			if carrier.get("grid_position") == null:
+				continue
+			var carrier_pos: Vector2i = carrier.grid_position
+			var dist: int = abs(enemy_pos.x - carrier_pos.x) + abs(enemy_pos.y - carrier_pos.y)
+			if dist <= range_val:
+				var ctx := _build_context(effect)
+				ctx.params.merge(data, true)
+				ctx.params["distance"] = dist
+				ctx.target = enemy
+				ctx.target_position = enemy_pos
+				atom_executor.execute_chain(chain, ctx)
 
 
 # === 上下文构建 ===
@@ -226,6 +335,7 @@ func _build_context(effect) -> AtomContext:
 	ctx.tick_mgr = tick_mgr
 	ctx.enemy_mgr = enemy_mgr
 	ctx.food_mgr = food_mgr
+	ctx.window_mgr = window_mgr
 
 	# 从 effect 获取 carrier 信息
 	var carrier = effect.get("carrier") if effect else null

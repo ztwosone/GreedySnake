@@ -22,6 +22,9 @@ func _register_all() -> void:
 	_atoms["modify_attack_cost"] = preload("res://systems/atoms/atoms/value/modify_attack_cost_atom.gd")
 	_atoms["shield"] = preload("res://systems/atoms/atoms/value/shield_atom.gd")
 	_atoms["lifesteal"] = preload("res://systems/atoms/atoms/value/lifesteal_atom.gd")
+	_atoms["modify_food_drop"] = load("res://systems/atoms/atoms/value/modify_food_drop_atom.gd")
+	_atoms["direct_grow"] = load("res://systems/atoms/atoms/value/direct_grow_atom.gd")
+	_atoms["modify_hit_threshold"] = load("res://systems/atoms/atoms/value/modify_hit_threshold_atom.gd")
 
 	# === Status 原子 ===
 	_atoms["apply_status"] = preload("res://systems/atoms/atoms/status/apply_status_atom.gd")
@@ -29,6 +32,7 @@ func _register_all() -> void:
 	_atoms["transfer_status"] = preload("res://systems/atoms/atoms/status/transfer_status_atom.gd")
 	_atoms["cleanse_all"] = preload("res://systems/atoms/atoms/status/cleanse_all_atom.gd")
 	_atoms["extend_duration"] = preload("res://systems/atoms/atoms/status/extend_duration_atom.gd")
+	_atoms["steal_status"] = load("res://systems/atoms/atoms/status/steal_status_atom.gd")
 
 	# === Spatial 原子 ===
 	_atoms["place_tile"] = preload("res://systems/atoms/atoms/spatial/place_tile_atom.gd")
@@ -59,6 +63,7 @@ func _register_all() -> void:
 	_atoms["repeat"] = preload("res://systems/atoms/atoms/temporal/repeat_atom.gd")
 	_atoms["queue"] = preload("res://systems/atoms/atoms/temporal/queue_atom.gd")
 	_atoms["reduce_cooldown"] = preload("res://systems/atoms/atoms/temporal/reduce_cooldown_atom.gd")
+	_atoms["open_window"] = load("res://systems/atoms/atoms/temporal/open_window_atom.gd")
 
 	# === Logic 原子 ===
 	_atoms["if_length_below"] = preload("res://systems/atoms/atoms/logic/if_length_below_atom.gd")
@@ -68,6 +73,7 @@ func _register_all() -> void:
 	_atoms["if_chance"] = preload("res://systems/atoms/atoms/logic/if_chance_atom.gd")
 	_atoms["if_cooldown"] = preload("res://systems/atoms/atoms/logic/if_cooldown_atom.gd")
 	_atoms["if_count_reached"] = preload("res://systems/atoms/atoms/logic/if_count_reached_atom.gd")
+	_atoms["if_in_window"] = load("res://systems/atoms/atoms/logic/if_in_window_atom.gd")
 
 	# === Build 原子 ===
 	_atoms["trigger_slot"] = preload("res://systems/atoms/atoms/build/trigger_slot_atom.gd")

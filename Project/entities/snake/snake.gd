@@ -149,6 +149,10 @@ func add_segment_at_tail() -> void:
 	grow_pending += 1
 
 
+func request_grow(amount: int) -> void:
+	grow_pending += amount
+
+
 func remove_tail_segment() -> void:
 	if body.size() <= 1:
 		return

@@ -21,6 +21,12 @@ func resolve(def: Dictionary) -> EffectChain:
 		chain.trigger_params["interval"] = float(def["interval"])
 	if def.has("layer"):
 		chain.trigger_params["layer"] = int(def["layer"])
+	if def.has("threshold"):
+		chain.trigger_params["threshold"] = int(def["threshold"])
+	if def.has("range"):
+		chain.trigger_params["range"] = int(def["range"])
+	if def.has("streak_timeout"):
+		chain.trigger_params["streak_timeout"] = int(def["streak_timeout"])
 
 	# 概率
 	chain.chance = float(def.get("chance", 1.0))
