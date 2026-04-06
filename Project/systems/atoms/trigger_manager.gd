@@ -92,6 +92,8 @@ func _connect_signals() -> void:
 		"snake_turned": "_on_snake_turned",
 		"status_added_to_carrier": "_on_status_gained",
 		"status_tile_placed": "_on_tile_placed",
+		# T29 蛇身被攻击
+		"snake_body_attacked": "_on_body_attacked",
 	}
 
 	for sig_name in signals_to_connect:
@@ -277,6 +279,10 @@ func _on_status_gained(data: Dictionary) -> void:
 
 func _on_tile_placed(data: Dictionary) -> void:
 	_fire_trigger("on_tile_placed", data)
+
+
+func _on_body_attacked(data: Dictionary) -> void:
+	_fire_trigger("on_body_attacked", data)
 
 
 func _check_near_death(data: Dictionary, new_length: int) -> void:

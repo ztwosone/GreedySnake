@@ -67,3 +67,7 @@ signal status_removed_from_carrier(data: Dictionary) # 载体移除状态 { carr
 signal window_opened(data: Dictionary)             # 窗口开启 { window_id, duration_ticks, owner }
 signal window_expired(data: Dictionary)            # 窗口到期 { window_id, owner }
 signal window_cancelled(data: Dictionary)          # 窗口取消 { window_id, owner, reason }
+
+# === SnakeParts ===
+signal snake_head_equipped(data: Dictionary)       # 蛇头装备 { head_id, level }
+signal snake_head_unequipped(data: Dictionary)     # 蛇头卸载 { head_id }

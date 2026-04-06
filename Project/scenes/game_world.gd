@@ -52,10 +52,23 @@ func _ready() -> void:
 	window_mgr.atom_registry = StatusEffectManager._atom_registry
 	add_child(window_mgr)
 
+	# 补全 EffectWindowManager 系统引用
+	window_mgr.effect_mgr = StatusEffectManager
+	window_mgr.enemy_mgr = enemy_manager
+	# Snake 无敌窗口引用
+	snake._window_mgr = window_mgr
+
 	if StatusEffectManager._trigger_manager:
 		StatusEffectManager._trigger_manager.enemy_mgr = enemy_manager
 		StatusEffectManager._trigger_manager.food_mgr = food_manager
 		StatusEffectManager._trigger_manager.window_mgr = window_mgr
+
+	# T29: SnakePartsManager
+	var SnakePartsMgrScript: GDScript = load("res://systems/snake_parts/snake_parts_manager.gd")
+	var snake_parts_mgr: Node = SnakePartsMgrScript.new()
+	snake_parts_mgr.name = "SnakePartsManager"
+	snake_parts_mgr.init_manager(snake, StatusEffectManager._trigger_manager, StatusEffectManager._chain_resolver)
+	add_child(snake_parts_mgr)
 
 	# 蛇段增益效果系统
 	var seg_effect_system := SegmentEffectSystem.new()

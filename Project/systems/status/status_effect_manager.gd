@@ -23,6 +23,8 @@ var _trigger_manager: TriggerManager = null
 var _active_modifiers: Dictionary = {
 	"growth": {},
 	"speed": {},
+	"hit_threshold": {},
+	"food_drop": {},
 }
 
 
@@ -227,7 +229,7 @@ func clear_all() -> void:
 	# 注销所有原子链
 	if _trigger_manager:
 		_trigger_manager.clear_all()
-	_active_modifiers = { "growth": {}, "speed": {} }
+	_active_modifiers = { "growth": {}, "speed": {}, "hit_threshold": {}, "food_drop": {} }
 
 	# 断开所有载体信号
 	for target_id in _id_to_target:

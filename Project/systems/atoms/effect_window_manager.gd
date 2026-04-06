@@ -4,6 +4,8 @@ extends Node
 
 var atom_executor: AtomExecutor = null
 var atom_registry: Node = null  ## AtomRegistry
+var effect_mgr: Node = null    ## StatusEffectManager
+var enemy_mgr: Node = null     ## EnemyManager
 
 # === 内部状态 ===
 var _active_windows: Dictionary = {}       # { window_id -> EffectWindow }
@@ -130,6 +132,10 @@ func _execute_expire_chain(window: RefCounted) -> void:
 	if ctx.source and ctx.source.get("grid_position") != null:
 		ctx.source_position = ctx.source.grid_position
 		ctx.target_position = ctx.source.grid_position
+	# 系统引用（burst_carried_status 等原子需要）
+	ctx.effect_mgr = effect_mgr
+	ctx.enemy_mgr = enemy_mgr
+	ctx.window_mgr = self
 
 	for atom_def in window.on_expire:
 		if atom_def is not Dictionary:

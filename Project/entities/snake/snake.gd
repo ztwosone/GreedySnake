@@ -14,6 +14,7 @@ var hits_per_segment_loss: int = 3
 var _hurt_tween: Tween
 var _danger_tween: Tween
 var _countdown_tween: Tween
+var _window_mgr: Node = null   # EffectWindowManager（无敌窗口检查）
 
 
 func _ready() -> void:
@@ -241,9 +242,17 @@ func _clear_segments() -> void:
 func take_hit(damage: int = 1) -> void:
 	if not is_alive:
 		return
+	# 无敌窗口检查（白蛇）
+	if _window_mgr and _window_mgr.get_rule("ignore_hit_counter", false):
+		return
+	# 读取持久修改器（九头蛇 hit_threshold -1）
+	var effective_threshold: int = hits_per_segment_loss
+	if StatusEffectManager:
+		var mod: int = int(StatusEffectManager.get_modifier("hit_threshold", self, 0.0))
+		effective_threshold = max(1, hits_per_segment_loss + mod)
 	for i in range(damage):
 		hits_taken += 1
-		if hits_taken >= hits_per_segment_loss:
+		if hits_taken >= effective_threshold:
 			hits_taken = 0
 			EventBus.length_decrease_requested.emit({"amount": 1, "source": "body_attack"})
 

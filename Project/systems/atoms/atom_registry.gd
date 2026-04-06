@@ -25,6 +25,7 @@ func _register_all() -> void:
 	_atoms["modify_food_drop"] = load("res://systems/atoms/atoms/value/modify_food_drop_atom.gd")
 	_atoms["direct_grow"] = load("res://systems/atoms/atoms/value/direct_grow_atom.gd")
 	_atoms["modify_hit_threshold"] = load("res://systems/atoms/atoms/value/modify_hit_threshold_atom.gd")
+	_atoms["area_damage"] = load("res://systems/atoms/atoms/value/area_damage_atom.gd")
 
 	# === Status 原子 ===
 	_atoms["apply_status"] = preload("res://systems/atoms/atoms/status/apply_status_atom.gd")
@@ -33,6 +34,7 @@ func _register_all() -> void:
 	_atoms["cleanse_all"] = preload("res://systems/atoms/atoms/status/cleanse_all_atom.gd")
 	_atoms["extend_duration"] = preload("res://systems/atoms/atoms/status/extend_duration_atom.gd")
 	_atoms["steal_status"] = load("res://systems/atoms/atoms/status/steal_status_atom.gd")
+	_atoms["burst_carried_status"] = load("res://systems/atoms/atoms/status/burst_carried_status_atom.gd")
 
 	# === Spatial 原子 ===
 	_atoms["place_tile"] = preload("res://systems/atoms/atoms/spatial/place_tile_atom.gd")

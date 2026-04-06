@@ -122,6 +122,10 @@ func _drop_food_for_enemy(enemy: Node, pos: Vector2i) -> void:
 	var type_id: String = enemy.get("enemy_type") if enemy.get("enemy_type") else "wanderer"
 	var cfg: Dictionary = ConfigManager.get_enemy_type(type_id)
 	var drop_count: int = int(cfg.get("drop_food_count", 0))
+	# 蛇头食物掉落修改器（九头蛇: -99 → 0 掉落）
+	if snake and StatusEffectManager:
+		var food_mod: int = int(StatusEffectManager.get_modifier("food_drop", snake, 0.0))
+		drop_count = max(0, drop_count + food_mod)
 	if drop_count <= 0:
 		return
 	_spawn_food_drops(pos, drop_count)

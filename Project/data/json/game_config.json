@@ -293,5 +293,143 @@
     "combat": [11, 20],
     "comfort": [21, 35],
     "overload": [36, 999]
+  },
+  "snake_heads": {
+    "hydra": {
+      "display_name": "九头蛇",
+      "description": "贪婪型：吃敌人直接+长度，但更脆弱",
+      "levels": {
+        "1": {
+          "entity_effects": [
+            {
+              "trigger": "on_applied",
+              "atoms": [
+                { "atom": "modify_hit_threshold", "value": -1 },
+                { "atom": "modify_food_drop", "amount": -99 }
+              ]
+            },
+            {
+              "trigger": "on_removed",
+              "atoms": [
+                { "atom": "modify_hit_threshold", "value": 1 },
+                { "atom": "modify_food_drop", "amount": 99 }
+              ]
+            },
+            {
+              "trigger": "on_kill",
+              "atoms": [
+                { "atom": "direct_grow", "amount": 1 },
+                { "atom": "steal_status" }
+              ]
+            }
+          ]
+        },
+        "2": {
+          "entity_effects": [
+            {
+              "trigger": "on_applied",
+              "atoms": [
+                { "atom": "modify_hit_threshold", "value": -1 },
+                { "atom": "modify_food_drop", "amount": -99 }
+              ]
+            },
+            {
+              "trigger": "on_removed",
+              "atoms": [
+                { "atom": "modify_hit_threshold", "value": 1 },
+                { "atom": "modify_food_drop", "amount": 99 }
+              ]
+            },
+            {
+              "trigger": "on_kill",
+              "atoms": [
+                { "atom": "direct_grow", "amount": 2 },
+                { "atom": "steal_status" }
+              ]
+            }
+          ]
+        },
+        "3": {
+          "entity_effects": [
+            {
+              "trigger": "on_applied",
+              "atoms": [
+                { "atom": "modify_hit_threshold", "value": -1 },
+                { "atom": "modify_food_drop", "amount": -99 }
+              ]
+            },
+            {
+              "trigger": "on_removed",
+              "atoms": [
+                { "atom": "modify_hit_threshold", "value": 1 },
+                { "atom": "modify_food_drop", "amount": 99 }
+              ]
+            },
+            {
+              "trigger": "on_kill",
+              "atoms": [
+                { "atom": "direct_grow", "amount": 2 },
+                { "atom": "steal_status" },
+                { "atom": "area_damage", "amount": 1, "radius": 1 }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "bai_she": {
+      "display_name": "白蛇",
+      "description": "稳健型：吃敌人获得安全窗口，但成长慢",
+      "levels": {
+        "1": {
+          "entity_effects": [
+            {
+              "trigger": "on_kill",
+              "atoms": [
+                { "atom": "open_window", "window_id": "bai_she_invincible", "duration_ticks": 3, "rules": { "ignore_hit_counter": true } }
+              ]
+            }
+          ]
+        },
+        "2": {
+          "entity_effects": [
+            {
+              "trigger": "on_kill",
+              "atoms": [
+                { "atom": "open_window", "window_id": "bai_she_invincible", "duration_ticks": 3, "rules": { "ignore_hit_counter": true } }
+              ]
+            },
+            {
+              "trigger": "on_body_attacked",
+              "conditions": [
+                { "atom": "if_in_window", "window_id": "bai_she_invincible" }
+              ],
+              "atoms": [
+                { "atom": "apply_status", "status_type": "ice", "apply_to": "attacker" }
+              ]
+            }
+          ]
+        },
+        "3": {
+          "entity_effects": [
+            {
+              "trigger": "on_kill",
+              "atoms": [
+                { "atom": "open_window", "window_id": "bai_she_invincible", "duration_ticks": 5, "rules": { "ignore_hit_counter": true }, "on_expire": [{ "atom": "burst_carried_status", "radius": 1 }] }
+              ]
+            },
+            {
+              "trigger": "on_body_attacked",
+              "conditions": [
+                { "atom": "if_in_window", "window_id": "bai_she_invincible" }
+              ],
+              "atoms": [
+                { "atom": "apply_status", "status_type": "ice", "apply_to": "attacker" }
+              ]
+            }
+          ]
+        }
+      }
+    }
   }
 }
