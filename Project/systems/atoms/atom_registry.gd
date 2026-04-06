@@ -26,6 +26,8 @@ func _register_all() -> void:
 	_atoms["direct_grow"] = load("res://systems/atoms/atoms/value/direct_grow_atom.gd")
 	_atoms["modify_hit_threshold"] = load("res://systems/atoms/atoms/value/modify_hit_threshold_atom.gd")
 	_atoms["area_damage"] = load("res://systems/atoms/atoms/value/area_damage_atom.gd")
+	_atoms["request_segment_loss"] = load("res://systems/atoms/atoms/value/request_segment_loss_atom.gd")
+	_atoms["modify_hits_taken"] = load("res://systems/atoms/atoms/value/modify_hits_taken_atom.gd")
 
 	# === Status 原子 ===
 	_atoms["apply_status"] = preload("res://systems/atoms/atoms/status/apply_status_atom.gd")
@@ -66,6 +68,7 @@ func _register_all() -> void:
 	_atoms["queue"] = preload("res://systems/atoms/atoms/temporal/queue_atom.gd")
 	_atoms["reduce_cooldown"] = preload("res://systems/atoms/atoms/temporal/reduce_cooldown_atom.gd")
 	_atoms["open_window"] = load("res://systems/atoms/atoms/temporal/open_window_atom.gd")
+	_atoms["cancel_window"] = load("res://systems/atoms/atoms/temporal/cancel_window_atom.gd")
 
 	# === Logic 原子 ===
 	_atoms["if_length_below"] = preload("res://systems/atoms/atoms/logic/if_length_below_atom.gd")

@@ -14,7 +14,7 @@ Godot 4.6 + GDScript 贪吃蛇 Roguelite。Grid-based、Tick-driven、Event-driv
 | L0 | 基础移动 + 长度 + 食物 | ✅ 完成 |
 | L1 | 战斗循环 + per-segment status + T25 Atom System | ✅ 完成（1030 测试） |
 | L2-Phase0 | T27A StatusCarrier + ReactionResolver + CollisionHandler | ✅ 完成（1082 测试） |
-| L2 | 蛇头/蛇尾/蛇鳞统一 Atom Chain | 🟡 设计完成，T27A/T27/T28A/T28B 已实现（1167 测试） |
+| L2 | 蛇头/蛇尾/蛇鳞统一 Atom Chain | 🟡 T27A/T27/T28A/T28B/T29 已实现（1209 测试） |
 | L3+ | 地图 PCG / 成长 / 元成长 | 🔮 待设计 |
 
 ## 核心配置
@@ -22,7 +22,7 @@ Godot 4.6 + GDScript 贪吃蛇 Roguelite。Grid-based、Tick-driven、Event-driv
 ```
 Project/data/json/game_config.json    # 核心配置（grid/tick/snake/food/enemy/status/reactions）
 Project/autoloads/event_bus.gd        # 全局事件定义
-Project/systems/atoms/atom_registry.gd # T25 原子注册表（55 原子，24 触发器）
+Project/systems/atoms/atom_registry.gd # T25 原子注册表（57 原子，24 触发器）
 Project/systems/status/reaction_resolver.gd  # T27A 反应查表引擎
 Project/systems/status/collision_handler.gd  # T27A 碰撞统一处理器
 ```
@@ -63,7 +63,15 @@ Project/systems/status/collision_handler.gd  # T27A 碰撞统一处理器
 - **新增触发器 7 个（T28A）** ✅ 已实现 — 补全操作维度和资源维度
   - 高：on_length_change（长度增减）、on_turn（转弯）、on_near_death（濒死）
   - 中：on_streak（连杀）、on_enemy_approach（敌人靠近）、on_status_gained（获得状态）、on_tile_placed（状态格放置）
-- **新增即时原子 4 个（T28B）** ✅ 已实现：modify_food_drop, direct_grow, steal_status, modify_hit_threshold；Snake.request_grow() 新增；原子总数 55
+- **新增即时原子 4 个（T28B）** ✅ 已实现：modify_food_drop, direct_grow, steal_status, modify_hit_threshold；Snake.request_grow() 新增
+- **SnakePartsManager + 蛇头链（T29）** ✅ 已实现
+  - SnakePartsManager 管理蛇头装备/卸载，SnakePartData 兼容 TriggerManager duck typing
+  - Hydra（九头蛇）：受击阈值-1、不掉食物、直接增长、窃取状态、L3回声咬
+  - Bái Shé（白蛇）：击杀开无敌窗口、L2+反击冰冻、L3到期爆发状态
+  - 新增 area_damage + burst_carried_status 原子（总数 57）
+  - StatusEffectManager 持久修改器：hit_threshold / food_drop
+  - Snake.take_hit() 集成无敌窗口查询
+  - ConfigManager 新增 snake_heads 段 + get_snake_head()
 - 蛇鳞效果也走 Atom Chain，不再有独立的 Condition/Action 系统
 
 ## 敌人类型（L1）

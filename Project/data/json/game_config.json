@@ -431,5 +431,115 @@
         }
       }
     }
+  },
+  "snake_tails": {
+    "salamander": {
+      "display_name": "再生尾",
+      "description": "防守恢复型：丢段后开启恢复窗口，到期自动恢复",
+      "levels": {
+        "1": {
+          "entity_effects": [
+            {
+              "trigger": "on_length_decrease",
+              "atoms": [
+                { "atom": "open_window", "window_id": "salamander_recovery", "duration_ticks": 20, "on_expire": [{ "atom": "direct_grow", "amount": 1 }] }
+              ]
+            }
+          ]
+        },
+        "2": {
+          "entity_effects": [
+            {
+              "trigger": "on_length_decrease",
+              "atoms": [
+                { "atom": "open_window", "window_id": "salamander_recovery", "duration_ticks": 28, "on_expire": [{ "atom": "direct_grow", "amount": 1 }] }
+              ]
+            }
+          ]
+        },
+        "3": {
+          "entity_effects": [
+            {
+              "trigger": "on_length_decrease",
+              "atoms": [
+                { "atom": "open_window", "window_id": "salamander_recovery", "duration_ticks": 28, "on_expire": [{ "atom": "direct_grow", "amount": 1 }, { "atom": "apply_status", "status_type": "ice", "apply_to": "tail_segment" }] }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "lag_tail": {
+      "display_name": "时滞尾",
+      "description": "进攻取消型：丢段延迟，吃敌人取消丢段",
+      "levels": {
+        "1": {
+          "entity_effects": [
+            {
+              "trigger": "on_applied",
+              "atoms": [
+                { "atom": "open_window", "window_id": "lag_tail_active", "duration_ticks": 99999, "rules": { "block_segment_loss": true } }
+              ]
+            },
+            {
+              "trigger": "on_removed",
+              "atoms": [
+                { "atom": "cancel_window", "window_id": "lag_tail_active" }
+              ]
+            },
+            {
+              "trigger": "on_segment_loss_deferred",
+              "atoms": [
+                { "atom": "open_window", "window_id": "lag_tail_delay", "duration_ticks": 3, "cancel_on": "snake_hit_enemy", "on_expire": [{ "atom": "request_segment_loss", "amount": 1 }] }
+              ]
+            }
+          ]
+        },
+        "2": {
+          "entity_effects": [
+            {
+              "trigger": "on_applied",
+              "atoms": [
+                { "atom": "open_window", "window_id": "lag_tail_active", "duration_ticks": 99999, "rules": { "block_segment_loss": true } }
+              ]
+            },
+            {
+              "trigger": "on_removed",
+              "atoms": [
+                { "atom": "cancel_window", "window_id": "lag_tail_active" }
+              ]
+            },
+            {
+              "trigger": "on_segment_loss_deferred",
+              "atoms": [
+                { "atom": "open_window", "window_id": "lag_tail_delay", "duration_ticks": 3, "cancel_on": "snake_hit_enemy", "on_expire": [{ "atom": "request_segment_loss", "amount": 1 }], "on_cancel": [{ "atom": "modify_hits_taken", "value": -1 }] }
+              ]
+            }
+          ]
+        },
+        "3": {
+          "entity_effects": [
+            {
+              "trigger": "on_applied",
+              "atoms": [
+                { "atom": "open_window", "window_id": "lag_tail_active", "duration_ticks": 99999, "rules": { "block_segment_loss": true } }
+              ]
+            },
+            {
+              "trigger": "on_removed",
+              "atoms": [
+                { "atom": "cancel_window", "window_id": "lag_tail_active" }
+              ]
+            },
+            {
+              "trigger": "on_segment_loss_deferred",
+              "atoms": [
+                { "atom": "open_window", "window_id": "lag_tail_delay", "duration_ticks": 3, "cancel_on": "enemy_killed", "on_expire": [{ "atom": "request_segment_loss", "amount": 1 }], "on_cancel": [{ "atom": "modify_hits_taken", "value": -1 }] }
+              ]
+            }
+          ]
+        }
+      }
+    }
   }
 }

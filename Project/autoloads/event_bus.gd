@@ -71,3 +71,8 @@ signal window_cancelled(data: Dictionary)          # 窗口取消 { window_id, o
 # === SnakeParts ===
 signal snake_head_equipped(data: Dictionary)       # 蛇头装备 { head_id, level }
 signal snake_head_unequipped(data: Dictionary)     # 蛇头卸载 { head_id }
+signal snake_tail_equipped(data: Dictionary)       # 蛇尾装备 { tail_id, level }
+signal snake_tail_unequipped(data: Dictionary)     # 蛇尾卸载 { tail_id }
+
+# === Segment Loss Deferred (T30 Lag Tail) ===
+signal segment_loss_deferred(data: Dictionary)     # 段丢失被延迟 { amount, source }

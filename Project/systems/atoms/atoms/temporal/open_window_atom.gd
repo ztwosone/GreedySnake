@@ -1,7 +1,7 @@
 class_name OpenWindowAtom
 extends AtomBase
 ## 开启效果窗口
-## 参数: window_id, duration_ticks, rules, on_expire, cancel_on
+## 参数: window_id, duration_ticks, rules, on_expire, on_cancel, cancel_on
 
 
 func execute(ctx: AtomContext) -> void:
@@ -14,6 +14,7 @@ func execute(ctx: AtomContext) -> void:
 		"duration_ticks": get_param("duration_ticks", 4),
 		"rules": get_param("rules", {}),
 		"on_expire": get_param("on_expire", []),
+		"on_cancel": get_param("on_cancel", []),
 		"cancel_on": get_param("cancel_on", ""),
 	}
 	ctx.window_mgr.open_window(wid, config, ctx.source)

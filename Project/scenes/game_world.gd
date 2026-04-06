@@ -57,6 +57,8 @@ func _ready() -> void:
 	window_mgr.enemy_mgr = enemy_manager
 	# Snake 无敌窗口引用
 	snake._window_mgr = window_mgr
+	# T30: LengthSystem 段丢失拦截引用
+	length_system.window_mgr = window_mgr
 
 	if StatusEffectManager._trigger_manager:
 		StatusEffectManager._trigger_manager.enemy_mgr = enemy_manager

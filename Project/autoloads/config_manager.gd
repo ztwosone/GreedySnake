@@ -19,6 +19,7 @@ var reactions: Dictionary = {}
 var enemy_types: Dictionary = {}
 var length_thresholds: Dictionary = {}
 var snake_heads: Dictionary = {}
+var snake_tails: Dictionary = {}
 
 # 反应查找表：("fire", "ice") → reaction_dict
 var _reaction_lookup: Dictionary = {}
@@ -69,6 +70,7 @@ func _populate_sections() -> void:
 	enemy_types = _data.get("enemy_types", {})
 	length_thresholds = _data.get("length_thresholds", {})
 	snake_heads = _data.get("snake_heads", {})
+	snake_tails = _data.get("snake_tails", {})
 
 
 func _build_reaction_lookup() -> void:
@@ -129,6 +131,16 @@ func get_snake_head(head_id: String, level: int = 1) -> Dictionary:
 
 func get_snake_head_ids() -> Array:
 	return snake_heads.keys()
+
+
+func get_snake_tail(tail_id: String, level: int = 1) -> Dictionary:
+	var tail_cfg: Dictionary = snake_tails.get(tail_id, {})
+	var levels: Dictionary = tail_cfg.get("levels", {})
+	return levels.get(str(level), {})
+
+
+func get_snake_tail_ids() -> Array:
+	return snake_tails.keys()
 
 
 func reload_config() -> bool:

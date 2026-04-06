@@ -7,6 +7,7 @@ var duration_ticks: int = 0
 var remaining_ticks: int = 0
 var rules: Dictionary = {}       # { "ignore_hit_counter": true, ... }
 var on_expire: Array = []        # 到期执行的原子定义列表
+var on_cancel: Array = []        # 取消时执行的原子定义列表
 var cancel_on: String = ""       # 取消信号名（空 = 无自动取消）
 var owner: Object = null         # 开窗口的实体（弱引用语义）
 
@@ -17,5 +18,6 @@ func init_from_config(wid: String, config: Dictionary, p_owner: Object) -> void:
 	remaining_ticks = duration_ticks
 	rules = config.get("rules", {})
 	on_expire = config.get("on_expire", [])
+	on_cancel = config.get("on_cancel", [])
 	cancel_on = config.get("cancel_on", "")
 	owner = p_owner

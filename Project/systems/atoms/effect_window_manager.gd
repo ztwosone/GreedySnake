@@ -45,13 +45,17 @@ func open_window(window_id: String, config: Dictionary, owner: Object) -> void:
 	})
 
 
-## 取消窗口（不触发 on_expire）
+## 取消窗口（不触发 on_expire，但触发 on_cancel）
 func cancel_window(window_id: String, reason: String = "manual") -> void:
 	if not _active_windows.has(window_id):
 		return
 	var window: RefCounted = _active_windows[window_id]
 	_disconnect_cancel(window_id, window)
 	_active_windows.erase(window_id)
+
+	# 执行 on_cancel 原子链（信号触发的取消才执行，手动/原子取消不执行）
+	if window.on_cancel.size() > 0 and reason == "signal" and atom_executor != null and atom_registry != null:
+		_execute_cancel_chain(window)
 
 	EventBus.window_cancelled.emit({
 		"window_id": window_id,
@@ -138,6 +142,31 @@ func _execute_expire_chain(window: RefCounted) -> void:
 	ctx.window_mgr = self
 
 	for atom_def in window.on_expire:
+		if atom_def is not Dictionary:
+			continue
+		var atom_name: String = atom_def.get("atom", "")
+		if atom_name.is_empty():
+			continue
+		var params: Dictionary = atom_def.duplicate()
+		params.erase("atom")
+		var atom: AtomBase = atom_registry.create(atom_name, params)
+		if atom == null:
+			continue
+		atom.execute(ctx)
+
+
+func _execute_cancel_chain(window: RefCounted) -> void:
+	var ctx := AtomContext.new()
+	ctx.source = window.owner if is_instance_valid(window.owner) else null
+	ctx.target = ctx.source
+	if ctx.source and ctx.source.get("grid_position") != null:
+		ctx.source_position = ctx.source.grid_position
+		ctx.target_position = ctx.source.grid_position
+	ctx.effect_mgr = effect_mgr
+	ctx.enemy_mgr = enemy_mgr
+	ctx.window_mgr = self
+
+	for atom_def in window.on_cancel:
 		if atom_def is not Dictionary:
 			continue
 		var atom_name: String = atom_def.get("atom", "")

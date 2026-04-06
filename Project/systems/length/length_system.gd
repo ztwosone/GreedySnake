@@ -2,6 +2,7 @@ class_name LengthSystem
 extends Node
 
 var snake: Snake
+var window_mgr: Node = null          # EffectWindowManager（T30 Lag Tail 用）
 ## 无身体倒计时：-1 表示未激活，>0 表示剩余 tick 数
 var no_body_ticks: int = -1
 ## 倒计时总 tick 数（用于计算比例）
@@ -55,6 +56,10 @@ func _on_length_increased(_data: Dictionary) -> void:
 
 func _on_decrease_requested(data: Dictionary) -> void:
 	if not snake or not snake.is_alive:
+		return
+	# T30 Lag Tail: 段丢失拦截
+	if data.get("bypass_block") != true and window_mgr and window_mgr.get_rule("block_segment_loss", false):
+		EventBus.segment_loss_deferred.emit(data)
 		return
 	var amount: int = data.get("amount", 1)
 	var source: String = data.get("source", "unknown")

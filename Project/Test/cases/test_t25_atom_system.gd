@@ -176,9 +176,9 @@ func _test_atom_registry(t) -> void:
 	t.assert_true(reg.has_method("has_atom"), "has has_atom()")
 	t.assert_true(reg.has_method("get_atom_names"), "has get_atom_names()")
 
-	# Check all 57 atoms are registered (49 + 6 T27/T28 + 2 T29)
+	# Check all 60 atoms are registered (49 + 6 T27/T28 + 2 T29 + 3 T30)
 	var names := reg.get_atom_names()
-	t.assert_eq(names.size(), 57, "AtomRegistry has 57 atoms registered")
+	t.assert_eq(names.size(), 60, "AtomRegistry has 60 atoms registered")
 
 	# Spot-check key atoms exist
 	t.assert_true(reg.has_atom("damage"), "registry has damage")

@@ -3,6 +3,7 @@ extends AtomBase
 ## Applies a status effect to the target for each layer.
 ## Params: type/status_type (String), layers (int, default 1), source (String).
 ## Optional: apply_to = "attacker" → 从 ctx.params["enemy"] 获取目标（白蛇反击用）
+## Optional: apply_to = "tail_segment" → 对蛇最后一段施加状态（再生尾 L3 用）
 
 
 func execute(ctx: AtomContext) -> void:
@@ -18,6 +19,13 @@ func execute(ctx: AtomContext) -> void:
 	var target = ctx.target
 	if apply_to == "attacker":
 		target = ctx.params.get("enemy", ctx.target)
+	elif apply_to == "tail_segment":
+		# 对蛇尾段施加状态（Salamander L3）
+		var snake = ctx.source
+		if snake and snake.get("segments") and snake.segments.size() > 0:
+			target = snake.segments[-1]
+		else:
+			return
 	if not is_instance_valid(target):
 		return
 
