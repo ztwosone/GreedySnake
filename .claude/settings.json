@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash F:/GreedySnake/.claude/hooks/pre-commit-test.sh",
+            "if": "Bash(git commit *)",
+            "timeout": 120
+          }
+        ]
+      }
+    ]
+  }
+}

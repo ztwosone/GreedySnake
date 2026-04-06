@@ -37,3 +37,13 @@
 - 系统间通过 EventBus 通信，不直接持有引用
 - 所有数值配置走 JSON，不硬编码
 - GDScript 命名用 snake_case，类名用 PascalCase
+
+## 快捷命令
+
+| 命令 | 用途 |
+|------|------|
+| `/test` | 运行测试套件 |
+| `/ship <msg>` | 测试 + 提交 + 推送 |
+| `/dailylog` | 生成每日开发日志 |
+| `/uid` | 补全缺失 .uid 文件 |
+| `/syncdocs` | 同步 QuickReference 和 L2_Overview |
