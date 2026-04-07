@@ -5,7 +5,7 @@ extends Node
 
 var snake: Node = null
 var _trigger_manager: Node = null
-var _chain_resolver: Node = null
+var _chain_resolver: RefCounted = null
 var _scale_slot_manager: Node = null
 
 var PartDataScript: GDScript = load("res://systems/snake_parts/snake_part_data.gd")
@@ -17,7 +17,7 @@ var _active_resonances: Dictionary = {}
 var _discovered_resonances: Dictionary = {}  # resonance_id → true
 
 
-func init_manager(p_snake: Node, p_trigger_mgr: Node, p_chain_resolver: Node, p_scale_slot_mgr: Node) -> void:
+func init_manager(p_snake: Node, p_trigger_mgr: Node, p_chain_resolver: RefCounted, p_scale_slot_mgr: Node) -> void:
 	snake = p_snake
 	_trigger_manager = p_trigger_mgr
 	_chain_resolver = p_chain_resolver

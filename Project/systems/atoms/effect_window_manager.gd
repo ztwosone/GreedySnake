@@ -3,7 +3,7 @@ extends Node
 ## 管理持续 N tick 的效果窗口，提供规则查询接口。
 
 var atom_executor: AtomExecutor = null
-var atom_registry: Node = null  ## AtomRegistry
+var atom_registry: RefCounted = null  ## AtomRegistry
 var effect_mgr: Node = null    ## StatusEffectManager
 var enemy_mgr: Node = null     ## EnemyManager
 

@@ -4,7 +4,7 @@ extends Node
 
 var snake: Node = null                     # Snake 引用
 var _trigger_manager: Node = null          # 共用 TriggerManager
-var _chain_resolver: Node = null           # 共用 EffectChainResolver
+var _chain_resolver: RefCounted = null      # 共用 EffectChainResolver
 
 var _active_head: RefCounted = null        # SnakePartData
 var _active_tail: RefCounted = null        # SnakePartData (T30)
@@ -12,7 +12,7 @@ var _active_tail: RefCounted = null        # SnakePartData (T30)
 var PartDataScript: GDScript = load("res://systems/snake_parts/snake_part_data.gd")
 
 
-func init_manager(p_snake: Node, p_trigger_mgr: Node, p_chain_resolver: Node) -> void:
+func init_manager(p_snake: Node, p_trigger_mgr: Node, p_chain_resolver: RefCounted) -> void:
 	snake = p_snake
 	_trigger_manager = p_trigger_mgr
 	_chain_resolver = p_chain_resolver

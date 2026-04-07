@@ -4,7 +4,7 @@ extends Node
 
 var snake: Node = null
 var _trigger_manager: Node = null
-var _chain_resolver: Node = null
+var _chain_resolver: RefCounted = null
 
 var PartDataScript: GDScript = load("res://systems/snake_parts/snake_part_data.gd")
 
@@ -18,7 +18,7 @@ var _open_slots: Dictionary = { "front": 1, "middle": 1, "back": 1 }
 var _slots: Dictionary = {}
 
 
-func init_manager(p_snake: Node, p_trigger_mgr: Node, p_chain_resolver: Node) -> void:
+func init_manager(p_snake: Node, p_trigger_mgr: Node, p_chain_resolver: RefCounted) -> void:
 	snake = p_snake
 	_trigger_manager = p_trigger_mgr
 	_chain_resolver = p_chain_resolver
