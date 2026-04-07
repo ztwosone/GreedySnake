@@ -21,9 +21,15 @@ var length_thresholds: Dictionary = {}
 var snake_heads: Dictionary = {}
 var snake_tails: Dictionary = {}
 var snake_scales: Dictionary = {}
+var tag_resonances: Dictionary = {}
+var scale_resonance_overrides: Dictionary = {}
 
 # 反应查找表：("fire", "ice") → reaction_dict
 var _reaction_lookup: Dictionary = {}
+# 共鸣查找表：双向 tag pair → resonance_dict
+var _tag_res_lookup: Dictionary = {}
+# 共鸣覆盖查找表：双向 scale pair → override_dict
+var _scale_override_lookup: Dictionary = {}
 
 
 func _ready() -> void:
@@ -57,6 +63,7 @@ func load_config(path: String = CONFIG_PATH) -> bool:
 	_data = result
 	_populate_sections()
 	_build_reaction_lookup()
+	_build_resonance_lookups()
 	return true
 
 
@@ -73,6 +80,8 @@ func _populate_sections() -> void:
 	snake_heads = _data.get("snake_heads", {})
 	snake_tails = _data.get("snake_tails", {})
 	snake_scales = _data.get("snake_scales", {})
+	tag_resonances = _data.get("tag_resonances", {})
+	scale_resonance_overrides = _data.get("scale_resonance_overrides", {})
 
 
 func _build_reaction_lookup() -> void:
@@ -153,6 +162,64 @@ func get_snake_scale(scale_id: String, level: int = 1) -> Dictionary:
 
 func get_snake_scale_ids() -> Array:
 	return snake_scales.keys()
+
+
+func get_scale_tags(scale_id: String) -> Array:
+	var scale_cfg: Dictionary = snake_scales.get(scale_id, {})
+	return scale_cfg.get("tags", [])
+
+
+func find_tag_resonance(tag_a: String, tag_b: String) -> Dictionary:
+	## 双向匹配 tag pair 共鸣
+	var key := _make_tag_res_key(tag_a, tag_b)
+	return _tag_res_lookup.get(key, {})
+
+
+func find_scale_resonance_override(scale_a: String, scale_b: String) -> Dictionary:
+	## 双向匹配 scale pair 覆盖
+	var key := _make_sorted_key(scale_a, scale_b)
+	return _scale_override_lookup.get(key, {})
+
+
+func get_tag_resonance_ids() -> Array:
+	var ids: Array = []
+	for key in tag_resonances:
+		var res_id: String = tag_resonances[key].get("resonance_id", key)
+		if not ids.has(res_id):
+			ids.append(res_id)
+	return ids
+
+
+func _build_resonance_lookups() -> void:
+	_tag_res_lookup.clear()
+	_scale_override_lookup.clear()
+	# Tag resonances: 双向注册
+	for key in tag_resonances:
+		var cfg: Dictionary = tag_resonances[key]
+		_tag_res_lookup[key] = cfg
+		# 生成反向 key
+		var parts: Array = key.split("+")
+		if parts.size() == 2:
+			var reverse_key: String = parts[1] + "+" + parts[0]
+			_tag_res_lookup[reverse_key] = cfg
+	# Scale overrides: 双向注册
+	for key in scale_resonance_overrides:
+		var cfg: Dictionary = scale_resonance_overrides[key]
+		_scale_override_lookup[key] = cfg
+		var parts: Array = key.split("+")
+		if parts.size() == 2:
+			var reverse_key: String = parts[1] + "+" + parts[0]
+			_scale_override_lookup[reverse_key] = cfg
+
+
+func _make_tag_res_key(a: String, b: String) -> String:
+	return "%s+%s" % [a, b]
+
+
+func _make_sorted_key(a: String, b: String) -> String:
+	if a < b:
+		return "%s+%s" % [a, b]
+	return "%s+%s" % [b, a]
 
 
 func reload_config() -> bool:

@@ -41,9 +41,11 @@ func _register_all() -> void:
 	_atoms["burst_carried_status"] = load("res://systems/atoms/atoms/status/burst_carried_status_atom.gd")
 	_atoms["spread_status_to_segments"] = load("res://systems/atoms/atoms/status/spread_status_to_segments_atom.gd")
 	_atoms["ice_wave"] = load("res://systems/atoms/atoms/status/ice_wave_atom.gd")
+	_atoms["apply_status_in_radius"] = load("res://systems/atoms/atoms/status/apply_status_in_radius_atom.gd")
 
 	# === Spatial 原子 ===
 	_atoms["place_tile"] = preload("res://systems/atoms/atoms/spatial/place_tile_atom.gd")
+	_atoms["place_tile_at_attacker"] = load("res://systems/atoms/atoms/spatial/place_tile_at_attacker_atom.gd")
 	_atoms["remove_tile"] = preload("res://systems/atoms/atoms/spatial/remove_tile_atom.gd")
 	_atoms["place_tile_trail"] = preload("res://systems/atoms/atoms/spatial/place_tile_trail_atom.gd")
 	_atoms["convert_tile"] = preload("res://systems/atoms/atoms/spatial/convert_tile_atom.gd")

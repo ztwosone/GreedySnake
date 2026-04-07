@@ -715,5 +715,126 @@
         ]}
       }
     }
-  }
+  },
+
+  "tag_resonances": {
+    "fire+poison": {
+      "resonance_id": "boiling_toxin",
+      "display_name": "沸毒",
+      "description": "踩毒格时同获火，触发毒爆反应",
+      "entity_effects": [
+        { "trigger": "on_entity_enter", "atoms": [
+          { "atom": "if_on_tile", "type": "poison" },
+          { "atom": "apply_status", "type": "fire", "layers": 1, "source": "resonance_boiling_toxin" }
+        ]}
+      ]
+    },
+    "fire+ice": {
+      "resonance_id": "steam_burst",
+      "display_name": "蒸腾",
+      "description": "被攻击时攻击者同时获火+冰，触发蒸腾反应",
+      "entity_effects": [
+        { "trigger": "on_body_attacked", "atoms": [
+          { "atom": "apply_status", "type": "fire", "layers": 1, "apply_to": "attacker" },
+          { "atom": "apply_status", "type": "ice", "layers": 1, "apply_to": "attacker" }
+        ]}
+      ]
+    },
+    "ice+poison": {
+      "resonance_id": "frozen_plague_res",
+      "display_name": "冻疫",
+      "description": "踩毒格时同获冰，触发冻疫反应",
+      "entity_effects": [
+        { "trigger": "on_entity_enter", "atoms": [
+          { "atom": "if_on_tile", "type": "poison" },
+          { "atom": "apply_status", "type": "ice", "layers": 1, "source": "resonance_frozen_plague" }
+        ]}
+      ]
+    },
+    "fire+physical": {
+      "resonance_id": "flame_thorn",
+      "display_name": "炎棘",
+      "description": "被攻击时攻击者获1层火",
+      "entity_effects": [
+        { "trigger": "on_body_attacked", "atoms": [
+          { "atom": "apply_status", "type": "fire", "layers": 1, "apply_to": "attacker" }
+        ]}
+      ]
+    },
+    "ice+physical": {
+      "resonance_id": "ice_spike",
+      "display_name": "冰刺",
+      "description": "被攻击时攻击者位置生成冰格",
+      "entity_effects": [
+        { "trigger": "on_body_attacked", "atoms": [
+          { "atom": "place_tile_at_attacker", "type": "ice", "layer": 1 }
+        ]}
+      ]
+    },
+    "physical+poison": {
+      "resonance_id": "toxic_thorn",
+      "display_name": "毒棘",
+      "description": "被攻击时攻击者获1层毒",
+      "entity_effects": [
+        { "trigger": "on_body_attacked", "atoms": [
+          { "atom": "apply_status", "type": "poison", "layers": 1, "apply_to": "attacker" }
+        ]}
+      ]
+    },
+    "fire+void": {
+      "resonance_id": "phantom_flame",
+      "display_name": "幽焰",
+      "description": "移动时20%概率在旧尾位置放火格",
+      "entity_effects": [
+        { "trigger": "on_move", "atoms": [
+          { "atom": "if_chance", "chance": 0.2 },
+          { "atom": "place_tile", "type": "fire", "layer": 1 }
+        ], "pattern": "trail" }
+      ]
+    },
+    "poison+void": {
+      "resonance_id": "toxic_phantom",
+      "display_name": "毒影",
+      "description": "移动时20%概率在旧尾位置放毒格",
+      "entity_effects": [
+        { "trigger": "on_move", "atoms": [
+          { "atom": "if_chance", "chance": 0.2 },
+          { "atom": "place_tile", "type": "poison", "layer": 1 }
+        ], "pattern": "trail" }
+      ]
+    },
+    "fire+recovery": {
+      "resonance_id": "burning_feast",
+      "display_name": "焚食",
+      "description": "击杀时在击杀位置放火格",
+      "entity_effects": [
+        { "trigger": "on_kill", "atoms": [
+          { "atom": "place_tile", "type": "fire", "layer": 1 }
+        ], "pattern": "target" }
+      ]
+    },
+    "ice+recovery": {
+      "resonance_id": "frozen_banquet",
+      "display_name": "寒餐",
+      "description": "吃食物时30%概率冻结半径3内1个敌人",
+      "entity_effects": [
+        { "trigger": "on_food_eaten", "atoms": [
+          { "atom": "if_chance", "chance": 0.3 },
+          { "atom": "apply_status_in_radius", "type": "ice", "radius": 3, "count": 1 }
+        ]}
+      ]
+    },
+    "physical+physical": {
+      "resonance_id": "iron_wall",
+      "display_name": "铁壁",
+      "description": "被攻击时攻击者获冰（击退+伤害+减速三连）",
+      "entity_effects": [
+        { "trigger": "on_body_attacked", "atoms": [
+          { "atom": "apply_status", "type": "ice", "layers": 1, "apply_to": "attacker" }
+        ]}
+      ]
+    }
+  },
+
+  "scale_resonance_overrides": {}
 }

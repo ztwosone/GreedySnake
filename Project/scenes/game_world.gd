@@ -79,6 +79,13 @@ func _ready() -> void:
 	scale_slot_mgr.init_manager(snake, StatusEffectManager._trigger_manager, StatusEffectManager._chain_resolver)
 	add_child(scale_slot_mgr)
 
+	# T32: ResonanceManager
+	var ResonanceMgrScript: GDScript = load("res://systems/snake_parts/resonance_manager.gd")
+	var resonance_mgr: Node = ResonanceMgrScript.new()
+	resonance_mgr.name = "ResonanceManager"
+	resonance_mgr.init_manager(snake, StatusEffectManager._trigger_manager, StatusEffectManager._chain_resolver, scale_slot_mgr)
+	add_child(resonance_mgr)
+
 	# 蛇段增益效果系统
 	var seg_effect_system := SegmentEffectSystem.new()
 	seg_effect_system.name = "SegmentEffectSystem"

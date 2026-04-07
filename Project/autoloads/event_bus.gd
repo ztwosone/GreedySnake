@@ -75,6 +75,8 @@ signal snake_tail_equipped(data: Dictionary)       # 蛇尾装备 { tail_id, lev
 signal snake_tail_unequipped(data: Dictionary)     # 蛇尾卸载 { tail_id }
 signal snake_scale_equipped(data: Dictionary)      # 鳞片装备 { scale_id, level, position }
 signal snake_scale_unequipped(data: Dictionary)    # 鳞片卸载 { scale_id, position }
+signal resonance_activated(data: Dictionary)       # 共鸣激活 { resonance_id, display_name, is_new_discovery }
+signal resonance_deactivated(data: Dictionary)     # 共鸣停用 { resonance_id }
 
 # === Segment Loss Deferred (T30 Lag Tail) ===
 signal segment_loss_deferred(data: Dictionary)     # 段丢失被延迟 { amount, source }
