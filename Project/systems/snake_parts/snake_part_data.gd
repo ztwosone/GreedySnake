@@ -2,8 +2,9 @@ extends RefCounted
 ## 蛇部件数据类
 ## 兼容 TriggerManager._build_context 的 duck typing：carrier, type, layer
 
-var part_type: String = "head"        # "head" / "tail"
-var part_id: String = ""              # "hydra" / "bai_she"
+var part_type: String = "head"        # "head" / "tail" / "scale"
+var part_id: String = ""              # "hydra" / "bai_she" / "flame_scale"
+var position: String = ""             # "front" / "middle" / "back"（鳞片用）
 var level: int = 1
 var carrier: Object = null            # Snake 节点引用
 var carrier_type: String = "entity"

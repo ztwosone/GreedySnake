@@ -72,6 +72,13 @@ func _ready() -> void:
 	snake_parts_mgr.init_manager(snake, StatusEffectManager._trigger_manager, StatusEffectManager._chain_resolver)
 	add_child(snake_parts_mgr)
 
+	# T31: ScaleSlotManager
+	var ScaleSlotMgrScript: GDScript = load("res://systems/snake_parts/scale_slot_manager.gd")
+	var scale_slot_mgr: Node = ScaleSlotMgrScript.new()
+	scale_slot_mgr.name = "ScaleSlotManager"
+	scale_slot_mgr.init_manager(snake, StatusEffectManager._trigger_manager, StatusEffectManager._chain_resolver)
+	add_child(scale_slot_mgr)
+
 	# 蛇段增益效果系统
 	var seg_effect_system := SegmentEffectSystem.new()
 	seg_effect_system.name = "SegmentEffectSystem"

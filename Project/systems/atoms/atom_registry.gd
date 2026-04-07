@@ -28,6 +28,8 @@ func _register_all() -> void:
 	_atoms["area_damage"] = load("res://systems/atoms/atoms/value/area_damage_atom.gd")
 	_atoms["request_segment_loss"] = load("res://systems/atoms/atoms/value/request_segment_loss_atom.gd")
 	_atoms["modify_hits_taken"] = load("res://systems/atoms/atoms/value/modify_hits_taken_atom.gd")
+	_atoms["modify_system_param"] = load("res://systems/atoms/atoms/value/modify_system_param_atom.gd")
+	_atoms["damage_attacker"] = load("res://systems/atoms/atoms/value/damage_attacker_atom.gd")
 
 	# === Status 原子 ===
 	_atoms["apply_status"] = preload("res://systems/atoms/atoms/status/apply_status_atom.gd")
@@ -37,6 +39,8 @@ func _register_all() -> void:
 	_atoms["extend_duration"] = preload("res://systems/atoms/atoms/status/extend_duration_atom.gd")
 	_atoms["steal_status"] = load("res://systems/atoms/atoms/status/steal_status_atom.gd")
 	_atoms["burst_carried_status"] = load("res://systems/atoms/atoms/status/burst_carried_status_atom.gd")
+	_atoms["spread_status_to_segments"] = load("res://systems/atoms/atoms/status/spread_status_to_segments_atom.gd")
+	_atoms["ice_wave"] = load("res://systems/atoms/atoms/status/ice_wave_atom.gd")
 
 	# === Spatial 原子 ===
 	_atoms["place_tile"] = preload("res://systems/atoms/atoms/spatial/place_tile_atom.gd")
@@ -69,6 +73,8 @@ func _register_all() -> void:
 	_atoms["reduce_cooldown"] = preload("res://systems/atoms/atoms/temporal/reduce_cooldown_atom.gd")
 	_atoms["open_window"] = load("res://systems/atoms/atoms/temporal/open_window_atom.gd")
 	_atoms["cancel_window"] = load("res://systems/atoms/atoms/temporal/cancel_window_atom.gd")
+	_atoms["knockback_attacker"] = load("res://systems/atoms/atoms/control/knockback_attacker_atom.gd")
+	_atoms["knockback_with_damage"] = load("res://systems/atoms/atoms/control/knockback_with_damage_atom.gd")
 
 	# === Logic 原子 ===
 	_atoms["if_length_below"] = preload("res://systems/atoms/atoms/logic/if_length_below_atom.gd")

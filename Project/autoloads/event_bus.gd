@@ -73,6 +73,8 @@ signal snake_head_equipped(data: Dictionary)       # 蛇头装备 { head_id, lev
 signal snake_head_unequipped(data: Dictionary)     # 蛇头卸载 { head_id }
 signal snake_tail_equipped(data: Dictionary)       # 蛇尾装备 { tail_id, level }
 signal snake_tail_unequipped(data: Dictionary)     # 蛇尾卸载 { tail_id }
+signal snake_scale_equipped(data: Dictionary)      # 鳞片装备 { scale_id, level, position }
+signal snake_scale_unequipped(data: Dictionary)    # 鳞片卸载 { scale_id, position }
 
 # === Segment Loss Deferred (T30 Lag Tail) ===
 signal segment_loss_deferred(data: Dictionary)     # 段丢失被延迟 { amount, source }

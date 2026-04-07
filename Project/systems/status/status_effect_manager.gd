@@ -25,6 +25,13 @@ var _active_modifiers: Dictionary = {
 	"speed": {},
 	"hit_threshold": {},
 	"food_drop": {},
+	# T31 鳞片修改器
+	"fire_aura_damage": {},
+	"fire_aura_range": {},
+	"poison_spread_bonus": {},
+	"poison_tile_damage": {},
+	"attack_cooldown_bonus": {},
+	"phantom_tail_count": {},
 }
 
 
@@ -229,7 +236,8 @@ func clear_all() -> void:
 	# 注销所有原子链
 	if _trigger_manager:
 		_trigger_manager.clear_all()
-	_active_modifiers = { "growth": {}, "speed": {}, "hit_threshold": {}, "food_drop": {} }
+	for key in _active_modifiers:
+		_active_modifiers[key] = {}
 
 	# 断开所有载体信号
 	for target_id in _id_to_target:

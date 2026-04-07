@@ -90,12 +90,23 @@ func _find_attackable_segment(enemy: Enemy, context: Dictionary, cfg: Dictionary
 	var prefer_status: String = cfg.get("prefer_attack_status", "")
 	var pos: Vector2i = enemy.grid_position
 
-	# 过滤：范围内 + 非HEAD
+	# T31 幽灵鳞：计算免攻击尾段数
+	var total_segs: int = segments.size()
+	var phantom_count: int = 0
+	if total_segs > 1:
+		var snake_ref = segments[0].get_parent() if not segments.is_empty() and is_instance_valid(segments[0]) else null
+		if snake_ref:
+			phantom_count = int(StatusEffectManager.get_modifier("phantom_tail_count", snake_ref, 0.0))
+
+	# 过滤：范围内 + 非HEAD + 非幽灵段
 	var candidates: Array = []
 	for seg in segments:
 		if not is_instance_valid(seg):
 			continue
 		if seg.segment_type == SnakeSegment.HEAD:
+			continue
+		# 幽灵鳞：跳过最后 phantom_count 段
+		if phantom_count > 0 and seg.segment_index >= total_segs - phantom_count:
 			continue
 		var dist: int = abs(seg.grid_position.x - pos.x) + abs(seg.grid_position.y - pos.y)
 		if dist <= attack_range:

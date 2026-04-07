@@ -345,9 +345,11 @@ func _attack_segment(segment: SnakeSegment) -> void:
 			segment.clear_carried_status()
 			clear_carried_status()
 
-	# 设置冷却
-	if cooldown > 0:
-		attack_cooldown_remaining = cooldown
+	# 设置冷却（T31 冰霜鳞加成）
+	var cooldown_bonus: int = int(StatusEffectManager.get_modifier("attack_cooldown_bonus", snake_node, 0.0)) if snake_node else 0
+	var total_cooldown: int = cooldown + cooldown_bonus
+	if total_cooldown > 0:
+		attack_cooldown_remaining = total_cooldown
 
 	EventBus.snake_body_attacked.emit({
 		"position": segment.grid_position,
