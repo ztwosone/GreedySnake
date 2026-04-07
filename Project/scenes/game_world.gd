@@ -150,6 +150,31 @@ func _ready() -> void:
 	debug_panel.set_snake(snake)
 	$UI.add_child(debug_panel)
 
+	# T33: Build 测试面板（按 B 切换）
+	var BuildPanelScript: GDScript = preload("res://ui/build_test_panel.gd")
+	var build_panel: PanelContainer = BuildPanelScript.new()
+	build_panel.name = "BuildTestPanel"
+	build_panel.setup(snake, snake_parts_mgr, scale_slot_mgr, resonance_mgr, window_mgr)
+	$UI.add_child(build_panel)
+
+
+## T33: 生命周期清理（在 queue_free 前调用）
+func cleanup() -> void:
+	var res_mgr = get_node_or_null("ResonanceManager")
+	if res_mgr:
+		res_mgr.clear_all()
+	var scale_mgr = get_node_or_null("ScaleSlotManager")
+	if scale_mgr:
+		scale_mgr.clear_all()
+	var parts_mgr = get_node_or_null("SnakePartsManager")
+	if parts_mgr:
+		parts_mgr.unequip_head()
+		parts_mgr.unequip_tail()
+	var win_mgr = get_node_or_null("EffectWindowManager")
+	if win_mgr:
+		win_mgr.clear_all()
+	StatusEffectManager.clear_all()
+
 
 func start_game() -> void:
 	# 1. Initialize Grid

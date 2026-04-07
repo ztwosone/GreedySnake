@@ -71,6 +71,9 @@ func _start_acceptance_test() -> void:
 
 func _cleanup_game_world() -> void:
 	if _current_game_world and is_instance_valid(_current_game_world):
+		# T33: 先清理跨系统状态（TriggerManager/修改器/窗口），再释放节点
+		if _current_game_world.has_method("cleanup"):
+			_current_game_world.cleanup()
 		_current_game_world.queue_free()
 		_current_game_world = null
 	GridWorld.clear_all()

@@ -14,7 +14,7 @@ Godot 4.6 + GDScript 贪吃蛇 Roguelite。Grid-based、Tick-driven、Event-driv
 | L0 | 基础移动 + 长度 + 食物 | ✅ 完成 |
 | L1 | 战斗循环 + per-segment status + T25 Atom System | ✅ 完成（1030 测试） |
 | L2-Phase0 | T27A StatusCarrier + ReactionResolver + CollisionHandler | ✅ 完成（1082 测试） |
-| L2 | 蛇头/蛇尾/蛇鳞统一 Atom Chain | 🟡 T27A/T27/T28A/T28B/T29 已实现（1209 测试） |
+| L2 | 蛇头/蛇尾/蛇鳞统一 Atom Chain | ✅ 完成 T27A~T33（1518 测试） |
 | L3+ | 地图 PCG / 成长 / 元成长 | 🔮 待设计 |
 
 ## 核心配置
@@ -22,7 +22,8 @@ Godot 4.6 + GDScript 贪吃蛇 Roguelite。Grid-based、Tick-driven、Event-driv
 ```
 Project/data/json/game_config.json    # 核心配置（grid/tick/snake/food/enemy/status/reactions）
 Project/autoloads/event_bus.gd        # 全局事件定义
-Project/systems/atoms/atom_registry.gd # T25 原子注册表（57 原子，24 触发器）
+Project/systems/atoms/atom_registry.gd # T25 原子注册表（68 原子，24 触发器）
+Project/ui/build_test_panel.gd        # T33 Build 测试面板（B 键切换）
 Project/systems/status/reaction_resolver.gd  # T27A 反应查表引擎
 Project/systems/status/collision_handler.gd  # T27A 碰撞统一处理器
 ```
@@ -72,7 +73,40 @@ Project/systems/status/collision_handler.gd  # T27A 碰撞统一处理器
   - StatusEffectManager 持久修改器：hit_threshold / food_drop
   - Snake.take_hit() 集成无敌窗口查询
   - ConfigManager 新增 snake_heads 段 + get_snake_head()
+- **蛇尾链（T30）** ✅ 已实现
+  - Salamander（火蜥蜴尾）：段丢失后恢复窗口，L2+恢复时尾段获火，L3回复量+1
+  - Lag Tail（滞后尾）：block_segment_loss 窗口 → 延迟段丢失，L2取消时减 hits_taken，L3蛇尾获冰
+  - 新增 request_segment_loss + modify_hits_taken + cancel_window 原子（总数 60）
+  - EffectWindow 新增 on_cancel 链：窗口被信号取消时执行
+  - LengthSystem 集成 block_segment_loss 窗口规则查询
+  - ConfigManager 新增 snake_tails 段 + get_snake_tail()
+- **ScaleSystem 蛇鳞槽位（T31）** ✅ 已实现
+  - ScaleSlotManager 管理 front/middle/back 三位置（最大 2/3/2 槽，初始 1/1/1）
+  - 9 鳞片 × 3 级，全 JSON + Atom Chain 驱动
+  - 前段：greedy_scale（食物掉落）、predator_scale（窃取+扩散状态）
+  - 中段：flame_scale（火光环增强）、toxin_scale（毒蔓延加速）、frost_scale（攻击冷却）、phantom_scale（幻影尾段）
+  - 后段：thorn_scale（击退）、regen_scale（概率增长）、retaliation_scale（反伤）
+  - 新增 6 原子（总数 66）：modify_system_param, damage_attacker, knockback_attacker, knockback_with_damage, spread_status_to_segments, ice_wave
+  - StatusEffectManager 新增 6 修改器：fire_aura_damage/range, poison_spread_bonus/tile_damage, attack_cooldown_bonus, phantom_tail_count
+  - SegmentEffectSystem：曼哈顿距离火光环 + 毒格伤害
+  - EnemyBrain：幻影尾段过滤
 - 蛇鳞效果也走 Atom Chain，不再有独立的 Condition/Action 系统
+- **邻接共鸣系统（T32）** ✅ 已实现
+  - Tag-pair 驱动 + scale-pair override 混合架构
+  - ResonanceManager 监听鳞片装备/卸载，自动计算邻接共鸣
+  - 位置级邻接：front↔middle、middle↔back、同位置互邻；front↔back 不邻接
+  - 11 个 tag-pair 共鸣：沸毒(fire+poison)、蒸腾(fire+ice)、冻疫(ice+poison)、炎棘(fire+physical)、冰刺(ice+physical)、毒棘(poison+physical)、幽焰(fire+void)、毒影(poison+void)、焚食(fire+recovery)、寒餐(ice+recovery)、铁壁(physical+physical)
+  - 同 tag 不共鸣（physical 除外，铁壁）；多 tag 鳞片可触发多个共鸣
+  - 新增 2 原子（总数 68）：apply_status_in_radius, place_tile_at_attacker
+  - ConfigManager 新增 tag_resonances + scale_resonance_overrides 双向查找
+  - EventBus 新增 resonance_activated / resonance_deactivated 信号
+  - 发现机制：首次激活 is_new_discovery=true（预留 UI 提示）
+- **全系统联调 + Build 测试面板（T33）** ✅ 已实现
+  - Build 测试面板（B 键）：实时显示头/尾/鳞/共鸣/修改器/窗口状态
+  - 热键装备：H=蛇头, J=蛇尾, F/G/K=前/中/后鳞, L=升级, 0=清空
+  - game_world.cleanup()：修复重开游戏时 TriggerManager/修改器/窗口泄漏
+  - main.gd：queue_free 前调用 cleanup 确保跨系统状态清理
+  - 集成测试：修改器叠加、共鸣联动、清理正确性、配置一致性
 
 ## 敌人类型（L1）
 
