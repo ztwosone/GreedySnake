@@ -29,7 +29,8 @@
 | 设计文档（source of truth） | `Designs/` + `TechDocs/ScriptingLeading.md` | 完整系统设计与技术架构 |
 | 事实摘要（速查） | `TechDocs/QuickReference.md` | 当前实现状态的精简索引 |
 | 每日日志 | `DailyLogs/` | 每日开发记录 |
-| 任务总览 | `Tasks/` | 里程碑任务分解 |
+| 任务总览 | `Tasks/` | 里程碑任务分解（L0-L2） |
+| SpecKit 规格 | `.specify/specs/` | L3+ 功能规格与任务 |
 
 ## 开发规范
 
@@ -37,6 +38,20 @@
 - 系统间通过 EventBus 通信，不直接持有引用
 - 所有数值配置走 JSON，不硬编码
 - GDScript 命名用 snake_case，类名用 PascalCase
+
+## SpecKit 工作流（L3+）
+
+新功能开发遵循 SpecKit 六阶段流程：
+1. `/speckit-specify` — 定义需求规格
+2. `/speckit-clarify` — 澄清歧义点（可选）
+3. `/speckit-plan` — 技术方案设计
+4. `/speckit-tasks` — 任务分解
+5. `/speckit-implement` — 逐任务实现
+6. `/speckit-checklist` — 质量验证（可选）
+
+规格文件在 `.specify/specs/` 下按 Feature 组织。项目宪法在 `.specify/memory/constitution.md`。
+
+L0-L2 历史设计和任务保留在 `Designs/` 和 `Tasks/`，不迁移。
 
 ## 快捷命令
 
@@ -47,3 +62,7 @@
 | `/dailylog` | 生成每日开发日志 |
 | `/uid` | 补全缺失 .uid 文件 |
 | `/syncdocs` | 同步 QuickReference 和 L2_Overview |
+| `/speckit-specify` | SpecKit: 创建功能规格 |
+| `/speckit-plan` | SpecKit: 技术方案 |
+| `/speckit-tasks` | SpecKit: 任务分解 |
+| `/speckit-implement` | SpecKit: 逐任务实现 |

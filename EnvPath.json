@@ -20,5 +20,13 @@
 
   "commands": {
     "run_tests": "\"F:/GodotMCP/Godot_v4.6.1-stable_win64.exe/Godot_v4.6.1-stable_win64_console.exe\" --headless --path \"F:/GreedySnake/Project\" Test/test_runner.tscn"
+  },
+
+  "speckit": {
+    "cli": "specify",
+    "cli_path": "C:/Users/ztwos/.local/bin/specify.exe",
+    "version": "0.6.0",
+    "specify_dir": ".specify",
+    "skills_dir": ".claude/skills"
   }
 }
