@@ -6,8 +6,10 @@ extends Node
 
 var _game_world_scene: PackedScene = preload("res://scenes/game_world.tscn")
 var _acceptance_scene: PackedScene = preload("res://scenes/l1_acceptance.tscn")
+var _l2_acceptance_scene: PackedScene = preload("res://scenes/l2_acceptance.tscn")
 var _current_game_world: Node2D
 var _is_acceptance_mode: bool = false
+var _acceptance_level: int = 1  # 1 = L1, 2 = L2
 
 
 func _ready() -> void:
@@ -22,10 +24,16 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not (title_screen.visible and event is InputEventKey and event.pressed):
+		return
 	# Press T on title screen to launch L1 acceptance test
-	if title_screen.visible and event is InputEventKey and event.pressed and event.keycode == KEY_T:
+	if event.keycode == KEY_T:
 		title_screen.hide()
-		_start_acceptance_test()
+		_start_acceptance_test(1)
+	# Press Y on title screen to launch L2 acceptance test
+	elif event.keycode == KEY_Y:
+		title_screen.hide()
+		_start_acceptance_test(2)
 
 
 func _on_start_pressed() -> void:
@@ -37,7 +45,7 @@ func _on_restart_pressed() -> void:
 	game_over_screen.hide()
 	_cleanup_game_world()
 	if _is_acceptance_mode:
-		_start_acceptance_test()
+		_start_acceptance_test(_acceptance_level)
 	else:
 		_start_new_game()
 
@@ -45,7 +53,7 @@ func _on_restart_pressed() -> void:
 func _on_test_mode_pressed() -> void:
 	game_over_screen.hide()
 	_cleanup_game_world()
-	_start_acceptance_test()
+	_start_acceptance_test(_acceptance_level)
 
 
 func _on_game_over(data: Dictionary) -> void:
@@ -60,10 +68,12 @@ func _start_new_game() -> void:
 	GameManager.start_game()
 
 
-func _start_acceptance_test() -> void:
+func _start_acceptance_test(level: int = 1) -> void:
 	_is_acceptance_mode = true
+	_acceptance_level = level
 	_cleanup_game_world()
-	_current_game_world = _acceptance_scene.instantiate()
+	var scene: PackedScene = _acceptance_scene if level == 1 else _l2_acceptance_scene
+	_current_game_world = scene.instantiate()
 	game_world_container.add_child(_current_game_world)
 	_current_game_world.start_game()
 	GameManager.start_game()

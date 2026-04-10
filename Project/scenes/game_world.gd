@@ -157,6 +157,13 @@ func _ready() -> void:
 	build_panel.setup(snake, snake_parts_mgr, scale_slot_mgr, resonance_mgr, window_mgr)
 	$UI.add_child(build_panel)
 
+	# 事件日志面板（按 V 切换）
+	var EventLogScript: GDScript = preload("res://ui/event_log_panel.gd")
+	var event_log: PanelContainer = EventLogScript.new()
+	event_log.name = "EventLogPanel"
+	event_log.setup(snake)
+	$UI.add_child(event_log)
+
 
 ## T33: 生命周期清理（在 queue_free 前调用）
 func cleanup() -> void:
