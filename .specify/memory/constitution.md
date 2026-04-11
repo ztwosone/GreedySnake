@@ -28,12 +28,17 @@ Design documents (`Designs/`) are the single source of truth. Code must never be
 - `ConfigManager` autoload provides typed access to all config data
 - Enemy types, status effects, reactions, snake parts all defined in JSON
 
-### IV. Test-After-Change
+### IV. Test-First / TDD (NON-NEGOTIABLE)
 
-- Run the full test suite after any code modification
-- All 1533+ tests must pass before committing
+Every feature implementation follows Red-Green-Refactor:
+1. **Red** - Write failing tests based on the spec/task requirements
+2. **Green** - Write the minimum code to make tests pass
+3. **Refactor** - Clean up while keeping tests green
+4. **Regression** - Run full test suite, all must pass before committing
+
 - Test runner: headless Godot via `test_runner.tscn`
 - Test framework: GUT (Godot Unit Testing)
+- Tests are written BEFORE implementation code, not after
 
 ### V. GDScript Conventions
 

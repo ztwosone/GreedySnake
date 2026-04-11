@@ -34,7 +34,7 @@
 
 ## 开发规范
 
-- 修改代码后运行测试，确保全部通过
+- TDD 流程：先写失败测试（Red）→ 最小实现（Green）→ 重构（Refactor）→ 全量回归
 - 系统间通过 EventBus 通信，不直接持有引用
 - 所有数值配置走 JSON，不硬编码
 - GDScript 命名用 snake_case，类名用 PascalCase
