@@ -1124,5 +1124,104 @@
         "placeholder_color": "#FFD54F"
       }
     }
+  },
+
+  "presentation": {
+    "palette": {
+      "bg_deep": "#0B0E11",
+      "bg_panel": "#12161C",
+      "bg_panel_raised": "#1A2026",
+      "wall": "#2A323B",
+      "text_primary": "#E8ECEF",
+      "text_dim": "#8A949E",
+      "frame_line": "#3A444F",
+      "status_fire": "#FF6B35",
+      "status_ice": "#7FD1F0",
+      "status_poison": "#6FBF3F",
+      "room_combat": "#B84444",
+      "room_reward": "#D9B44A",
+      "room_rest": "#4A9B78",
+      "room_endpoint": "#7D63B8",
+      "room_shop": "#4A8FB8",
+      "room_elite": "#C2185B",
+      "accent_shedskin": "#D1A642",
+      "accent_resonance": "#4FE3C1",
+      "accent_danger": "#FF3B30",
+      "accent_confirm": "#9CCC65"
+    },
+    "typography": { "display": 48, "title": 32, "heading": 20, "body": 16, "caption": 13 },
+    "motion": {
+      "durations": { "half_tick": 0.125, "one_tick": 0.25, "two_ticks": 0.5 },
+      "ceremony_range_sec": [0.3, 0.6],
+      "stagger_per_item": 0.04,
+      "easing": { "enter": "quint_out", "exit": "cubic_in", "feedback": "cubic_out", "acquire": "back_out" }
+    },
+    "layout": { "base_unit": 16, "screen_margin": 16, "panel_padding": 16, "min_hit_target": 32 },
+    "glyphs": {
+      "_canvas_units": 16,
+      "combat": [
+        { "rect": [3, 7, 10, 2], "rotation": 45 },
+        { "rect": [3, 7, 10, 2], "rotation": -45 }
+      ],
+      "reward": [
+        { "rect": [4, 4, 8, 8], "rotation": 45 }
+      ],
+      "rest": [
+        { "rect": [3, 7, 10, 2], "rotation": 0 }
+      ],
+      "endpoint": [
+        { "rect": [2, 2, 12, 12], "rotation": 0 },
+        { "rect": [4, 4, 8, 8], "rotation": 0, "cut": true },
+        { "rect": [5, 5, 6, 6], "rotation": 0 },
+        { "rect": [7, 7, 2, 2], "rotation": 0, "cut": true }
+      ],
+      "shop": [
+        { "rect": [3, 3, 10, 2], "rotation": 0 },
+        { "rect": [4, 7, 8, 6], "rotation": 0 }
+      ],
+      "elite": [
+        { "rect": [4, 4, 8, 8], "rotation": 45 },
+        { "rect": [6, 6, 4, 4], "rotation": 45, "cut": true },
+        { "rect": [7, 7, 2, 2], "rotation": 45 }
+      ],
+      "shedskin": [
+        { "rect": [5, 4, 6, 8], "rotation": 45 }
+      ],
+      "scale": [
+        { "rect": [4, 6, 8, 4], "rotation": 0 },
+        { "rect": [4, 6, 8, 4], "rotation": 60 },
+        { "rect": [4, 6, 8, 4], "rotation": 120 }
+      ],
+      "head": [
+        { "rect": [3, 3, 10, 10], "rotation": 0 },
+        { "rect": [10, 6, 4, 4], "rotation": 0, "cut": true }
+      ],
+      "tail": [
+        { "rect": [3, 5, 4, 6], "rotation": 0 },
+        { "rect": [7, 6, 4, 4], "rotation": 0 },
+        { "rect": [11, 7, 2, 2], "rotation": 0 }
+      ],
+      "slot_empty": [
+        { "rect": [5, 3, 6, 1], "rotation": 0 },
+        { "rect": [5, 12, 6, 1], "rotation": 0 },
+        { "rect": [3, 5, 1, 6], "rotation": 0 },
+        { "rect": [12, 5, 1, 6], "rotation": 0 }
+      ]
+    },
+    "game_feel": { "enabled": true, "triggers": {} },
+    "audio": { "enabled": true, "master_volume_db": -6, "dedup_ms": 50, "sfx": {} },
+    "hints": {},
+    "death_causes": {},
+    "acceptance": {
+      "feedback_window_ticks": 1,
+      "max_pending_modals": 1,
+      "time_to_first_choice_max_ticks": 120,
+      "dead_air_max_ticks": 12,
+      "contrast_min_body": 4.5,
+      "contrast_min_large": 3.0,
+      "overlap_tolerance_px2": 4,
+      "opaque_alpha": 0.5
+    },
+    "debug_ui": false
   }
 }

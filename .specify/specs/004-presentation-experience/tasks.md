@@ -7,10 +7,10 @@
 
 ### F-A 配置与主题
 
-- [ ] T001 [F-A] `game_config.json` 新增 `presentation` 段（palette/typography/motion/
+- [x] T001 [F-A] `game_config.json` 新增 `presentation` 段（palette/typography/motion/
   layout/glyphs/acceptance/debug_ui，schema 见设计文档 §14）+ ConfigManager accessor
   + 配置契约测试（test_xp_presentation_config）
-- [ ] T002 [F-A] `ui/kit/theme_builder.gd`：JSON→Theme + `get_contrast_pairs()`；
+- [x] T002 [F-A] `ui/kit/theme_builder.gd`：JSON→Theme + `get_contrast_pairs()`；
   单测字号/颜色/对比度对
 
 ### F-B UI 内核组件
