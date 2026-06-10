@@ -65,8 +65,8 @@
 
 **Independent Test**: 定种子生成两次同图；性质断言（连通/可达/房数边界/商店保底位置/首层零修饰零精英）全绿；`floor.generator` 两档均可跑。
 
-- [ ] T018 [US4] Red 卡：对照修订版 spec 重写 `Project/Test/cases/test_l4_pcg_rooms.gd` 为**性质测试**——连通性、全房可达、房数边界、定种子确定性（SC-011）、商店保底排 ≥2 战斗房后（SC-010）、endpoint=boss、首层 modifier/elite 权重为 0 从数据生效。测试套件：`test_l4_pcg_rooms.gd`
-- [ ] T019 [US4] 重写 `Project/systems/rooms/floor_map_generator.gd` PCG 路径（判决：PCG 重写）：seeded RNG + config 权重/分支 + 每层保底 shop + endpoint=boss；魔数（:54-84）全部入 JSON；fixed_v1 路径保留于 `floor.generator` 开关后。测试套件：`test_l4_pcg_rooms.gd` + `test_l3_floor_progression.gd` 回归（fixed_v1 档）
+- [x] T018 [US4] Red 卡：对照修订版 spec 重写 `Project/Test/cases/test_l4_pcg_rooms.gd` 为**性质测试**——连通性、全房可达、房数边界、定种子确定性（SC-011）、商店保底排 ≥2 战斗房后（SC-010）、endpoint=boss、首层 modifier/elite 权重为 0 从数据生效。测试套件：`test_l4_pcg_rooms.gd`
+- [x] T019 [US4] 重写 `Project/systems/rooms/floor_map_generator.gd` PCG 路径（判决：PCG 重写）：seeded RNG + config 权重/分支 + 每层保底 shop + endpoint=boss；魔数（:54-84）全部入 JSON；fixed_v1 路径保留于 `floor.generator` 开关后。测试套件：`test_l4_pcg_rooms.gd` + `test_l3_floor_progression.gd` 回归（fixed_v1 档）
 
 **T4 收口**: 严格门禁绿 → 合 main。
 

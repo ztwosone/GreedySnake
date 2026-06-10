@@ -251,6 +251,16 @@ func get_shop_guarantee() -> Dictionary:
 	return floor.get("shop_guarantee", {})
 
 
+func get_pcg_config() -> Dictionary:
+	## T019: PCG 生成参数段（floor.pcg——主路径房数表/房型权重/支线参数，FR-010 无魔数）
+	return floor.get("pcg", {})
+
+
+func get_pcg_main_room_bounds(floor_index: int) -> Dictionary:
+	## T019: 指定楼层主路径房数边界 {min, max}；超出表的楼层钳制到最高已定义层
+	return _get_floor_keyed_value(get_pcg_config().get("main_rooms", {}), floor_index, {})
+
+
 func get_shop_price_multiplier_per_floor() -> float:
 	## FR-003: 跨层物价压力阀（蜕皮不清零，下层物价上涨）
 	return float(shop.get("price_multiplier_per_floor", 1.0))

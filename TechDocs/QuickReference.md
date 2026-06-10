@@ -203,6 +203,35 @@ FR-018 显式保留契约：**RewardFlowSystem 为 L3 `reward` 房发射的合�
 - 几何探测新增状态 `l4_shop_open`（state_stager + test_xp_ui_geometry：两战斗一奖励
   走到 shop_01，ShopPanel 货架 + 蜕皮 chip 同屏探测）。
 
+## L4 Seeded PCG 楼层生成事实（S2 T4，T018-T019，2026-06-11）
+
+- `FloorMapGenerator` 重写为双档（FR-016）：`floor.generator == "pcg"` 走 seeded PCG，
+  否则 fixed_v1 固定路径（回退/MDE 档，输出与 L3 验收完全一致；草稿「楼层 1 无条件短路
+  固定路径、2 层起无视开关走 PCG」已修——开关全权决定档位）。`generate_floor(floor_index,
+  run_seed)` 返回 map 新增 `generator` 字段标记实际档位。
+- **种子推导（SC-011）**：每层 RNG 种子 = `hash("run_seed:floor_index")`，同 run 不同楼层
+  独立可复现；与 ShopSystem `hash(run_seed:room_id)` 派生约定一致。RNG 调用顺序固定
+  （① 主题 → ② 主路径房数 → ③ 自由槽房型 → ④ 中段洗牌 → ⑤ 商店插位 → ⑥ 支线房 →
+  ⑦ 精英升格 → ⑧ 修饰符），重排即改变同种子输出。
+- **结构保证（构造即性质）**：起点 = combat、终点 = boss 恰一间且为图终点（死端）；
+  每层恰一间商店且所有 start→shop 路径途经 ≥ `shop_guarantee.min_combat_rooms_before`
+  个战斗类房（combat/elite，SC-010——经预留中段战斗槽 + 插位下界构造保证）；奖励房
+  ≥ `floor.pcg.min_reward_rooms`；主路径 `exits[0]` = 下一主路径房，支线房挂主路径房
+  exits 末尾且为死端（全房可达）。精英升格 = combat 房按 `floor.elite_weights` 概率
+  转 elite（起点/boss 豁免）；修饰符按 `floor.modifier_weights` 逐项概率附加到战斗类房，
+  尊重 `room_modifiers.<id>.enabled` 逐项开关（FR-009）；首层两权重全 0（FR-017）。
+- JSON schema 增量：`floor.pcg`（`main_rooms` 楼层键表 {min,max} 主路径房数、
+  `min_reward_rooms`、`middle_type_weights`、`side_room_chance`、`max_side_rooms`、
+  `side_type_weights`——草稿 :54-84 魔数全部清除，FR-010）；`room_types.boss`
+  （clear_enemies、required/enemy_count 1、`is_boss: true`、不自动完成；US4 boss endpoint，
+  Boss 结算消费在 T024-T027）。房 dict 新增 `modifiers: Array`（fixed_v1 档恒空）。
+- ConfigManager 新 accessor：`get_pcg_config()`、`get_pcg_main_room_bounds(floor)`
+  （楼层键表，钳制语义同 `_get_floor_keyed_value`）。
+- 测试事实：`test_l4_pcg_rooms.gd` 重写为性质测试（定种子全等 var_to_str 比对、变种子
+  10 取 ≥9 异图、BFS 全房可达、DFS 枚举 start→shop 全路径验战斗保底、房数边界 =
+  main_rooms ± max_side_rooms、首层零精英零修饰 + 权重拉满反证数据通路 + 逐项 disable）；
+  测试通过改写 `ConfigManager.floor`/`room_modifiers` 段并还原来驱动数据反证。
+
 ## L1 战斗循环关键事实
 
 - **吃敌人无消耗** — 蛇头碰敌人 = 直接吞噬，不扣长度；若蛇头与敌人携带异类状态则触发反应、双方状态清除

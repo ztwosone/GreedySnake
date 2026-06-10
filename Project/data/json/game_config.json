@@ -933,6 +933,18 @@
     "shop_guarantee": {
       "enabled": true,
       "min_combat_rooms_before": 2
+    },
+    "pcg": {
+      "main_rooms": {
+        "1": { "min": 5, "max": 6 },
+        "2": { "min": 6, "max": 7 },
+        "3": { "min": 7, "max": 8 }
+      },
+      "min_reward_rooms": 1,
+      "middle_type_weights": { "combat": 55, "reward": 25, "rest": 20 },
+      "side_room_chance": 0.35,
+      "max_side_rooms": 2,
+      "side_type_weights": { "combat": 40, "reward": 40, "rest": 20 }
     }
   },
 
@@ -996,6 +1008,18 @@
       "required_count": 2,
       "enemy_count": 2,
       "placeholder_color": "#C2185B",
+      "enabled": true,
+      "auto_complete_on_enter": false
+    },
+    "boss": {
+      "display_name": "首领房",
+      "primary_intent": "defeat_boss",
+      "intent_label": "击败首领",
+      "objective_type": "clear_enemies",
+      "required_count": 1,
+      "enemy_count": 1,
+      "is_boss": true,
+      "placeholder_color": "#8E24AA",
       "enabled": true,
       "auto_complete_on_enter": false
     }
