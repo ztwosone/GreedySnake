@@ -16,7 +16,13 @@ extends Node2D
 @onready var scale_reward_system: Node = get_node_or_null("ScaleRewardSystem")
 @onready var shop_system: Node = get_node_or_null("ShopSystem")
 @onready var slot_expansion_system: Node = get_node_or_null("SlotExpansionSystem")
+@onready var room_director: Node = get_node_or_null("RoomDirector")
 @onready var camera: Camera2D = $Camera2D
+
+## spec 002 T022：多层切换跟踪——floor_generated 的楼层号大于当前值且 run 在跑 = 切层，
+## 先 reset_for_floor() 再由 RoomDirector 在随后的 room_entered 重新布场。
+## 0 = 尚未开局（start_run 的首发 floor_generated 只记录不重置）。
+var _active_floor_index: int = 0
 
 
 func _ready() -> void:
@@ -105,6 +111,13 @@ func _ready() -> void:
 		shop_system.setup(shedskin_system, scale_slot_mgr, snake_parts_mgr)
 	if slot_expansion_system and slot_expansion_system.has_method("setup"):
 		slot_expansion_system.setup(scale_slot_mgr)
+
+	# spec 002 T021/T022: RoomDirector 按房型布场；切层重置经 floor_generated 触发
+	# （L1/L2 验收场景无 RoomDirector/RunProgressionSystem 节点，保持原行为）
+	if room_director and room_director.has_method("setup"):
+		room_director.setup(enemy_manager, food_manager)
+	if run_progression_system and not EventBus.floor_generated.is_connected(_on_world_floor_generated):
+		EventBus.floor_generated.connect(_on_world_floor_generated)
 
 	# 蛇段增益效果系统
 	var seg_effect_system := SegmentEffectSystem.new()
@@ -200,8 +213,57 @@ func _ready() -> void:
 		shop_panel.setup(shop_system)
 
 
+func _exit_tree() -> void:
+	if EventBus.floor_generated.is_connected(_on_world_floor_generated):
+		EventBus.floor_generated.disconnect(_on_world_floor_generated)
+
+
+## spec 002 T022：楼层切换监听——本世界的 run 推进到新楼层时清场重建
+func _on_world_floor_generated(data: Dictionary) -> void:
+	if run_progression_system == null or not run_progression_system.is_running():
+		return
+	var floor_index: int = int(data.get("floor_index", 0))
+	# 只认本世界 run state 当前楼层的发射（其他套件/系统的 mock 发射不触发重置）
+	if int(run_progression_system.get_state().get("floor_index", 0)) != floor_index:
+		return
+	if _active_floor_index >= 1 and floor_index > _active_floor_index:
+		reset_for_floor()
+	_active_floor_index = floor_index
+
+
+## spec 002 T022：楼层切换清场——组合既有原语（clear_enemies/clear_foods/
+## status_tile clear_all/effect window clear_all），蛇重建保长度；管理器存续
+## （SnakePartsManager/ScaleSlotManager/ResonanceManager/ShedskinSystem 不动，
+## Build 与蜕皮跨层存续是 FR-003/FR-013 边界，专项测试 = test_l4_slots T023）。
+## 随后的 room_entered 由 RoomDirector 重新布怪布食。
+func reset_for_floor() -> void:
+	var preserved_length: int = snake.body.size()
+	if preserved_length <= 0:
+		preserved_length = Constants.INITIAL_SNAKE_LENGTH
+
+	# 旧蛇段即将销毁：先按 target 注销其状态（不可用 StatusEffectManager.clear_all——
+	# 那会连 TriggerManager 原子链一起清掉，杀死已装备 Build 的触发器）
+	StatusEffectManager.remove_all_statuses(snake)
+	for seg in snake.segments:
+		if is_instance_valid(seg):
+			StatusEffectManager.remove_all_statuses(seg)
+
+	enemy_manager.clear_enemies()
+	food_manager.clear_foods()
+	status_tile_manager.clear_all()
+	var win_mgr = get_node_or_null("EffectWindowManager")
+	if win_mgr:
+		win_mgr.clear_all()
+
+	var start_pos := Vector2i(Constants.GRID_WIDTH / 2, Constants.GRID_HEIGHT / 2)
+	snake.init_snake(start_pos, preserved_length, Constants.DIR_VECTORS[Constants.Direction.RIGHT])
+
+
 ## T33: 生命周期清理（在 queue_free 前调用）
 func cleanup() -> void:
+	_active_floor_index = 0
+	if room_director and room_director.has_method("cleanup"):
+		room_director.cleanup()
 	if shop_system and shop_system.has_method("cleanup"):
 		shop_system.cleanup()
 	if slot_expansion_system and slot_expansion_system.has_method("cleanup"):
@@ -251,19 +313,22 @@ func start_game() -> void:
 
 	# 4. Initialize L3 run and current room
 	var current_room: Dictionary = {}
+	_active_floor_index = 0
 	if ConfigManager.get_run_config().get("enabled", false) and run_progression_system and run_progression_system.has_method("start_run"):
 		run_progression_system.start_run()
 		current_room = run_progression_system.get_current_room()
 		if room_flow_system and room_flow_system.has_method("enter_room"):
 			room_flow_system.enter_room(current_room)
 
-	# 5. Initialize enemies
-	var enemy_count: int = 3
-	if ConfigManager.get_run_config().get("enabled", false):
-		var room_type: String = current_room.get("room_type", "combat")
-		var room_cfg: Dictionary = ConfigManager.get_room_type(room_type)
-		enemy_count = int(room_cfg.get("enemy_count", enemy_count))
-	enemy_manager.init_enemies(enemy_count)
+	# 5. Initialize enemies（spec 002 T021：有 RoomDirector 时由其在 room_entered
+	# 按房型/主题/难度接管布怪布食；L1/L2 验收场景无该节点，保持原行为）
+	if room_director == null:
+		var enemy_count: int = 3
+		if ConfigManager.get_run_config().get("enabled", false):
+			var room_type: String = current_room.get("room_type", "combat")
+			var room_cfg: Dictionary = ConfigManager.get_room_type(room_type)
+			enemy_count = int(room_cfg.get("enemy_count", enemy_count))
+		enemy_manager.init_enemies(enemy_count)
 
 	# 6. Start Tick
 	TickManager.start_ticking()

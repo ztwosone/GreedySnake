@@ -121,11 +121,11 @@ L4 事件契约「发射方 → 监听方」对照表（T1 落地信号定义；
 | `shop_entered` | {room_id, items} | ShopSystem（T3） | shop_panel（T3） |
 | `shop_purchase` | {item_id, category, cost, currency_remaining} | ShopSystem（T3） | ShedskinSystem、shop_panel（T3） |
 | `slot_unlocked` | {position, total_slots, source} | SlotExpansionSystem（T3） | Build 面板（T3） |
-| `floor_reward_presented` | {floor_index, options} | FloorRewardSystem（T5） | floor_reward_panel、模态门控（T5） |
-| `floor_reward_chosen` | {category, option_id, skipped?} | FloorRewardSystem（T5） | RunProgression（决议先于 advance_floor，T027） |
-| `difficulty_adjusted` | {reason, adjustment} | DifficultyScaler（T6） | RoomDirector（唯一消费者，T6） |
-| `room_modifier_applied` | {room_id, modifier_id} | RoomModifierSystem（T6，经 RoomDirector 应用） | RoomDirector/表现层（T6） |
-| `floor_theme_set` | {theme, pressure, floor_index} | FloorMapGenerator/RoomDirector（T4/T5） | 表现层（S4） |
+| `floor_reward_presented` | {floor_index, options} | FloorRewardSystem（T5b） | floor_reward_panel、模态门控（门控+切层挂起已接，T5a ✅） |
+| `floor_reward_chosen` | {category, option_id, skipped?} | FloorRewardSystem（T5b） | RunProgression（决议先于 advance_floor，groundwork T5a ✅，T027 完成接线） |
+| `difficulty_adjusted` | {reason, adjustment} | DifficultyScaler（T6） | RoomDirector（唯一消费者，duck-typed 钩子缝已留 T5a ✅） |
+| `room_modifier_applied` | {room_id, modifier_id} | RoomModifierSystem（T6，经 RoomDirector 应用——注入点已留 T5a ✅） | RoomDirector/表现层（T6） |
+| `floor_theme_set` | {theme, pressure, floor_index} | RoomDirector（T5a ✅，生成器保持纯函数） | 表现层（S4） |
 
 FR-018 显式保留契约：**RewardFlowSystem 为 L3 `reward` 房发射的合成 `room_completed` 是该类房间唯一完成通路（load-bearing），保留不动**；草稿 ScaleRewardSystem 的合成 `room_completed` 是缺陷（幻影二次 offer 根因之一），T005 拆除——拆除范围仅限 ScaleRewardSystem。空选项 offer 一律自动决议（chosen 带 `skipped: true` 或 discarded，FR-014）；任一 `*_presented` 未决时推进请求被忽略（FR-015，T007 落地）。
 
@@ -231,6 +231,46 @@ FR-018 显式保留契约：**RewardFlowSystem 为 L3 `reward` 房发射的合�
   10 取 ≥9 异图、BFS 全房可达、DFS 枚举 start→shop 全路径验战斗保底、房数边界 =
   main_rooms ± max_side_rooms、首层零精英零修饰 + 权重拉满反证数据通路 + 逐项 disable）；
   测试通过改写 `ConfigManager.floor`/`room_modifiers` 段并还原来驱动数据反证。
+
+## L4 多层推进 + RoomDirector 事实（S2 T5a，T020-T023，2026-06-11）
+
+- `EnemyManager` 增量改造（T020，默认行为与 L1/L2 完全一致）：
+  `respawn_policy = "maintain"`（默认，击杀即补怪维持 `max_enemy_count`）|
+  `"room_budget"`（生成既定一批不补怪，RoomDirector 用）；`spawn_budget`（room_budget
+  档剩余可生成数，-1 不限，`spawn_enemy` 成功消耗 1、归零拒绝；`spawn_enemy_at`
+  为脚本定点放置**不消耗**——l1/l2 验收场景用法）；`set_spawn_weights(Dictionary)`
+  注入权重表（空表回退 `enemy.spawn_weights`，权重按 float 累计）。
+- `RoomDirector`（T021，`systems/rooms/room_director.gd`，game_world.tscn 常驻节点）：
+  `floor_generated` → 缓存楼层/主题并发 `floor_theme_set`（主题空不发——fixed_v1 档）；
+  `room_entered` → 清场（clear_enemies/clear_foods）→ 重新布怪布食：仅 `clear_enemies`
+  目标房有敌（预算 = 房 dict `enemy_count` + 难度 delta，**钳 >= required_count** 保
+  目标可达成）；主题敌池经 `set_spawn_weights` 注入；elite/`is_boss` 房映射
+  `enemy_types.elite_*` 变体（无变体回退基础型——spec「boss 未配置 → 精英回退」边界）；
+  食物数 = `difficulty.floor_table[层].food_count` + delta（钳 >= 0）。
+  难度钩子 `set_difficulty_scaler(obj)` duck-typed 读 `get_enemy_count_delta`/
+  `get_food_count_delta`（T6 前零桩）；修饰符注入点 `set_modifier_system(obj)` →
+  布场后调 `apply_modifiers(room)`（T031 消费）。
+- `RunProgressionSystem` 多层推进（T022）：run state 增 `seed` 键；`advance_floor()`
+  以同一 run seed 生成下一层（种子推导含 floor_index，SC-011 跨层确定性）、
+  completed/available 按层重置（房 id 是楼层作用域）、`floor_generated` →
+  `room_entered` 进起点房。**pcg 档**非终层 endpoint/boss 完成 → `floor_completed` →
+  （`floor_reward` 家族未决则挂起，`floor_reward_chosen` 后再推进——FR-007 决议先于
+  `floor_generated` 的 T027 groundwork）→ `call_deferred("advance_floor")`（boss 击杀
+  级联发生在 tick 派发内，不可同步重建世界）；终层（`run.max_floors`）→ 胜利路径。
+  **fixed_v1 档保持单层 MDE 闭环**（终点完成即胜利，FR-016「回退/MDE 路径」语义，
+  L3 验收与 MDE 手动脚本不变——多层推进是 pcg 档行为）。
+- `game_world`（T022）：`reset_for_floor()` 组合既有原语（按 target 注销蛇/段状态——
+  **不可用 `StatusEffectManager.clear_all`，会连 TriggerManager 原子链清掉杀死 Build
+  触发器**；clear_enemies/clear_foods/status_tile clear_all/effect window clear_all；
+  蛇重建保长度），监听 `floor_generated`（楼层号大于跟踪值且属本世界 run 才重置，
+  mock 发射免疫）；`start_game` 在有 RoomDirector 时不再 `init_enemies`（布怪让位
+  director；l1/l2 场景无该节点保持原行为）。
+- Build 跨层存续（T023，`test_l4_slots` 用例组）：蛇重建后已装鳞片/头/共鸣/开槽数/
+  蜕皮余额/长度全部存续，卸装重装可驱动共鸣重算（触发器链路完好，FR-003/FR-013 边界）。
+- 测试事实：`test_l4_room_director.gd`（T020 契约 + T021 布场 + T022 多层/门控/
+  fixed_v1 回归 + game_world reset e2e）；全 game_world 多层测试需测试内切
+  `ConfigManager.floor["generator"] = "pcg"` 并还原；boss 完成后需 `await process_frame`
+  冲延迟切层。
 
 ## L1 战斗循环关键事实
 

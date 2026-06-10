@@ -1,5 +1,12 @@
 class_name RunProgressionSystem
 extends Node
+## spec 002 T022 多层推进：pcg 档非终层 boss/endpoint 完成 →（楼层奖励决议先于推进，
+## FR-007/US5 场景 5——floor_reward 未决时挂起）→ 延迟 advance_floor() → 同一 run seed
+## 重生成下一层 → floor_generated → room_entered 进起点房；终层（run.max_floors）→ 胜利路径。
+## fixed_v1 档保持单层 MDE 闭环（终点完成即胜利，L3 验收与 MDE 手动脚本语义不变）；
+## 多层推进是 pcg 档行为（FR-016：fixed_v1 = 回退/MDE 路径）。
+## advance_floor 经 call_deferred 调度：boss 击杀级联（enemy_killed → room_completed）
+## 发生在 tick 处理中，不能在派发内重建世界（蛇重建/清场重入防护）。
 
 const FloorMapGeneratorScript = preload("res://systems/rooms/floor_map_generator.gd")
 
@@ -12,6 +19,9 @@ var _generator = FloorMapGeneratorScript.new()
 ## 按 offer 家族登记（reward / scale_reward / floor_reward），各 offer 系统单 offer 在飞，
 ## 家族键足够；shop 进出流由 T014 卡接入。
 var _pending_offers: Dictionary = {}
+
+## T022/T027 groundwork：楼层奖励未决时挂起切层，floor_reward_chosen 后再推进
+var _advance_after_floor_reward: bool = false
 
 
 func _ready() -> void:
@@ -84,6 +94,7 @@ func start_run(seed: int = 0) -> void:
 	current_run_state = {
 		"run_id": "run_%d_%d" % [floor_index, floor_seed],
 		"floor_index": floor_index,
+		"seed": floor_seed,
 		"current_room_id": start_room_id,
 		"completed_room_ids": [],
 		"available_room_ids": [start_room_id] if start_room_id != "" else [],
@@ -122,6 +133,7 @@ func cleanup() -> void:
 	current_run_state.clear()
 	current_floor_map.clear()
 	_pending_offers.clear()
+	_advance_after_floor_reward = false
 	disconnect_events()
 
 
@@ -224,7 +236,48 @@ func _on_room_completed(data: Dictionary) -> void:
 	var completed_room: Dictionary = _get_room_by_id(room_id)
 	if _is_endpoint_completion(data, completed_room):
 		_emit_floor_completed(room_id)
-		mark_victory(room_id)
+		# T022：终层（run.max_floors）或 fixed_v1 单层 MDE 闭环 → 胜利路径；
+		# 否则等楼层奖励决议（FR-007：决议先于 advance_floor/floor_generated）后延迟切层
+		if _is_final_floor() or not _is_multi_floor_map():
+			mark_victory(room_id)
+		elif _pending_offers.has("floor_reward"):
+			_advance_after_floor_reward = true
+		else:
+			call_deferred("advance_floor")
+
+
+## T022：推进到下一楼层——同一 run seed 重生成（种子推导含 floor_index，SC-011）、
+## 楼层局部状态重置（completed/available 按层清，房 id 是楼层作用域）、
+## floor_generated → room_entered 进起点房（game_world 在 floor_generated 时机 reset_for_floor）
+func advance_floor() -> bool:
+	if current_run_state.is_empty() or not is_running():
+		return false
+	var next_floor: int = int(current_run_state.get("floor_index", 1)) + 1
+	if next_floor > ConfigManager.get_max_floors():
+		return false
+
+	var run_seed: int = int(current_run_state.get("seed", 0))
+	current_floor_map = _generator.generate_floor(next_floor, run_seed)
+	var start_room_id: String = current_floor_map.get("start_room_id", "")
+	current_run_state["floor_index"] = next_floor
+	current_run_state["current_room_id"] = start_room_id
+	current_run_state["completed_room_ids"] = []
+	current_run_state["available_room_ids"] = [start_room_id] if start_room_id != "" else []
+
+	EventBus.floor_generated.emit(current_floor_map.duplicate(true))
+	var start_room: Dictionary = _get_room_by_id(start_room_id)
+	if not start_room.is_empty():
+		EventBus.room_entered.emit(start_room.duplicate(true))
+	return true
+
+
+func _is_final_floor() -> bool:
+	return int(current_run_state.get("floor_index", 1)) >= ConfigManager.get_max_floors()
+
+
+## 多层推进是 pcg 档行为；fixed_v1 = 单层 MDE 回退档（FR-016），终点完成即胜利
+func _is_multi_floor_map() -> bool:
+	return str(current_floor_map.get("generator", "")) == "pcg"
 
 
 func _get_room_by_id(room_id: String) -> Dictionary:
@@ -299,6 +352,10 @@ func _on_floor_reward_presented(_data: Dictionary) -> void:
 
 func _on_floor_reward_chosen(_data: Dictionary) -> void:
 	_set_offer_pending("floor_reward", false)
+	# T022/T027：楼层奖励决议完成后才推进（决议先于 floor_generated，FR-007）
+	if _advance_after_floor_reward:
+		_advance_after_floor_reward = false
+		call_deferred("advance_floor")
 
 
 func _on_room_advance_requested(data: Dictionary) -> void:

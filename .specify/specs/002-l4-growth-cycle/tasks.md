@@ -78,10 +78,10 @@
 
 **Independent Test**: 面板公共 API 驱动 3 层 PCG run 至胜利；首层 Boss 后选位开槽 + 三选一生效；终层 Boss 后无楼层奖励直达胜利。
 
-- [ ] T020 [US4] EnemyManager 增量改造卡（RoomDirector 前置契约变更）：`Project/systems/enemy/enemy_manager.gd` 新增 `respawn_policy`（默认 `maintain` 保 L1/L2 行为与既有测试绿）+ 注入式权重表 + spawn_budget。测试套件：`Project/Test/cases/test_l4_room_director.gd`（新建）+ 既有 enemy 套件回归
-- [ ] T021 [US4] 新建 `Project/systems/rooms/room_director.gd`：监听 `room_entered`/`floor_generated` → 清场 → 按房型+主题权重+难度修正布怪布食（修饰符注入点）。测试套件：`test_l4_room_director.gd`
-- [ ] T022 [US4] 多层切换卡：`Project/scenes/game_world.gd` 新增 `reset_for_floor()`（组合既有 clear_enemies/clear_foods/clear_all 原语）；`run_progression_system.gd` 消费 `run.max_floors`。测试套件：`test_l4_room_director.gd` + `test_l3_run_loop.gd` 回归
-- [ ] T023 [US4] Build 装备跨层存续专门测试卡：蛇重建后已装鳞片/共鸣/蜕皮余额全部存续（FR-003/FR-013 边界）。测试套件：`test_l4_slots.gd`（跨层存续用例组）
+- [x] T020 [US4] EnemyManager 增量改造卡（RoomDirector 前置契约变更）：`Project/systems/enemy/enemy_manager.gd` 新增 `respawn_policy`（默认 `maintain` 保 L1/L2 行为与既有测试绿）+ 注入式权重表 + spawn_budget。测试套件：`Project/Test/cases/test_l4_room_director.gd`（新建）+ 既有 enemy 套件回归
+- [x] T021 [US4] 新建 `Project/systems/rooms/room_director.gd`：监听 `room_entered`/`floor_generated` → 清场 → 按房型+主题权重+难度修正布怪布食（修饰符注入点）。测试套件：`test_l4_room_director.gd`
+- [x] T022 [US4] 多层切换卡：`Project/scenes/game_world.gd` 新增 `reset_for_floor()`（组合既有 clear_enemies/clear_foods/clear_all 原语）；`run_progression_system.gd` 消费 `run.max_floors`。测试套件：`test_l4_room_director.gd` + `test_l3_run_loop.gd` 回归（注：多层推进仅 pcg 档——fixed_v1 保持单层 MDE 闭环、终点即胜利；advance_floor 经 call_deferred 调度防击杀级联重入；floor_reward 未决挂起切层为 T027 groundwork）
+- [x] T023 [US4] Build 装备跨层存续专门测试卡：蛇重建后已装鳞片/共鸣/蜕皮余额全部存续（FR-003/FR-013 边界）。测试套件：`test_l4_slots.gd`（跨层存续用例组）
 - [ ] T024 [US5] Red 卡：对照修订版 spec 重写 `Project/Test/cases/test_l4_floor_rewards.gd`——固定槽位解锁步骤（选前/中/后）先于 3 选 1；三选项恰为高级鳞/升级最低级件/同 tag 换鳞；终层不弹（US5 场景 4）；奖励决议先于 `floor_generated`（US5 场景 5）；全空自动决议。测试套件：`test_l4_floor_rewards.gd`
 - [ ] T025 [US5] 重写 `Project/systems/growth/floor_reward_system.gd` 逻辑（判决：重写——草稿 expansion 硬编码 equip、correction 是 pass 的假实现）：实现 §10.3-10.5 模型（FR-007），`floor_index < run.max_floors` 才呈现。测试套件：`test_l4_floor_rewards.gd`
 - [ ] T026 [US5] UI 卡：`Project/ui/floor_reward_panel.gd` **基于 ui/kit 构建**为两段式（槽位定位选择 → choice_card×3）。测试套件：`test_l4_floor_rewards.gd`（UIActor 驱动）+ 几何探测
