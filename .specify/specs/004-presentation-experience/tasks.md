@@ -15,10 +15,10 @@
 
 ### F-B UI 内核组件
 
-- [ ] T003 [F-B] `ui/kit/kit_panel.gd` 基类：角括号框 _draw + 出生分组/`ui_layer` 元数据/
+- [x] T003 [F-B] `ui/kit/kit_panel.gd` 基类：角括号框 _draw + 出生分组/`ui_layer` 元数据/
   `settle()`；单测分组与元数据存在性
-- [ ] T004 [F-B] `ui/kit/glyph.gd`：`presentation.glyphs` 数据驱动绘制；单测子节点数/颜色
-- [ ] T005 [F-B] `ui/kit/choice_card.gd` + `banner.gd` + `chip.gd`：组件态与公共 API
+- [x] T004 [F-B] `ui/kit/glyph.gd`：`presentation.glyphs` 数据驱动绘制；单测子节点数/颜色
+- [x] T005 [F-B] `ui/kit/choice_card.gd` + `banner.gd` + `chip.gd`：组件态与公共 API
   （set_content/set_selected/settle）；单测状态切换
 
 ### F-C 仪表缝
