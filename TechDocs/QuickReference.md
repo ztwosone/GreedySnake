@@ -16,8 +16,10 @@ Godot 4.6 + GDScript 贪吃蛇 Roguelite。Grid-based、Tick-driven、Event-driv
 | L2-Phase0 | T27A StatusCarrier + ReactionResolver + CollisionHandler | ✅ 完成（1082 测试） |
 | L2 | 蛇头/蛇尾/蛇鳞统一 Atom Chain | ✅ 完成 T27A~T33（1518 测试） |
 | L2.5 | Virtual Player 自动化测试基础设施 | ✅ 完成 |
-| L3 | 完整一局：地图 / 房间 / 奖励 / 终局 | ✅ v1 完成（RunState、FloorMap、房间流程、奖励选择、楼层推进、终局、占位 UI smoke） |
-| L4+ | 成长深度 / 元成长 | 🔮 待设计 |
+| L3 | 完整一局：地图 / 房间 / 奖励 / 终局 | ✅ v1 完成并已提交（RunState、FloorMap、房间流程、奖励选择、楼层推进、终局、占位 UI smoke） |
+| L4 | 成长循环（蜕皮/鳞片奖励/槽位/商店/PCG/难度） | 🟡 2026-06-05 草稿已提交在库：**零场景集成、任务 0 勾选、已知逻辑缺陷**，待按 spec 002 逐卡重验收 |
+| L5 | 元成长（解锁/传承石/拾取/user:// 存档） | 🟡 同上，待按 spec 003 重验收；`run_ended` 生产代码无发射方 |
+| 体验层 | 程序化美学 + 游戏手感（SpecKit 004） | 📋 已规划：设计文档 `Designs/Interactive/presentation_design.md` 先行 |
 
 ## 核心配置
 
@@ -50,15 +52,17 @@ Project/Test/cases/test_l3_smoke_run.gd      # L3 v1 固定路径占位 UI smoke
 - Tick = 0.25s
 - 测试入口：`res://Test/test_runner.tscn`
 - 严格测试入口：`$env:GODOT_DISABLE_CRASH_HANDLER="1"; powershell -ExecutionPolicy Bypass -File Tools/run_tests_strict.ps1`
-- 当前验证事实（2026-05-19）：普通测试 `1831/1831` 断言通过；严格测试脚本会捕获运行期 Godot 错误输出，并豁免已知 AtomRegistry 负向测试、lambda capture 清理日志和 headless 退出期资源日志。
+- 当前验证事实（2026-06-10）：普通测试 `2346/2346` 断言通过，套件 `56/56`（runner 现核对"发现/运行"数）；严格门禁 `STRICT PASSED`。严格脚本先跑 `--headless --import` 重建 class cache/.uid（导入器输出不进扫描），再跑测试并扫描 stderr，豁免 AtomRegistry 负向测试、lambda capture 清理日志和 headless 退出期资源日志。
+- 测试约定：禁止裸引用全局 class_name，一律 `const XxxScript := preload(...)`（见 ScriptingLeading 附录 C.8）；坏套件计 FAIL 不再静默吞测（2026-06-05 的"ALL PASSED 758/758"假绿根因已修复）。
 
 ## AgentOps 统筹事实
 
 - 仓库长期记忆放在 `AgentOps/`，新会话必须从 `AgentOps/README.md` 启动。
 - L3+ 默认由 Orchestrator Agent 派发单任务卡；Implementer 不自行扩大范围。
-- 当前默认 feature branch：`codex/001-l3-run-loop`。
-- 当前默认 feature：`.specify/specs/001-l3-run-loop/`。
-- L3 设计门禁：体验深度、认知轻度；美术/UI 允许功能占位，但必须保留正式表现接口。
+- 当前阶段路线：S0 稳定化 ✅ → S1 体验设计文档+表现内核（SpecKit 004 Phase F）→ S2 L4 重验收（spec 002）→ S3 L5（spec 003）→ S4 体验完成层（004 Phase P）→ S5 封板。S2/S4 按 US 合 main，其余按 Stage 合 main。
+- 安全快照：`snapshot/2026-06-10-raw-worktree` 保存 6-05 草稿原始状态，永不合并。
+- 设计门禁：体验深度、认知轻度；美术/UI 占位将由 SpecKit 004 表现内核替换为统一设计语言。
+- 治理规则：改 EventBus 契约或 JSON schema 的提交，必须同一提交内含 QuickReference 增量。
 
 ## L3 Foundation 事实
 
