@@ -1,9 +1,9 @@
 # 当前状态
 
-**更新时间**：2026-06-11（S2 T3 簇收口 + MDE 检查点）
+**更新时间**：2026-06-11（S2 T4 簇收口）
 **当前分支**：`002-l4-growth-cycle`（spec 002 重验收进行中，每簇过严格门禁后合 main）
 **当前 feature**：`.specify/specs/002-l4-growth-cycle/`（重验收）
-**当前阶段**：S2 T3 簇完成（T011-T017 槽位扩展 + 商店 + MDE 检查点 tag `mde-checkpoint`）；下一簇 T4（Seeded PCG，T018-T019）
+**当前阶段**：S2 T4 簇完成（T018-T019 Seeded PCG）；下一簇 T5（多层推进 + 楼层奖励 + RoomDirector，T020-T028）
 
 ## 阶段路线图
 
@@ -56,11 +56,22 @@ S1 统一设计语言。此后任何中断，项目仍是「打开就能感受�
 
 ## 最近验证基线
 
-- 普通测试：`3207/3207` 断言，套件 `68/68`（T3 簇重写 `test_l4_slots`/`test_l4_shop` +
-  L3 套件适配 6 房路径后的断言基数）。
-- 严格测试：`STRICT PASSED`（2026-06-11，S2 T3 簇门禁）。
+- 普通测试：`3155/3155` 断言，套件 `68/68`（T4 簇重写 `test_l4_pcg_rooms` 为性质测试后的
+  断言基数——草稿逐房逐字段断言改为聚合性质断言，总数回落属预期）。
+- 严格测试：`STRICT PASSED`（2026-06-11，S2 T4 簇门禁）。
 
 ## S2 进度
+
+- T4 簇 ✅（T018-T019）：`floor_map_generator` 重写为双档——`floor.generator` 开关全权决定
+  （草稿楼层 1 短路固定路径、2 层起无视开关已修）；PCG 档 seeded（每层 RNG 种子 =
+  `hash("run_seed:floor_index")`，RNG 调用顺序固定且文档化）；结构保证构造即性质：
+  起点 combat / 终点 boss 恰一间（`room_types.boss` 新增，is_boss、clear_enemies）、
+  每层恰一商店且全路径 ≥2 战斗房在前（SC-010）、奖励房保底、支线死端全房可达；
+  精英升格按 `floor.elite_weights`、修饰符按 `floor.modifier_weights` + 逐项 enabled
+  （首层全 0 数据节奏生效）；魔数全入 `floor.pcg`（main_rooms 楼层键表/权重/支线参数）+
+  新 accessor `get_pcg_config`/`get_pcg_main_room_bounds`；`test_l4_pcg_rooms` 重写为
+  性质测试（定种子全等、变种子异图、BFS 可达、DFS 商店保底、边界、数据反证、逐项 disable）；
+  fixed_v1 档输出与 L3 验收完全一致（`test_l3_floor_progression` 回归绿）。
 
 - T1 簇 ✅（T001-T003）：`run.max_floors: 3` 取代并删除 `max_floors_v1`（旧键零调用方）、`floor.generator` 开关、
   节奏权重（首层 modifier/elite 全 0）、商店保底、`shop.price_multiplier_per_floor`、`room_types.shop|elite`、
@@ -92,18 +103,24 @@ S1 统一设计语言。此后任何中断，项目仍是「打开就能感受�
   `l4_scale_pending` 状态；JSON 增量 `growth.scale_reward.default_pool`。
   测试事实：全局 `enemy_killed` 的 `enemy_def` 必须是 Node 派生或 null（EnemyManager 按 Node 收参）。
 
-## 下一张建议任务（S2 T4 簇开卡）
+## 下一张建议任务（S2 T5 簇开卡）
 
-T3 簇已收口合 main，MDE 存活线已立（tag `mde-checkpoint`）。下一簇 T4（T018-T019 Seeded PCG）：
-1. T018 Red：重写 `test_l4_pcg_rooms.gd` 为**性质测试**——连通性、全房可达、房数边界、
-   定种子确定性（SC-011）、商店保底排 ≥2 战斗房后（SC-010）、endpoint=boss、
-   首层 modifier/elite 权重为 0 从数据生效。
-2. T019 重写 `floor_map_generator.gd` PCG 路径：seeded RNG + config 权重/分支 + 每层保底 shop +
-   endpoint=boss；魔数（:54-84）全部入 JSON；fixed_v1 留作 `floor.generator` 开关回退
-   （注意 fixed_v1 路径现为 6 房含 shop_01）。
-3. 回归重点：`test_l3_floor_progression.gd`（fixed_v1 档）+ 楼层键表查询走
-   `ConfigManager._get_floor_keyed_value` 系 accessor，不读裸 dict。
-4. 后续：T5 多层+RoomDirector（T020 EnemyManager respawn_policy 前置）→T6 难度+修饰符→T7 验收。
-   每簇合 main。13 文件判决表见 plan.md「重验收策略」。
-   T016 后注意：任何走完整 fixed 路径的新测试要途经 shop_01（房间自动完成、无门控、
-   `room_entered` 退店收面板）。
+T4 簇已收口合 main。下一簇 T5（T020-T028 多层推进 + 楼层奖励 + RoomDirector）：
+1. T020 前置契约变更：`enemy_manager.gd` 增量改造——`respawn_policy`（默认 `maintain`
+   保 L1/L2 行为与既有测试绿）+ 注入式权重表 + spawn_budget；新建 `test_l4_room_director.gd`。
+2. T021 `room_director.gd` 新建：监听 `room_entered`/`floor_generated` → 清场 → 按房型 +
+   主题权重 + 难度修正布怪布食；PCG 房 dict 已带 `modifiers: Array` 与 `theme_id`，
+   elite 房型/boss 房型（enemy_count/required_count）从 `room_types` 读。
+3. T022 多层切换：`game_world.reset_for_floor()` + `run_progression_system` 消费
+   `run.max_floors`；楼层奖励决议先于 `advance_floor()`（T027）；终层 → 胜利路径。
+   PCG 档 `generate_floor(floor_index, run_seed)` 已支持任意层（种子推导含 floor_index），
+   多层 run 直接传同一 run_seed 即可获得确定性楼层序列。
+4. T024-T026 楼层奖励：固定槽位解锁步骤先于 3 选 1；`floor_reward_panel` 两段式；
+   终层不弹（`floor_index < run.max_floors`）。注意 boss 房不自动完成、objective =
+   clear_enemies；PCG 图终点即 boss 房（`endpoint_room_id`）。
+5. 回归重点：fixed_v1 档仍是默认（`floor.generator: "fixed_v1"`），多层测试需在测试内
+   切 `ConfigManager.floor["generator"] = "pcg"` 并还原（test_l4_pcg_rooms 有现成
+   `_force_generator`/`_restore_floor_section` 模式可抄）。
+6. 后续：T6 难度+修饰符（DifficultyScaler 唯一消费者 = RoomDirector）→ T7 验收封口
+   （T029/T031/T033 重写时删除 `room_modifiers` 中 darkness/speed_strips/mine_tiles
+   草稿残留）。每簇合 main。13 文件判决表见 plan.md「重验收策略」。
