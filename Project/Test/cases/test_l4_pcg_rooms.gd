@@ -27,6 +27,7 @@ func run(t) -> void:
 	_test_room_count_bounds(t)
 	_test_shop_guarantee_after_combat(t)
 	_test_floor1_pacing_zero_from_data(t)
+	_test_floor2_plus_pacing_presence_from_data(t)
 	_test_pacing_weights_drive_generation(t)
 	_test_modifier_per_item_disable_respected(t)
 
@@ -232,6 +233,35 @@ func _test_floor1_pacing_zero_from_data(t) -> void:
 				violations.append("s%d %s: modifiers on floor 1" % [run_seed, room.get("room_id", "?")])
 	t.assert_eq(violations, [], "[FR-017] floor 1 has zero elite rooms and zero modifiers (weights all 0 in data)")
 	_restore_generator(previous)
+
+
+func _test_floor2_plus_pacing_presence_from_data(t) -> void:
+	## T032 节奏互证（SC-010 正面半幅）：真实配置 + 固定种子（确定性，非抽样波动）下，
+	## 2 层起精英与修饰符确实从数据权重出现，且生成的修饰符 id 全部落在 v1 集合内。
+	var previous: String = _force_generator("pcg")
+	var elite_seen: int = 0
+	var modifier_seen: int = 0
+	var foreign_modifiers: Array = []
+	var v1_ids: Array = ["shield_enemies", "preset_status_tiles"]
+	for floor_index in [2, 3]:
+		for run_seed in range(9001, 9013):
+			for room in _generate(floor_index, run_seed).get("rooms", []):
+				if not (room is Dictionary):
+					continue
+				if str(room.get("room_type", "")) == "elite":
+					elite_seen += 1
+				for modifier_id in room.get("modifiers", []):
+					modifier_seen += 1
+					if not v1_ids.has(str(modifier_id)):
+						foreign_modifiers.append("f%d s%d %s: %s" % [floor_index, run_seed, room.get("room_id", "?"), modifier_id])
+	_restore_generator(previous)
+
+	t.assert_true(elite_seen >= 1,
+		"[T032] floors >= 2 generate elite rooms from data weights (got %d across fixed seeds)" % elite_seen)
+	t.assert_true(modifier_seen >= 1,
+		"[T032] floors >= 2 generate room modifiers from data weights (got %d across fixed seeds)" % modifier_seen)
+	t.assert_eq(foreign_modifiers, [],
+		"[T032] every generated modifier id belongs to the v1 set (FR-009)")
 
 
 func _test_pacing_weights_drive_generation(t) -> void:

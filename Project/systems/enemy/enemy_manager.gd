@@ -7,6 +7,9 @@ extends Node
 ##   归零后拒绝生成。spawn_enemy_at 是脚本定点放置（l1/l2 验收场景、触发原子），不消耗预算。
 ## - 注入式权重表：set_spawn_weights() 覆盖 enemy.spawn_weights（空表 = 回退配置）；
 ##   RoomDirector 以 floor_themes.<id>.enemy_pool_weights 注入主题敌池。
+## - spawn_hp_bonus（T030）：随机生成的敌人在 config hp 之上加成（FR-008 静态层 HP 压力，
+##   RoomDirector 每房按 DifficultyScaler.get_enemy_hp_bonus() 写入；默认 0 保 L1/L2）。
+##   spawn_enemy_at 是脚本定点放置（l1/l2 验收场景、触发原子），不吃加成。
 
 var max_enemy_count: int = 3
 var current_enemies: Array[Enemy] = []
@@ -16,6 +19,7 @@ var food_manager: FoodManager = null
 var collision_handler: Node = null  ## CollisionHandler
 var respawn_policy: String = "maintain"
 var spawn_budget: int = -1
+var spawn_hp_bonus: int = 0
 var _spawn_weights_override: Dictionary = {}
 const SPAWN_SAFE_DISTANCE: int = 3
 
@@ -57,6 +61,7 @@ func spawn_enemy(type_id: String = "wanderer") -> void:
 
 	var enemy := Enemy.new()
 	enemy.setup_from_config(type_id)
+	enemy.hp += maxi(0, spawn_hp_bonus)
 	enemy.collision_handler = collision_handler
 	enemy.place_on_grid(pos)
 	if enemy_container:
