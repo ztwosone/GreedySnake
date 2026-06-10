@@ -22,7 +22,13 @@
 
   "commands": {
     "run_tests": "\"F:/GodotMCP/Godot_v4.6.1-stable_win64.exe/Godot_v4.6.1-stable_win64_console.exe\" --headless --path \"F:/GreedySnake/Project\" Test/test_runner.tscn",
-    "run_tests_strict": "$env:GODOT_DISABLE_CRASH_HANDLER=\"1\"; powershell -ExecutionPolicy Bypass -File \"F:/GreedySnake/Tools/run_tests_strict.ps1\""
+    "run_tests_strict": "$env:GODOT_DISABLE_CRASH_HANDLER=\"1\"; powershell -ExecutionPolicy Bypass -File \"F:/GreedySnake/Tools/run_tests_strict.ps1\"",
+    "run_acceptance_shots": "powershell -ExecutionPolicy Bypass -File \"F:/GreedySnake/Tools/run_acceptance_shots.ps1\""
+  },
+
+  "acceptance_shots": {
+    "scene": "F:/GreedySnake/Project/AcceptanceShots/acceptance_shots.tscn",
+    "output_dir": "F:/GreedySnake/AgentOps/acceptance_shots"
   },
 
   "speckit": {

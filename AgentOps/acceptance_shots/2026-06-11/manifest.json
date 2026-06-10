@@ -1,0 +1,48 @@
+{
+	"date": "2026-06-11",
+	"resolution": "1280x704",
+	"shots": [
+		{
+			"file": "01_title.png",
+			"id": "01_title",
+			"ok": true,
+			"state": "title_screen"
+		},
+		{
+			"file": "02_l3_run_start.png",
+			"id": "02_l3_run_start",
+			"ok": true,
+			"state": "l3_run_start"
+		},
+		{
+			"file": "03_l4_scale_pending.png",
+			"id": "03_l4_scale_pending",
+			"ok": true,
+			"state": "l4_scale_pending"
+		},
+		{
+			"file": "04_l4_shop_open.png",
+			"id": "04_l4_shop_open",
+			"ok": true,
+			"state": "l4_shop_open"
+		},
+		{
+			"file": "05_l4_floor_reward_slot.png",
+			"id": "05_l4_floor_reward_slot",
+			"ok": true,
+			"state": "l4_floor_reward_slot"
+		},
+		{
+			"file": "06_l4_floor_reward_choice.png",
+			"id": "06_l4_floor_reward_choice",
+			"ok": true,
+			"state": "l4_floor_reward_choice"
+		},
+		{
+			"file": "07_l4_multifloor_midrun.png",
+			"id": "07_l4_multifloor_midrun",
+			"ok": true,
+			"state": "@multifloor_midrun"
+		}
+	]
+}
