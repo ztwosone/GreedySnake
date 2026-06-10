@@ -63,11 +63,24 @@ func _test_sc003_shop_items(t) -> void:
 
 
 func _test_sc004_floor_reward_categories(t) -> void:
+	# Amended 2026-06-11（FR-007/Designs §10.3-10.5）：Boss 结算 = 固定槽位解锁步骤先行，
+	# 再独立 3 选 1（扩展/强化/修正三类各一）。SC-001..SC-012 全量映射归 T033。
+	var mock_snake := Node2D.new()
+	mock_snake.name = "AccFloorRewardMock"
+	var scale_mgr: Node = load("res://systems/snake_parts/scale_slot_manager.gd").new()
+	scale_mgr.init_manager(mock_snake, StatusEffectManager._trigger_manager, StatusEffectManager._chain_resolver)
+	var slot_system: Node = load("res://systems/growth/slot_expansion_system.gd").new()
+	slot_system.setup(scale_mgr)
+	t.add_child(slot_system)
 	var system: Node = load("res://systems/growth/floor_reward_system.gd").new()
+	system.setup(scale_mgr, slot_system)
 	t.add_child(system)
+	t.assert_true(scale_mgr.equip_scale("middle", "flame_scale", 1), "[SC-004] precondition: a scale equipped")
 
-	var offer: Dictionary = system.present_floor_reward(1, "boss_01")
-	var options: Array = offer.get("options", [])
+	var offer: Dictionary = system.present_settlement(1, "boss_01")
+	t.assert_eq(str(offer.get("step", "")), "slot_unlock", "[SC-004] fixed slot-unlock step resolves first")
+	t.assert_true(system.choose_slot_position("front"), "[SC-004] player picks a position")
+	var options: Array = system.get_current_offer().get("options", [])
 	t.assert_eq(options.size(), 3, "[SC-004] 3 floor reward options")
 	var categories: Array = []
 	for opt in options:
@@ -75,9 +88,15 @@ func _test_sc004_floor_reward_categories(t) -> void:
 	t.assert_true(categories.has("expansion"), "[SC-004] expansion category present")
 	t.assert_true(categories.has("reinforcement"), "[SC-004] reinforcement category present")
 	t.assert_true(categories.has("correction"), "[SC-004] correction category present")
+	t.assert_true(system.choose_floor_reward(0), "[SC-004] choice resolves the settlement")
 
 	system.cleanup()
 	system.queue_free()
+	slot_system.cleanup()
+	slot_system.queue_free()
+	scale_mgr.clear_all()
+	scale_mgr.free()
+	mock_snake.free()
 
 
 func _test_sc005_multi_floor(t) -> void:

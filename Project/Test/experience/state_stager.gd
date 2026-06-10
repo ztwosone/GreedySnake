@@ -16,6 +16,8 @@ static func stage(state_name: String, host: Node) -> Dictionary:
 	##   "l3_reward_pending"：combat_01 完成 + 鳞片 offer 决议 + 进奖励房（RewardChoicePanel 可见）
 	##   "l4_scale_pending"：combat_01 完成（ScaleChoicePanel 可见 + 蜕皮 chip 已披露，spec 002 T2）
 	##   "l4_shop_open"：走完两战斗一奖励进商店房（ShopPanel 可见 + 蜕皮 chip，spec 002 T3）
+	##   "l4_floor_reward_slot"：Boss 结算第一段（FloorRewardPanel 槽位定位选择，spec 002 T5b）
+	##   "l4_floor_reward_choice"：Boss 结算第二段（FloorRewardPanel choice_card×3，spec 002 T5b）
 	## ctx["ui_root"]：几何探针扫描根（壳层屏 = UILayer，局内 = game_world 的 UI 层）
 	var ctx: Dictionary = {
 		"state_name": state_name,
@@ -76,6 +78,15 @@ static func stage(state_name: String, host: Node) -> Dictionary:
 			if shop_scale_panel != null and shop_scale_panel.has_method("discard_offer"):
 				shop_scale_panel.discard_offer()
 			shop_floor_panel.request_next_room()  # shop_01
+		"l4_floor_reward_slot", "l4_floor_reward_choice":
+			# spec 002 T5b：Boss 结算两段式（系统公共 API 直驱呈现，面板随事件展示；
+			# 第二段在槽位选择后呈现 choice_card×3）
+			var floor_reward_system: Node = world.get_node_or_null("FloorRewardSystem")
+			var floor_reward_panel: Node = world.get_node_or_null("UI/FloorRewardPanel")
+			if floor_reward_system != null and floor_reward_system.has_method("present_settlement"):
+				floor_reward_system.present_settlement(1, "state_stager")
+				if state_name == "l4_floor_reward_choice" and floor_reward_panel != null:
+					floor_reward_panel.choose_slot_by_index(0)
 		_:
 			push_warning("state_stager: unknown state '%s', staged bare run" % state_name)
 	return ctx

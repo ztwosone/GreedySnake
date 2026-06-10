@@ -1104,17 +1104,20 @@
     "floor_reward": {
       "offer_count": 3,
       "categories": ["expansion", "reinforcement", "correction"],
+      "slot_unlock_source": "boss",
       "expansion": {
         "display_name": "扩展",
-        "description": "获得一个高级鳞片或诅咒鳞片"
+        "description": "随机获得 1 片高级鳞片",
+        "scale_pool": "l1_basic",
+        "advanced_level": 2
       },
       "reinforcement": {
         "display_name": "强化",
-        "description": "升级最低等级鳞片、蛇头或蛇尾"
+        "description": "当前最低等级鳞片免费升一级"
       },
       "correction": {
         "display_name": "修正",
-        "description": "重新排列槽位或交换同标签鳞片"
+        "description": "将一片鳞片替换为同标签的随机鳞片"
       }
     }
   },

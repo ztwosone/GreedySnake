@@ -1,9 +1,9 @@
 # 当前状态
 
-**更新时间**：2026-06-11（S2 T5a 收口）
+**更新时间**：2026-06-11（S2 T5b 收口）
 **当前分支**：`002-l4-growth-cycle`（spec 002 重验收进行中，每簇过严格门禁后合 main）
 **当前 feature**：`.specify/specs/002-l4-growth-cycle/`（重验收）
-**当前阶段**：S2 T5 簇前半完成（T020-T023 多层基建）；后半 T5b（T024-T028 楼层奖励 + 多层冒烟）
+**当前阶段**：S2 T5 簇全部完成（T020-T028）；下一簇 T6（T029-T032 难度缩放 + 房间修饰符）
 
 ## 阶段路线图
 
@@ -56,10 +56,25 @@ S1 统一设计语言。此后任何中断，项目仍是「打开就能感受�
 
 ## 最近验证基线
 
-- 普通测试：`3246/3246` 断言，套件 `69/69`（新增 `test_l4_room_director`）。
-- 严格测试：`STRICT PASSED`（2026-06-11，S2 T5a 门禁）。
+- 普通测试：`3391/3391` 断言，套件 `70/70`（新增 `test_l4_multifloor_run`）。
+- 严格测试：`STRICT PASSED`（2026-06-11，S2 T5b 门禁）。
 
 ## S2 进度
+
+- T5b ✅（T024-T028 楼层奖励 + 多层冒烟）：`FloorRewardSystem` 重写为 Boss 结算两段式
+  （FR-007/Designs §10.3-10.5）——固定槽位解锁步骤（选前/中/后，经 SlotExpansionSystem
+  `unlock_slot(position, "boss")` 真开槽，新槽先于 3 选 1 开放；全位置满级自动跳过）+
+  独立 3 选 1（扩展=随机高级鳞 `advanced_level`/强化=最低级件免费升一级/修正=同 tag
+  换鳞保级保槽位；无合格目标类别以高级鳞替补；全空自动决议 FR-014）；呈现自守门
+  `floor_index < run.max_floors` **且 pcg 档**（终层直达胜利 US5 场景 4；fixed_v1 单层
+  MDE 闭环不弹）；决议严格先于 `advance_floor`/`floor_generated`（US5 场景 5，顺序断言
+  入库）；`floor_reward_panel` 基于 ui/kit 重建两段式模态（槽位卡 → choice_card×3，
+  去 class_name）；game_world.tscn/gd 接线 + cleanup；`ScaleSlotManager.get_slot_layout`
+  新 accessor（升级/换鳞按真实槽位号定位）；几何探测新增 `l4_floor_reward_slot/choice`
+  状态；T5a 驱动器（room_director/slots T023/acceptance SC-004）补结算决议；
+  `test_l4_multifloor_run.gd` 多层冒烟（种子 9090：3 层主题/布局各异、门控、槽位 3→5、
+  终层无奖励、cause=victory）。EventBus 契约增量（presented 两段 step 字段 / chosen 带
+  floor_index+skipped）同提交落 QuickReference。
 
 - T5a ✅（T020-T023 多层基建）：`EnemyManager` 增量改造——`respawn_policy`
   （默认 `maintain` 保 L1/L2 行为，`room_budget` 档不补怪）+ `spawn_budget`
@@ -116,27 +131,24 @@ S1 统一设计语言。此后任何中断，项目仍是「打开就能感受�
   `l4_scale_pending` 状态；JSON 增量 `growth.scale_reward.default_pool`。
   测试事实：全局 `enemy_killed` 的 `enemy_def` 必须是 Node 派生或 null（EnemyManager 按 Node 收参）。
 
-## 下一张建议任务（S2 T5b 开卡）
+## 下一张建议任务（S2 T6 开卡）
 
-T5a（T020-T023）已收口合 main。后半 T5b（T024-T028 楼层奖励 + 多层冒烟）：
-1. T024-T026 楼层奖励：固定槽位解锁步骤（选前/中/后，经 SlotExpansionSystem
-   `unlock_slot(position, "boss")`）先于 3 选 1（高级鳞/升级最低级件/同 tag 换鳞）；
-   `floor_reward_panel` 基于 ui/kit 两段式；终层不弹（`floor_index < run.max_floors`）。
-   FloorRewardSystem 监听 `floor_completed` 同步呈现即可——RunProgression 在
-   `_emit_floor_completed` 之后才查 `floor_reward` pending 家族，同派发内呈现的 offer
-   会被看见并挂起切层（T5a groundwork：`_advance_after_floor_reward` +
-   `floor_reward_chosen` 后 `call_deferred("advance_floor")`）。
-2. T027 集成：把 groundwork 接到真 FloorRewardSystem（game_world.tscn 加节点 + setup），
-   验证决议先于 `floor_generated`；终层 `floor_completed` → 胜利已在 T5a 落地。
-3. T028 多层冒烟：`test_l4_multifloor_run.gd` 3 层 PCG 至胜利，面板公共 API 驱动；
-   现成驱动器模式可抄 `test_l4_room_director._drive_world_to_next_floor` /
-   `test_l4_slots._drive_world_until_endpoint`（战斗房 record progress → 鳞片 offer
-   放弃/选择 → Next；boss 完成后 `await process_frame` 冲延迟切层）。
-4. 回归重点：fixed_v1 仍是默认且**保持单层 MDE 闭环（终点即胜利）**——多层推进
-   是 pcg 档行为（T5a 裁定，FR-016 回退档语义）；多层测试需测试内切
-   `ConfigManager.floor["generator"] = "pcg"` 并还原。
-5. 后续：T6 难度+修饰符（DifficultyScaler 唯一消费者 = RoomDirector，duck-typed
-   钩子缝已留：`set_difficulty_scaler` + `get_enemy_count_delta`/`get_food_count_delta`；
-   修饰符注入点 `set_modifier_system(obj).apply_modifiers(room)` 已留）→ T7 验收封口
-   （T029/T031/T033 重写时删除 `room_modifiers` 中 darkness/speed_strips/mine_tiles
-   草稿残留）。每簇合 main。13 文件判决表见 plan.md「重验收策略」。
+T5 簇（T020-T028）已收口合 main。T6（T029-T032 难度缩放 + 房间修饰符）：
+1. T029 Red：重写 `test_l4_difficulty.gd`——静态层表缩放 MUST 用例组；反应式 DDA
+   SHOULD 用例组（**仅生成参数级断言，无任何玩家感知措辞**，Designs §11.5「隐性」）；
+   clamp 边界。重写时删除 `room_modifiers` 中 darkness/speed_strips/mine_tiles 草稿残留
+   （T1 注记的欠账，test_l4_acceptance SC-007 草稿用例同卡更新）。
+2. T030 重写 `difficulty_scaler.gd`：修全局 tick 当单房用时（:114）、分母硬编码（:93）；
+   度量改单房口径并 JSON 化（`difficulty.reactive` 归一化参数已在 T1 落地）；
+   **唯一消费者 = RoomDirector**——duck-typed 钩子缝已留（`set_difficulty_scaler` +
+   `get_enemy_count_delta`/`get_food_count_delta`，T5a 零桩）；静态层缩放 MUST
+   （`difficulty.floor_table` 已被 RoomDirector 食物/敌数消费）+ 反应式 DDA SHOULD 分层。
+3. T031 重写-扩展 `room_modifier_system.gd`：v1 = `shield_enemies` + `preset_status_tiles`
+   （复用状态格视觉）；经 RoomDirector 注入点 `set_modifier_system(obj).apply_modifiers(room)`
+   实际应用（game_world 接线）；逐项 JSON disable（配置已在 T1 落地）。
+4. T032 节奏数据验证：首层 modifier/elite 权重 0、2 层起生效（`test_l4_config` +
+   `test_l4_pcg_rooms` 互证，大多已有——查缺补漏）。
+5. 砍单阶梯首位 = 反应式 DDA（T030 SHOULD 部分），超时即砍。
+6. 后续 T7 验收封口（T033 acceptance 对照 SC-001..SC-012 重写 + T034 VirtualPlayer
+   playbook + T035 截图装置 + T036 /syncdocs + T037 Gate-A）。每簇合 main。
+   13 文件判决表见 plan.md「重验收策略」。

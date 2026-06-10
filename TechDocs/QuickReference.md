@@ -121,8 +121,8 @@ L4 事件契约「发射方 → 监听方」对照表（T1 落地信号定义；
 | `shop_entered` | {room_id, items} | ShopSystem（T3） | shop_panel（T3） |
 | `shop_purchase` | {item_id, category, cost, currency_remaining} | ShopSystem（T3） | ShedskinSystem、shop_panel（T3） |
 | `slot_unlocked` | {position, total_slots, source} | SlotExpansionSystem（T3） | Build 面板（T3） |
-| `floor_reward_presented` | {floor_index, options} | FloorRewardSystem（T5b） | floor_reward_panel、模态门控（门控+切层挂起已接，T5a ✅） |
-| `floor_reward_chosen` | {category, option_id, skipped?} | FloorRewardSystem（T5b） | RunProgression（决议先于 advance_floor，groundwork T5a ✅，T027 完成接线） |
+| `floor_reward_presented` | {reward_id, floor_index, source_room_id, step: "slot_unlock"\|"choice", slot_options, options} | FloorRewardSystem（T5b ✅，Boss 结算两段各发一次） | floor_reward_panel、RunProgression/FloorProgressPanel 模态门控（T5b ✅） |
+| `floor_reward_chosen` | {floor_index, category, option_id, skipped} | FloorRewardSystem（T5b ✅，skipped=true 为空选项自动决议 FR-014） | RunProgression（决议先于 advance_floor/floor_generated，T027 ✅）、floor_reward_panel 收面板 |
 | `difficulty_adjusted` | {reason, adjustment} | DifficultyScaler（T6） | RoomDirector（唯一消费者，duck-typed 钩子缝已留 T5a ✅） |
 | `room_modifier_applied` | {room_id, modifier_id} | RoomModifierSystem（T6，经 RoomDirector 应用——注入点已留 T5a ✅） | RoomDirector/表现层（T6） |
 | `floor_theme_set` | {theme, pressure, floor_index} | RoomDirector（T5a ✅，生成器保持纯函数） | 表现层（S4） |
@@ -271,6 +271,41 @@ FR-018 显式保留契约：**RewardFlowSystem 为 L3 `reward` 房发射的合�
   fixed_v1 回归 + game_world reset e2e）；全 game_world 多层测试需测试内切
   `ConfigManager.floor["generator"] = "pcg"` 并还原；boss 完成后需 `await process_frame`
   冲延迟切层。
+
+## L4 Boss 结算 + 楼层奖励 + 多层冒烟事实（S2 T5b，T024-T028，2026-06-11）
+
+- `FloorRewardSystem` 重写落地（`systems/growth/floor_reward_system.gd`，game_world.tscn 常驻节点）：
+  Boss 结算两段式（FR-007/Designs §10.3-10.5）——① 固定槽位解锁步骤
+  `choose_slot_position(position)` 经 `SlotExpansionSystem.unlock_slot(position, "boss")`
+  真开槽（新槽先于 3 选 1 开放，US3 场景 1；全位置满级自动跳过）；② 独立 3 选 1
+  `choose_floor_reward(index)`：扩展=随机高级鳞（`growth.floor_reward.expansion.advanced_level/
+  scale_pool`，满槽替换语义同 ScaleRewardSystem）/ 强化=最低等级已装鳞免费升一级
+  （`ScaleSlotManager.upgrade_scale`，满级件跳过，同级并列取 front→middle→back 序首件）/
+  修正=同 tag 换鳞（保级保槽位）。无合格目标类别以高级鳞替补（去重），尽量保持 3 选项；
+  全空自动决议（`floor_reward_chosen` 带 skipped=true，不发 presented，FR-014）。
+- 呈现自守门（`_on_floor_completed`）：`floor_index < run.max_floors`（终层直达胜利路径，
+  US5 场景 4）**且 `floor.generator == "pcg"`**（T5a 裁定：fixed_v1 = 单层 MDE 回退档）；
+  `present_settlement(floor_index, room_id, salt)` 公共方法本身不设门槛（测试/布景直驱）。
+  抽样种子 = `hash(run_id:floor_reward:floor_index:source_room_id)`（同 run 同层确定性）。
+  `run_started` 清残留 offer（FR-013）。
+- 门控时序（T027）：`floor_completed` 同步派发内 presented → RunProgression 登记
+  `floor_reward` 家族 → 挂起切层；`floor_reward_chosen` → `call_deferred("advance_floor")`
+  ——决议严格先于下一次 `floor_generated`（US5 场景 5，`test_l4_floor_rewards` 顺序断言）。
+- `ScaleSlotManager.get_slot_layout(position)` 新 accessor：槽位原始视图（含 null 空槽，
+  索引 = 真实槽位号）——升级/换鳞按槽位号定位（`get_scales` 压缩空槽索引会漂移）。
+- UI：`ui/floor_reward_panel.gd` 基于 ui/kit 重建为两段式模态（modal 层 + ui_modal 组，
+  右上选择栏同槽位；① slot_empty glyph 槽位卡（前段/中段/后段）→ ② choice_card×3
+  （类别名 + detail 具体效果 + 底缘标签色条），已去 class_name。公共契约：setup/get_step/
+  get_visible_option_count/get_slot_labels/get_option_labels/choose_slot_by_index/
+  choose_slot_position/choose_option_by_index/get_status_text。
+- 多层冒烟（T028，`test_l4_multifloor_run.gd`）：种子 9090 三层 PCG 至胜利全程面板公共 API
+  驱动——floor_generated×3、主题（ruins/marsh/cave）与房型序列各异（SC-005）、结算未决时
+  Next 被拒、槽位 3→5 真开、终层无楼层奖励、game_over cause=victory。
+- 几何探测新增状态 `l4_floor_reward_slot`/`l4_floor_reward_choice`（state_stager 经
+  `present_settlement` 系统公共 API 布景两段模态）。
+- JSON 增量：`growth.floor_reward.slot_unlock_source: "boss"`、`expansion.scale_pool/
+  advanced_level`；三类 description 对齐 Designs §10.4 措辞（诅咒鳞/头尾升级/槽位重排
+  变体在 backlog.md，不入 v1）。
 
 ## L1 战斗循环关键事实
 

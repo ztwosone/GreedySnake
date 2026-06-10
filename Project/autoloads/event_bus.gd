@@ -101,8 +101,8 @@ signal scale_option_discarded(data: Dictionary)     # 鳞片选项放弃 { offer
 signal shop_entered(data: Dictionary)               # 进入商店 { room_id, items }
 signal shop_purchase(data: Dictionary)              # 商店购买 { item_id, category, cost, currency_remaining }
 signal slot_unlocked(data: Dictionary)              # 槽位解锁 { position, total_slots, source }
-signal floor_reward_presented(data: Dictionary)     # 楼层奖励展示 { floor_index, options }
-signal floor_reward_chosen(data: Dictionary)        # 楼层奖励选择 { category, option_id }（payload 可带 skipped=true 空选项自动决议，FR-014）
+signal floor_reward_presented(data: Dictionary)     # Boss 结算展示 { reward_id, floor_index, source_room_id, step: "slot_unlock"|"choice", slot_options, options }（两段各发一次，FR-007）
+signal floor_reward_chosen(data: Dictionary)        # 楼层奖励决议 { floor_index, category, option_id, skipped }（skipped=true 空选项自动决议，FR-014；发射即解除门控 FR-015）
 signal difficulty_adjusted(data: Dictionary)        # 难度调整 { reason, adjustment }
 signal room_modifier_applied(data: Dictionary)      # 房间修饰符应用 { room_id, modifier_id }
 signal floor_theme_set(data: Dictionary)            # 楼层主题设定 { theme, pressure, floor_index }
