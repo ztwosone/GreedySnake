@@ -25,6 +25,16 @@ if ($StdoutPath -eq "" -and $StderrPath -eq "") {
     $StderrPath = Join-Path $repoRoot ".tmp_godot_test_stderr.log"
     Remove-Item -LiteralPath $StdoutPath, $StderrPath -ErrorAction SilentlyContinue
 
+    # 先重建 import/全局类缓存：headless 下全局 class_name 解析依赖该缓存，
+    # 缓存过期曾导致整批测试解析失败。导入器输出不进严格扫描，只看退出码。
+    $importStdout = Join-Path $repoRoot ".tmp_godot_test_import_stdout.log"
+    $importStderr = Join-Path $repoRoot ".tmp_godot_test_import_stderr.log"
+    & $godot --headless --import --path $project 1> $importStdout 2> $importStderr
+    if ($LASTEXITCODE -ne 0) {
+        Write-Output "STRICT FAILED: godot --import exited with code $LASTEXITCODE (see $importStderr)."
+        exit $LASTEXITCODE
+    }
+
     & $godot --headless --path $project $scene 1> $StdoutPath 2> $StderrPath
     $GodotExitCode = $LASTEXITCODE
 }

@@ -6,6 +6,8 @@ var _pass_count: int = 0
 var _fail_count: int = 0
 var _current_suite: String = ""
 var _test_suites: Array[GDScript] = []
+var _discovered_count: int = 0
+var _ran_count: int = 0
 
 
 func _ready() -> void:
@@ -15,7 +17,7 @@ func _ready() -> void:
 
 func _run_after_scene_ready() -> void:
 	await get_tree().process_frame
-	_run_all()
+	await _run_all()
 	_disconnect_transient_event_bus_callbacks()
 	_print_summary()
 	await _flush_pending_cleanup()
@@ -46,12 +48,14 @@ func _discover_tests() -> void:
 	var file_name := dir.get_next()
 	while file_name != "":
 		if file_name.begins_with("test_") and file_name.ends_with(".gd"):
+			_discovered_count += 1
 			var path := "res://test/cases/" + file_name
 			var script = load(path)
 			if script is GDScript:
 				_test_suites.append(script)
 			else:
-				printerr("[TestRunner] Failed to load: %s" % path)
+				_fail_count += 1
+				printerr("  FAIL: suite failed to load: %s" % path)
 		file_name = dir.get_next()
 	_test_suites.sort_custom(func(a: GDScript, b: GDScript) -> bool:
 		return a.resource_path < b.resource_path
@@ -61,16 +65,27 @@ func _discover_tests() -> void:
 func _run_all() -> void:
 	print("\n========== GreedySnake QA Test Runner ==========\n")
 	for script in _test_suites:
+		# 解析失败的脚本 load() 仍返回 GDScript；new() 会炸并中断后续全部套件，
+		# 历史上曾因此出现"假绿"（summary ALL PASSED 但大半套件没跑）
+		if not script.can_instantiate():
+			_fail_count += 1
+			printerr("  FAIL: broken suite (parse/compile error): %s" % script.resource_path)
+			continue
 		var instance = script.new()
 		if not instance.has_method("run"):
-			printerr("[TestRunner] %s missing run() method, skipped" % script.resource_path)
+			_fail_count += 1
+			printerr("  FAIL: %s missing run() method" % script.resource_path)
 			continue
 		_current_suite = script.resource_path.get_file().trim_suffix(".gd")
 		print("--- %s ---" % _current_suite)
-		instance.run(self)
+		await instance.run(self)
+		_ran_count += 1
 		if instance is Node:
 			instance.queue_free()
 		print("")
+	if _ran_count != _discovered_count:
+		_fail_count += 1
+		printerr("  FAIL: suite count mismatch - discovered %d, ran %d" % [_discovered_count, _ran_count])
 
 
 func assert_true(condition: bool, description: String) -> void:
@@ -128,6 +143,7 @@ func assert_dir_exists(path: String) -> void:
 func _print_summary() -> void:
 	var total := _pass_count + _fail_count
 	print("=================================================")
+	print("suites: %d discovered / %d ran" % [_discovered_count, _ran_count])
 	if _fail_count == 0:
 		print("ALL PASSED: %d/%d tests" % [_pass_count, total])
 	else:

@@ -12,7 +12,6 @@ func _ready() -> void:
 	mouse_filter = MOUSE_FILTER_IGNORE
 	set_anchors_preset(PRESET_BOTTOM_WIDE)
 	custom_minimum_size = Vector2(0, 2)
-	size = Vector2(0, 2)
 	offset_top = -2
 	offset_bottom = 0
 
