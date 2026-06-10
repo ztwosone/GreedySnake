@@ -1,6 +1,15 @@
 # Godot 4.x
 Project/.godot/
 
+# Godot editor user data (self_contained mode side effect)
+Project/Godot/
+
+# Test runner temp output
+.tmp_godot_test_*.log
+
+# Claude Code local plan scratch files
+.claude/plans/
+
 # Godot exported builds
 Project/export/
 Project/build/

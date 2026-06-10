@@ -24,7 +24,23 @@
       "Read(C:/Users/ztwos/**)",
       "Bash(\"F:/GodotMCP/Godot_v4.6.1-stable_win64.exe/Godot_v4.6.1-stable_win64_console.exe\" --headless --path \"F:/GreedySnake/Project\" Test/test_runner.tscn)",
       "Bash(bash F:/GreedySnake/.claude/hooks/pre-commit-test.sh)",
-      "Bash(echo \"EXIT: $?\")"
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(find F:/GreedySnake/Project/Test/cases -type f -name *.go)",
+      "Bash(grep -h \"func test_\" F:/GreedySnake/Project/Test/cases/*.gd)",
+      "Bash(grep -l \"cross\\\\|integration\\\\|combine\\\\|interact\" F:/GreedySnake/Project/Test/cases/test_t*.gd)",
+      "Bash(grep -l \"_integration\\\\|_interaction\\\\|_combined\\\\|_cross\" F:/GreedySnake/Project/Test/cases/*.gd)",
+      "Bash(grep -n \"head.*tail\\\\|tail.*scale\\\\|scale.*resonance\\\\|resonance.*head\" F:/GreedySnake/Project/Test/cases/*.gd)",
+      "Bash(/tmp/test_summary.txt:*)",
+      "Read(//tmp/**)",
+      "Bash(pip install:*)",
+      "Bash(uv tool:*)",
+      "Bash(export PATH=\"$HOME/.local/bin:$PATH\")",
+      "Bash(specify --version)",
+      "Bash(specify --help)",
+      "Bash(specify version:*)",
+      "Bash(specify init:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File .specify/scripts/powershell/setup-plan.ps1 -Json)",
+      "PowerShell($err = Get-Content .tmp_godot_test_stderr.log; \\($err | Select-String 'SCRIPT ERROR'\\).Count; $err | Select-String 'res://' | ForEach-Object { if \\($_ -match 'res://[\\\\w/\\\\.]+'\\) { $matches[0] } } | Sort-Object -Unique)"
     ]
   },
   "mcpServers": {

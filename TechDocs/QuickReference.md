@@ -15,7 +15,11 @@ Godot 4.6 + GDScript 贪吃蛇 Roguelite。Grid-based、Tick-driven、Event-driv
 | L1 | 战斗循环 + per-segment status + T25 Atom System | ✅ 完成（1030 测试） |
 | L2-Phase0 | T27A StatusCarrier + ReactionResolver + CollisionHandler | ✅ 完成（1082 测试） |
 | L2 | 蛇头/蛇尾/蛇鳞统一 Atom Chain | ✅ 完成 T27A~T33（1518 测试） |
-| L3+ | 地图 PCG / 成长 / 元成长 | 🔮 待设计 |
+| L2.5 | Virtual Player 自动化测试基础设施 | ✅ 完成 |
+| L3 | 完整一局：地图 / 房间 / 奖励 / 终局 | ✅ v1 完成并已提交（RunState、FloorMap、房间流程、奖励选择、楼层推进、终局、占位 UI smoke） |
+| L4 | 成长循环（蜕皮/鳞片奖励/槽位/商店/PCG/难度） | 🟡 2026-06-05 草稿已提交在库：**零场景集成、任务 0 勾选、已知逻辑缺陷**，待按 spec 002 逐卡重验收 |
+| L5 | 元成长（解锁/传承石/拾取/user:// 存档） | 🟡 同上，待按 spec 003 重验收；`run_ended` 生产代码无发射方 |
+| 体验层 | 程序化美学 + 游戏手感（SpecKit 004） | 📋 已规划：设计文档 `Designs/Interactive/presentation_design.md` 先行 |
 
 ## 核心配置
 
@@ -26,11 +30,60 @@ Project/systems/atoms/atom_registry.gd # T25 原子注册表（68 原子，24 �
 Project/ui/build_test_panel.gd        # T33 Build 测试面板（B 键切换）
 Project/systems/status/reaction_resolver.gd  # T27A 反应查表引擎
 Project/systems/status/collision_handler.gd  # T27A 碰撞统一处理器
+AgentOps/                         # 会话无关 Agent 统筹控制面
+Tools/run_tests_strict.ps1        # 严格测试包装器（扫描 Godot 错误输出）
+.specify/specs/001-l3-run-loop/   # L3 完整一局 SpecKit 规格
+Project/Test/cases/test_l3_run_loop.gd       # L3 配置/事件契约测试
+Project/systems/run/run_progression_system.gd # L3 run 生命周期状态机
+Project/systems/rooms/floor_map_generator.gd  # L3 v1 固定短路径房间地图生成器
+Project/Test/cases/test_l3_room_flow.gd      # L3 US1 房间进入/完成测试
+Project/systems/rooms/room_flow_system.gd    # L3 房间生命周期与目标进度
+Project/ui/room_intent_panel.gd              # L3 房间意图/进度占位 UI
+Project/Test/cases/test_l3_rewards.gd        # L3 US2 奖励展示/选择/Build 应用测试
+Project/systems/rewards/reward_flow_system.gd # L3 奖励 offer、选择和 Build 接入
+Project/ui/reward_choice_panel.gd            # L3 奖励选择占位 UI
+Project/Test/cases/test_l3_floor_progression.gd # L3 US3 楼层推进/进度 UI 测试
+Project/ui/floor_progress_panel.gd           # L3 楼层进度占位 UI
+Project/Test/cases/test_l3_run_end.gd        # L3 US4 终局/死亡/cleanup 测试
+Project/Test/cases/test_l3_smoke_run.gd      # L3 v1 固定路径占位 UI smoke run
 ```
 
 - CELL_SIZE = 32，网格 40×22
 - Tick = 0.25s
 - 测试入口：`res://Test/test_runner.tscn`
+- 严格测试入口：`$env:GODOT_DISABLE_CRASH_HANDLER="1"; powershell -ExecutionPolicy Bypass -File Tools/run_tests_strict.ps1`
+- 当前验证事实（2026-06-10）：普通测试 `2346/2346` 断言通过，套件 `56/56`（runner 现核对"发现/运行"数）；严格门禁 `STRICT PASSED`。严格脚本先跑 `--headless --import` 重建 class cache/.uid（导入器输出不进扫描），再跑测试并扫描 stderr，豁免 AtomRegistry 负向测试、lambda capture 清理日志和 headless 退出期资源日志。
+- 测试约定：禁止裸引用全局 class_name，一律 `const XxxScript := preload(...)`（见 ScriptingLeading 附录 C.8）；坏套件计 FAIL 不再静默吞测（2026-06-05 的"ALL PASSED 758/758"假绿根因已修复）。
+
+## AgentOps 统筹事实
+
+- 仓库长期记忆放在 `AgentOps/`，新会话必须从 `AgentOps/README.md` 启动。
+- L3+ 默认由 Orchestrator Agent 派发单任务卡；Implementer 不自行扩大范围。
+- 当前阶段路线：S0 稳定化 ✅ → S1 体验设计文档+表现内核（SpecKit 004 Phase F）→ S2 L4 重验收（spec 002）→ S3 L5（spec 003）→ S4 体验完成层（004 Phase P）→ S5 封板。S2/S4 按 US 合 main，其余按 Stage 合 main。
+- 安全快照：`snapshot/2026-06-10-raw-worktree` 保存 6-05 草稿原始状态，永不合并。
+- 设计门禁：体验深度、认知轻度；美术/UI 占位将由 SpecKit 004 表现内核替换为统一设计语言。
+- 治理规则：改 EventBus 契约或 JSON schema 的提交，必须同一提交内含 QuickReference 增量。
+
+## L3 Foundation 事实
+
+- `game_config.json` 新增 `run` / `floor` / `room_types` / `rewards` / `endpoint` 配置。
+- ConfigManager 新增 L3 访问器：`get_run_config()`、`get_floor_config()`、`get_room_type()`、`get_reward_pool()` 等。
+- EventBus 新增 L3 信号：`run_started`、`floor_generated`、`room_entered`、`room_completed`、`reward_presented`、`reward_chosen`、`floor_completed`、`run_victory` 等。
+- `RunProgressionSystem` 已支持 start/victory/death/cleanup 生命周期、当前房间查询、可进入房间列表、房间完成后解锁下一房间，以及 `advance_to_room(room_id)` 显式推进。
+- `RunProgressionSystem` 只接受当前可进入房间的 completion，监听 `room_advance_requested` 进入下一房间，监听 `snake_died` 同步 death outcome，并在 endpoint 完成时发出 `floor_completed` / `run_victory`。
+- `FloorMapGenerator` 已支持从 JSON `floor.fixed_v1_path` 生成确定性短路径房间图，房间类型、意图、目标和占位颜色来自 JSON。
+- `RoomFlowSystem` 已支持进入当前房间、监听既有 `enemy_killed` 事件推进 `clear_enemies` 目标、发出 `room_objective_progressed` 和单次 `room_completed`。
+- `RoomIntentPanel` 已作为功能占位 UI 接入 `game_world.tscn`，显示房间意图、目标进度和完成状态；正式美术可后续替换节点表现。
+- L3 v1 战斗房当前配置为 `required_count=3` 且 `enemy_count=3`，这是 JSON 数值，不写死在系统代码中，避免“清空敌人”提前完成。
+- `RewardFlowSystem` 已支持从 JSON `rewards.pools.starter_build` 生成最多 3 个可应用选项，监听配置的 `rewards.trigger_room_types`；v1 从 `reward` 房进入触发，选择后完成奖励房，并通过既有 `SnakePartsManager` / `ScaleSlotManager` 应用 head/tail/scale 奖励。
+- `RewardChoicePanel` 已作为功能占位 UI 接入 `game_world.tscn`，使用按钮、文本标签和色块表达奖励选择与已选择反馈。
+- L3 v1 奖励先复用既有 Build 系统，单次展示最多 3 个选项。
+- `FloorProgressPanel` 已作为功能占位 UI 接入 `game_world.tscn`，使用色块和文本展示固定路径进度、当前房间意图和完成状态。
+- `FloorProgressPanel` 已支持 Next 按钮/`request_next_room()`，通过 EventBus `room_advance_requested` 请求进入下一可用房间；UI 不直接修改 run state。
+- `rest` 与 `endpoint` v1 通过 JSON `auto_complete_on_enter` 自动完成，避免 L3 v1 引入额外休整系统或 Boss 机制。
+- `test_l3_smoke_run.gd` 已验证真实 `game_world.tscn` 能通过占位 UI 跑完固定一局：战斗 → 奖励 → 战斗 → 休整 → endpoint → victory/game over。
+- `game_world.gd` 的 L3 子节点引用使用 `get_node_or_null()`，继承的 L1/L2 验收场景可以不带 L3 节点进树。
+- `game_world.cleanup()` 已清理 L3 state、Build state、window state，以及 `TriggerManager` 对场景级 enemy/food/window manager 的引用；`VFXManager` 会在旧 VFX 层失效后重建。
 
 ## L1 战斗循环关键事实
 

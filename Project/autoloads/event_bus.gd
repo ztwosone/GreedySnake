@@ -54,6 +54,18 @@ signal game_started                                # 游戏开始
 signal game_over(data: Dictionary)                 # 游戏结束 { cause, final_length }
 signal game_restart_requested                      # 请求重新开始
 
+# === L3 Run Loop ===
+signal run_started(data: Dictionary)               # L3 run 开始 { run_id, floor_index }
+signal floor_generated(data: Dictionary)           # 楼层生成 { floor_id, rooms, start_room_id, endpoint_room_id }
+signal room_entered(data: Dictionary)              # 进入房间 { room_id, room_type, intent_label }
+signal room_advance_requested(data: Dictionary)    # 请求进入下一房间 { room_id }
+signal room_objective_progressed(data: Dictionary) # 房间目标进度 { room_id, objective_type, current, required }
+signal room_completed(data: Dictionary)            # 房间完成 { room_id, room_type }
+signal reward_presented(data: Dictionary)          # 奖励展示 { offer_id, options }
+signal reward_chosen(data: Dictionary)             # 奖励选择 { offer_id, option_id, reward_type, target_id }
+signal floor_completed(data: Dictionary)           # 楼层完成 { floor_id, floor_index }
+signal run_victory(data: Dictionary)               # Run 胜利 { run_id, floor_index }
+
 # === No-Body Countdown ===
 signal no_body_countdown_tick(data: Dictionary)    # 每tick广播 { remaining_seconds, total_seconds, ratio }
 signal no_body_countdown_started(data: Dictionary) # 倒计时开始 { total_seconds }
@@ -80,3 +92,23 @@ signal resonance_deactivated(data: Dictionary)     # 共鸣停用 { resonance_id
 
 # === Segment Loss Deferred (T30 Lag Tail) ===
 signal segment_loss_deferred(data: Dictionary)     # 段丢失被延迟 { amount, source }
+
+# === L4 Growth Cycle ===
+signal currency_changed(data: Dictionary)           # 货币变化 { currency, amount, total, source }
+signal scale_reward_presented(data: Dictionary)     # 鳞片奖励展示 { source_room_id, options }
+signal scale_reward_chosen(data: Dictionary)        # 鳞片奖励选择 { option_id, scale_id, position, level }
+signal shop_entered(data: Dictionary)               # 进入商店 { room_id, items }
+signal shop_purchase(data: Dictionary)              # 商店购买 { item_id, category, cost, currency_remaining }
+signal slot_unlocked(data: Dictionary)              # 槽位解锁 { position, total_slots, source }
+signal floor_reward_presented(data: Dictionary)     # 楼层奖励展示 { floor_index, options }
+signal floor_reward_chosen(data: Dictionary)        # 楼层奖励选择 { category, option_id }
+signal difficulty_adjusted(data: Dictionary)        # 难度调整 { reason, adjustment }
+signal room_modifier_applied(data: Dictionary)      # 房间修饰符应用 { room_id, modifier_id }
+
+# === L5 Meta Growth ===
+signal content_unlocked(data: Dictionary)           # 内容解锁 { content_type, content_id, display_name }
+signal legacy_stone_created(data: Dictionary)       # 传承石创建 { description, highlight_type, bias_config }
+signal legacy_stone_selected(data: Dictionary)      # 传承石选择 { stone_index }
+signal pickup_dropped(data: Dictionary)             # 拾取物掉落 { pickup_id, position, display_name }
+signal pickup_activated(data: Dictionary)           # 拾取物激活 { pickup_id }
+signal run_ended(data: Dictionary)                  # Run 结束 { outcome, stats: Dictionary }

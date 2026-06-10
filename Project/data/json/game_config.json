@@ -836,5 +836,293 @@
     }
   },
 
-  "scale_resonance_overrides": {}
+  "scale_resonance_overrides": {},
+
+  "run": {
+    "enabled": true,
+    "start_floor": 1,
+    "max_floors_v1": 1,
+    "victory_mode": "endpoint",
+    "clear_on_restart": true
+  },
+
+  "floor": {
+    "rooms_per_floor": 5,
+    "reward_choices": 3,
+    "fixed_v1_path": ["combat_01", "reward_01", "combat_02", "rest_01", "endpoint_01"],
+    "default_seed": 1001
+  },
+
+  "room_types": {
+    "combat": {
+      "display_name": "战斗房",
+      "primary_intent": "clear_enemies",
+      "intent_label": "清空敌人",
+      "objective_type": "clear_enemies",
+      "required_count": 3,
+      "enemy_count": 3,
+      "placeholder_color": "#B84444",
+      "enabled": true,
+      "auto_complete_on_enter": false
+    },
+    "reward": {
+      "display_name": "奖励房",
+      "primary_intent": "choose_reward",
+      "intent_label": "选择奖励",
+      "objective_type": "claim_reward",
+      "required_count": 1,
+      "placeholder_color": "#D9B44A",
+      "enabled": true,
+      "auto_complete_on_enter": false
+    },
+    "rest": {
+      "display_name": "休整房",
+      "primary_intent": "recover_or_skip",
+      "intent_label": "休整",
+      "objective_type": "rest",
+      "required_count": 1,
+      "placeholder_color": "#4A9B78",
+      "enabled": true,
+      "auto_complete_on_enter": true
+    },
+    "endpoint": {
+      "display_name": "终点房",
+      "primary_intent": "finish_run",
+      "intent_label": "完成本层",
+      "objective_type": "reach_endpoint",
+      "required_count": 1,
+      "placeholder_color": "#7D63B8",
+      "enabled": true,
+      "auto_complete_on_enter": true
+    }
+  },
+
+  "rewards": {
+    "offer_count": 3,
+    "uses_existing_build": true,
+    "trigger_room_types": ["reward"],
+    "pools": {
+      "starter_build": [
+        {
+          "option_id": "head_hydra",
+          "display_name": "九头蛇",
+          "reward_type": "head",
+          "target_id": "hydra",
+          "target_slot": "head",
+          "level_delta": 0,
+          "placeholder_color": "#C85F3D"
+        },
+        {
+          "option_id": "tail_salamander",
+          "display_name": "再生尾",
+          "reward_type": "tail",
+          "target_id": "salamander",
+          "target_slot": "tail",
+          "level_delta": 0,
+          "placeholder_color": "#D9823B"
+        },
+        {
+          "option_id": "scale_flame",
+          "display_name": "火焰鳞",
+          "reward_type": "scale",
+          "target_id": "flame_scale",
+          "target_slot": "middle",
+          "level_delta": 0,
+          "placeholder_color": "#E4572E"
+        }
+      ]
+    }
+  },
+
+  "endpoint": {
+    "display_name": "终点",
+    "objective_type": "reach_endpoint",
+    "victory_on_complete": true,
+    "placeholder_color": "#7D63B8"
+  },
+
+  "growth": {
+    "enabled": true,
+    "shedskin": {
+      "kill_normal": 1,
+      "kill_elite": 3,
+      "scale_discard": 2,
+      "exploration_bonus_max": 2
+    },
+    "scale_reward": {
+      "offer_count": 3,
+      "trigger_room_types": ["combat"],
+      "pools": {
+        "l1_basic": [
+          { "option_id": "scale_flame", "display_name": "火焰鳞", "reward_type": "scale", "target_id": "flame_scale", "target_slot": "middle", "level_delta": 0, "placeholder_color": "#E4572E" },
+          { "option_id": "scale_toxin", "display_name": "毒素鳞", "reward_type": "scale", "target_id": "toxin_scale", "target_slot": "middle", "level_delta": 0, "placeholder_color": "#8BC34A" },
+          { "option_id": "scale_frost", "display_name": "冰霜鳞", "reward_type": "scale", "target_id": "frost_scale", "target_slot": "middle", "level_delta": 0, "placeholder_color": "#64B5F6" },
+          { "option_id": "scale_greedy", "display_name": "贪婪鳞", "reward_type": "scale", "target_id": "greedy_scale", "target_slot": "front", "level_delta": 0, "placeholder_color": "#FFD54F" },
+          { "option_id": "scale_predator", "display_name": "捕食鳞", "reward_type": "scale", "target_id": "predator_scale", "target_slot": "front", "level_delta": 0, "placeholder_color": "#BA68C8" },
+          { "option_id": "scale_thorn", "display_name": "棘刺鳞", "reward_type": "scale", "target_id": "thorn_scale", "target_slot": "back", "level_delta": 0, "placeholder_color": "#A1887F" },
+          { "option_id": "scale_regen", "display_name": "再生鳞", "reward_type": "scale", "target_id": "regen_scale", "target_slot": "back", "level_delta": 0, "placeholder_color": "#81C784" },
+          { "option_id": "scale_phantom", "display_name": "幻影鳞", "reward_type": "scale", "target_id": "phantom_scale", "target_slot": "middle", "level_delta": 0, "placeholder_color": "#CE93D8" },
+          { "option_id": "scale_retaliation", "display_name": "反伤鳞", "reward_type": "scale", "target_id": "retaliation_scale", "target_slot": "back", "level_delta": 0, "placeholder_color": "#EF5350" }
+        ]
+      }
+    },
+    "slot_expansion": {
+      "initial": { "front": 1, "middle": 1, "back": 1 },
+      "max": { "front": 2, "middle": 3, "back": 2 },
+      "boss_unlock_enabled": true,
+      "shop_unlock_enabled": true
+    },
+    "floor_reward": {
+      "offer_count": 3,
+      "categories": ["expansion", "reinforcement", "correction"],
+      "expansion": {
+        "display_name": "扩展",
+        "description": "获得一个高级鳞片或诅咒鳞片"
+      },
+      "reinforcement": {
+        "display_name": "强化",
+        "description": "升级最低等级鳞片、蛇头或蛇尾"
+      },
+      "correction": {
+        "display_name": "修正",
+        "description": "重新排列槽位或交换同标签鳞片"
+      }
+    }
+  },
+
+  "shop": {
+    "enabled": true,
+    "max_items_per_shop": 5,
+    "room_type": "shop",
+    "item_categories": {
+      "scale_l1": { "price": 2, "display_name": "鳞片 (L1)", "category": "scale" },
+      "scale_l2": { "price": 3, "display_name": "鳞片 (L2)", "category": "scale" },
+      "scale_l3": { "price": 4, "display_name": "鳞片 (L3)", "category": "scale" },
+      "slot_front": { "price": 5, "display_name": "扩展前排槽位", "category": "slot" },
+      "slot_middle": { "price": 5, "display_name": "扩展中排槽位", "category": "slot" },
+      "slot_back": { "price": 5, "display_name": "扩展后排槽位", "category": "slot" },
+      "head_upgrade": { "price": 4, "display_name": "蛇头升级", "category": "head_upgrade" },
+      "tail_upgrade": { "price": 4, "display_name": "蛇尾升级", "category": "tail_upgrade" }
+    }
+  },
+
+  "difficulty": {
+    "enabled": true,
+    "baseline_enemy_count": 3,
+    "baseline_food_count": 3,
+    "overperform_threshold": 0.7,
+    "underperform_threshold": 0.3,
+    "adjustment_enemy_delta": 1,
+    "adjustment_food_delta": 1,
+    "min_enemy_count": 1,
+    "max_enemy_count": 8,
+    "min_food_count": 1,
+    "max_food_count": 6,
+    "rooms_between_adjustments": 2,
+    "metrics": {
+      "clear_speed_weight": 0.4,
+      "damage_taken_weight": 0.3,
+      "status_usage_weight": 0.3
+    }
+  },
+
+  "room_modifiers": {
+    "darkness": {
+      "display_name": "黑暗",
+      "description": "降低可见度，非相邻格变暗",
+      "enabled": true,
+      "apply_chains": [],
+      "remove_chains": [],
+      "visual_config": { "alpha": 0.6, "blind_radius": 2 }
+    },
+    "speed_strips": {
+      "display_name": "加速带",
+      "description": "部分格子提供移动速度加成",
+      "enabled": true,
+      "apply_chains": [],
+      "remove_chains": [],
+      "visual_config": { "strip_count": 4, "speed_mult": 2.0 }
+    },
+    "shield_enemies": {
+      "display_name": "护盾敌人",
+      "description": "随机敌人获得额外护盾",
+      "enabled": true,
+      "apply_chains": [],
+      "remove_chains": [],
+      "visual_config": { "shield_hp_bonus": 2, "shield_count": 2 }
+    },
+    "mine_tiles": {
+      "display_name": "地雷格",
+      "description": "随机格子上放置可触发伤害的地雷",
+      "enabled": true,
+      "apply_chains": [],
+      "remove_chains": [],
+      "visual_config": { "mine_count": 3, "damage": 2 }
+    }
+  },
+
+  "floor_themes": {
+    "cave": {
+      "display_name": "洞穴",
+      "environment": "cave",
+      "placeholder_color": "#795548",
+      "terrain_templates": ["open", "corridor"],
+      "enemy_pool_weights": { "wanderer": 50, "chaser": 30, "bog_crawler": 20 }
+    },
+    "marsh": {
+      "display_name": "沼泽",
+      "environment": "marsh",
+      "placeholder_color": "#4A9B78",
+      "terrain_templates": ["open", "island"],
+      "enemy_pool_weights": { "wanderer": 30, "chaser": 20, "bog_crawler": 50 }
+    },
+    "ruins": {
+      "display_name": "废墟",
+      "environment": "ruins",
+      "placeholder_color": "#9E9E9E",
+      "terrain_templates": ["corridor", "asymmetric"],
+      "enemy_pool_weights": { "wanderer": 30, "chaser": 50, "bog_crawler": 20 }
+    }
+  },
+
+  "meta_growth": {
+    "enabled": true,
+    "save_path": "user://meta_save.json",
+    "max_legacy_stones": 5,
+    "unlock_conditions": [
+      { "condition_id": "turns_200", "condition_type": "total_turns", "threshold": 200, "target_type": "head", "target_id": "ungud", "display_name": "彩虹蛇", "description": "一局内转弯超过200次" },
+      { "condition_id": "reaction_kills_15", "condition_type": "reaction_kills", "threshold": 15, "target_type": "head", "target_id": "medusa", "display_name": "美杜莎", "description": "一局内通过状态反应击杀超过15个敌人" },
+      { "condition_id": "survive_60s_low_length", "condition_type": "survival_low_length", "threshold": 60, "target_type": "head", "target_id": "taotie", "display_name": "饕餮", "description": "一局内在长度<5的情况下存活超过60秒" },
+      { "condition_id": "floors_3", "condition_type": "floors_completed", "threshold": 3, "target_type": "tail", "target_id": "styx_tail", "display_name": "冥河尾", "description": "完成3层以上楼层" },
+      { "condition_id": "enemies_50", "condition_type": "total_kills", "threshold": 50, "target_type": "tail", "target_id": "salamander", "display_name": "火蜥蜴尾", "description": "一局内击杀超过50个敌人" }
+    ],
+    "legacy_stone_templates": {
+      "high_kills": { "display_name": "杀戮传承", "highlight_type": "high_kills", "description": "那蛇在一局内屠戮了无数敌人", "bias_config": { "scale_tag_weights": { "fire": 1.3, "physical": 1.2 } } },
+      "long_survival": { "display_name": "生存传承", "highlight_type": "long_survival", "description": "那蛇在绝境中顽强生存了许久", "bias_config": { "scale_tag_weights": { "recovery": 1.5, "ice": 1.2 } } },
+      "complex_reaction": { "display_name": "反应传承", "highlight_type": "complex_reaction", "description": "那蛇引发了5层以上的反应链", "bias_config": { "scale_tag_weights": { "fire": 1.2, "ice": 1.2, "poison": 1.2 } } },
+      "near_death": { "display_name": "濒死传承", "highlight_type": "near_death", "description": "那蛇在濒死边缘完成了逆转", "bias_config": { "scale_tag_weights": { "void": 1.5, "recovery": 1.3 } } },
+      "default": { "display_name": "旅者传承", "highlight_type": "default", "description": "那蛇完成了一次旅程", "bias_config": { "scale_tag_weights": {} } }
+    }
+  },
+
+  "event_pickups": {
+    "enabled": true,
+    "drop_chance": 0.5,
+    "pickups": {
+      "broken_eye": {
+        "display_name": "破碎之眼",
+        "description": "短暂显示敌人下一步移动方向",
+        "duration_rooms": 3,
+        "enabled": true,
+        "placeholder_color": "#CE93D8"
+      },
+      "serpent_scale": {
+        "display_name": "蛇鳞碎片",
+        "description": "携带后下次鳞片奖励多一个选项",
+        "duration_rooms": 2,
+        "enabled": true,
+        "placeholder_color": "#FFD54F"
+      }
+    }
+  }
 }

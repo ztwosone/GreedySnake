@@ -7,8 +7,11 @@ var _commands: Array[Dictionary] = []
 var _index: int = 0
 
 
-func setup(commands: Array[Dictionary]) -> void:
-	_commands = commands
+func setup(commands: Array) -> void:
+	_commands.clear()
+	for command in commands:
+		if command is Dictionary:
+			_commands.append(command)
 	_index = 0
 
 

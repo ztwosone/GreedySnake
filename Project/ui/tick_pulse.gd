@@ -12,13 +12,23 @@ func _ready() -> void:
 	mouse_filter = MOUSE_FILTER_IGNORE
 	set_anchors_preset(PRESET_BOTTOM_WIDE)
 	custom_minimum_size = Vector2(0, 2)
-	size = Vector2(0, 2)
 	offset_top = -2
 	offset_bottom = 0
 
 	EventBus.tick_post_process.connect(_on_tick)
 	EventBus.no_body_countdown_tick.connect(_on_countdown_tick)
 	EventBus.no_body_countdown_cancelled.connect(_on_countdown_cancelled)
+
+
+func _exit_tree() -> void:
+	if EventBus.tick_post_process.is_connected(_on_tick):
+		EventBus.tick_post_process.disconnect(_on_tick)
+	if EventBus.no_body_countdown_tick.is_connected(_on_countdown_tick):
+		EventBus.no_body_countdown_tick.disconnect(_on_countdown_tick)
+	if EventBus.no_body_countdown_cancelled.is_connected(_on_countdown_cancelled):
+		EventBus.no_body_countdown_cancelled.disconnect(_on_countdown_cancelled)
+	if _pulse_tween and _pulse_tween.is_valid():
+		_pulse_tween.kill()
 
 
 func _on_tick(_tick_index: int) -> void:

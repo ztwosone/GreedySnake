@@ -2055,3 +2055,5 @@ AtomRegistry（systems/atoms/atom_registry.gd）:
 6. **所有数值都可配置：** 硬编码数值是设计迭代的大敌。即使是看起来「不会变」的值（如初始长度 6），也应该从 `balance.json` 读取。
 
 7. **MVP 先行，逐步叠加：** 严格按照 P0→P1→P2→P3→P4→P5 顺序实现。每个里程碑完成后应有可运行的游戏版本。不要提前实现高优先级系统需要的底层机制以外的任何内容。
+
+8. **测试与跨系统引用禁止裸用全局 class_name，一律显式 preload：** headless 运行下全局类名解析依赖编辑器生成的 `.godot/global_script_class_cache.cfg`；新脚本未经编辑器/`--import` 扫描时，裸引用（如 `var m := MetaSaveSystem.new()`）会整文件解析失败——且坏脚本经 `load()` 仍返回 GDScript，`new()` 才炸，曾导致 runner 中断后续全部套件而 summary 仍打印 ALL PASSED（假绿）。规范：测试用 `const XxxScript := preload("res://...")` + `XxxScript.new()`；系统间类型注解用鸭子类型（参数不标类型）。`Tools/run_tests_strict.ps1` 已前置 `--import` 步骤重建缓存，test_runner 已对坏套件计 FAIL 并核对"发现/运行"套件数，但约定仍是第一道防线。

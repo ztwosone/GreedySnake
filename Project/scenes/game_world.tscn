@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://game_world"]
+[gd_scene load_steps=17 format=3 uid="uid://game_world"]
 
 [ext_resource type="Script" path="res://scenes/game_world.gd" id="1"]
 [ext_resource type="Script" path="res://scenes/grid_background.gd" id="2"]
@@ -10,6 +10,12 @@
 [ext_resource type="Script" path="res://entities/status_tiles/status_tile_manager.gd" id="8"]
 [ext_resource type="Script" path="res://systems/status/status_transfer_system.gd" id="9"]
 [ext_resource type="Script" path="res://systems/status/reaction_system.gd" id="10"]
+[ext_resource type="Script" path="res://systems/run/run_progression_system.gd" id="11"]
+[ext_resource type="Script" path="res://systems/rooms/room_flow_system.gd" id="12"]
+[ext_resource type="Script" path="res://ui/room_intent_panel.gd" id="13"]
+[ext_resource type="Script" path="res://systems/rewards/reward_flow_system.gd" id="14"]
+[ext_resource type="Script" path="res://ui/reward_choice_panel.gd" id="15"]
+[ext_resource type="Script" path="res://ui/floor_progress_panel.gd" id="16"]
 [node name="GameWorld" type="Node2D"]
 script = ExtResource("1")
 
@@ -47,6 +53,15 @@ script = ExtResource("9")
 [node name="ReactionSystem" type="Node" parent="."]
 script = ExtResource("10")
 
+[node name="RunProgressionSystem" type="Node" parent="."]
+script = ExtResource("11")
+
+[node name="RoomFlowSystem" type="Node" parent="."]
+script = ExtResource("12")
+
+[node name="RewardFlowSystem" type="Node" parent="."]
+script = ExtResource("14")
+
 [node name="UI" type="CanvasLayer" parent="."]
 
 [node name="HUD" type="Control" parent="UI"]
@@ -75,3 +90,12 @@ offset_right = 400.0
 offset_bottom = 114.0
 theme_override_font_sizes/font_size = 18
 text = ""
+
+[node name="RoomIntentPanel" type="PanelContainer" parent="UI"]
+script = ExtResource("13")
+
+[node name="RewardChoicePanel" type="PanelContainer" parent="UI"]
+script = ExtResource("15")
+
+[node name="FloorProgressPanel" type="PanelContainer" parent="UI"]
+script = ExtResource("16")

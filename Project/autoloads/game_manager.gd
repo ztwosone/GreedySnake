@@ -11,6 +11,7 @@ func _ready() -> void:
 	EventBus.snake_died.connect(_on_snake_died)
 	EventBus.enemy_killed.connect(_on_enemy_killed)
 	EventBus.game_restart_requested.connect(restart_game)
+	EventBus.run_victory.connect(_on_run_victory)
 
 
 func start_game() -> void:
@@ -50,3 +51,8 @@ func _on_snake_died(data: Dictionary) -> void:
 func _on_enemy_killed(_data: Dictionary) -> void:
 	if current_state == GameState.PLAYING:
 		current_score += 1
+
+
+func _on_run_victory(_data: Dictionary) -> void:
+	if current_state == GameState.PLAYING:
+		end_game("victory")
