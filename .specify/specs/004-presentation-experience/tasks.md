@@ -47,8 +47,11 @@
 
 ### F-Gate
 
-- [ ] T015 [F-Gate] S1 Gate-A：F5 全流程统一设计语言；严格门禁绿；文档同步
+- [x] T015 [F-Gate] S1 Gate-A：F5 全流程统一设计语言；严格门禁绿；文档同步
   （QuickReference/CurrentState/DailyLog）；Gate-H 设计语言裁定记录
+  （Gate-A 通过 2026-06-11：67/67 套件 2897/2897 + STRICT PASSED + 几何探测
+  覆盖 title/game_over/l3_run_start/l3_reward_pending；Gate-H 待人工 5 分钟裁定，
+  不阻塞 S2 开工，须在 S2 收口前补录于 CurrentState）
 
 ## Phase P — 体验完成层（S4，占位，开工时细化）
 
