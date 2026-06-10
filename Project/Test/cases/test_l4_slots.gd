@@ -77,10 +77,24 @@ func _test_build_persists_across_floors(t) -> void:
 	var length_before: int = snake.body.size()
 	var open_middle_before: int = scale_mgr.get_open_slots("middle")
 
-	# 完成 boss → 延迟切层
+	# 完成 boss → Boss 结算（T5b：槽位解锁选 front 不动 middle；3 选 1 选强化——
+	# 升级最低级件保 part_id 不变，存续断言的已知 Build 不被扰动）→ 延迟切层
 	var room_flow: Node = world.get_node("RoomFlowSystem")
+	var floor_reward_system: Node = world.get_node("FloorRewardSystem")
+	var floor_reward_panel: Node = world.get_node("UI/FloorRewardPanel")
 	var required: int = int(room_flow.get_current_room().get("objective", {}).get("required_count", 1))
 	room_flow.record_objective_progress(required, {"method": "t023"})
+	t.assert_true(floor_reward_system.has_pending_offer(),
+		"[T023] boss completion presents the settlement before the transition (FR-007)")
+	t.assert_eq(floor_reward_panel.get_step(), "slot_unlock", "[T023] fixed slot-unlock step first")
+	t.assert_true(floor_reward_panel.choose_slot_position("front"), "[T023] pick front via panel API")
+	var reward_index: int = -1
+	var reward_options: Array = floor_reward_system.get_current_offer().get("options", [])
+	for option_index in range(reward_options.size()):
+		if str(reward_options[option_index].get("category", "")) == "reinforcement":
+			reward_index = option_index
+	t.assert_true(reward_index >= 0 and floor_reward_panel.choose_option_by_index(reward_index),
+		"[T023] resolve the 3-choose-1 (reinforcement) via panel API")
 	await t.get_tree().process_frame
 	await t.get_tree().process_frame
 	t.assert_eq(int(run_system.get_state().get("floor_index", 0)), 2,

@@ -82,11 +82,11 @@
 - [x] T021 [US4] 新建 `Project/systems/rooms/room_director.gd`：监听 `room_entered`/`floor_generated` → 清场 → 按房型+主题权重+难度修正布怪布食（修饰符注入点）。测试套件：`test_l4_room_director.gd`
 - [x] T022 [US4] 多层切换卡：`Project/scenes/game_world.gd` 新增 `reset_for_floor()`（组合既有 clear_enemies/clear_foods/clear_all 原语）；`run_progression_system.gd` 消费 `run.max_floors`。测试套件：`test_l4_room_director.gd` + `test_l3_run_loop.gd` 回归（注：多层推进仅 pcg 档——fixed_v1 保持单层 MDE 闭环、终点即胜利；advance_floor 经 call_deferred 调度防击杀级联重入；floor_reward 未决挂起切层为 T027 groundwork）
 - [x] T023 [US4] Build 装备跨层存续专门测试卡：蛇重建后已装鳞片/共鸣/蜕皮余额全部存续（FR-003/FR-013 边界）。测试套件：`test_l4_slots.gd`（跨层存续用例组）
-- [ ] T024 [US5] Red 卡：对照修订版 spec 重写 `Project/Test/cases/test_l4_floor_rewards.gd`——固定槽位解锁步骤（选前/中/后）先于 3 选 1；三选项恰为高级鳞/升级最低级件/同 tag 换鳞；终层不弹（US5 场景 4）；奖励决议先于 `floor_generated`（US5 场景 5）；全空自动决议。测试套件：`test_l4_floor_rewards.gd`
-- [ ] T025 [US5] 重写 `Project/systems/growth/floor_reward_system.gd` 逻辑（判决：重写——草稿 expansion 硬编码 equip、correction 是 pass 的假实现）：实现 §10.3-10.5 模型（FR-007），`floor_index < run.max_floors` 才呈现。测试套件：`test_l4_floor_rewards.gd`
-- [ ] T026 [US5] UI 卡：`Project/ui/floor_reward_panel.gd` **基于 ui/kit 构建**为两段式（槽位定位选择 → choice_card×3）。测试套件：`test_l4_floor_rewards.gd`（UIActor 驱动）+ 几何探测
-- [ ] T027 [US4+US5] 集成卡：`run_progression_system.gd` 楼层奖励决议**先于** `advance_floor()` 发 `floor_generated`；终层 `floor_completed` → 胜利路径。测试套件：`test_l4_floor_rewards.gd` + `test_l3_run_end.gd` 回归
-- [ ] T028 [US4] 多层冒烟卡：新建 `Project/Test/cases/test_l4_multifloor_run.gd`——3 层 PCG 至胜利，全程面板公共 API 驱动（test_l3_smoke_run 模式扩展）。测试套件：`test_l4_multifloor_run.gd`
+- [x] T024 [US5] Red 卡：对照修订版 spec 重写 `Project/Test/cases/test_l4_floor_rewards.gd`——固定槽位解锁步骤（选前/中/后）先于 3 选 1；三选项恰为高级鳞/升级最低级件/同 tag 换鳞；终层不弹（US5 场景 4）；奖励决议先于 `floor_generated`（US5 场景 5）；全空自动决议。测试套件：`test_l4_floor_rewards.gd`
+- [x] T025 [US5] 重写 `Project/systems/growth/floor_reward_system.gd` 逻辑（判决：重写——草稿 expansion 硬编码 equip、correction 是 pass 的假实现）：实现 §10.3-10.5 模型（FR-007），`floor_index < run.max_floors` 才呈现。测试套件：`test_l4_floor_rewards.gd`（注：依 T5a 裁定附加 pcg 档自守门——fixed_v1 单层闭环终点即胜利、结算无后续楼层；无合格目标类别以高级鳞替补；抽样种子 = run_id:floor:room 确定性）
+- [x] T026 [US5] UI 卡：`Project/ui/floor_reward_panel.gd` **基于 ui/kit 构建**为两段式（槽位定位选择 → choice_card×3）。测试套件：`test_l4_floor_rewards.gd`（UIActor 驱动）+ 几何探测（新增 `l4_floor_reward_slot`/`l4_floor_reward_choice` 状态）
+- [x] T027 [US4+US5] 集成卡：`run_progression_system.gd` 楼层奖励决议**先于** `advance_floor()` 发 `floor_generated`；终层 `floor_completed` → 胜利路径。测试套件：`test_l4_floor_rewards.gd` + `test_l3_run_end.gd` 回归（game_world.tscn/gd 接线 FloorRewardSystem + FloorRewardPanel；T5a 既有驱动器补结算决议）
+- [x] T028 [US4] 多层冒烟卡：新建 `Project/Test/cases/test_l4_multifloor_run.gd`——3 层 PCG 至胜利，全程面板公共 API 驱动（test_l3_smoke_run 模式扩展）。测试套件：`test_l4_multifloor_run.gd`（floor_generated×3 + 主题/布局各异 + 结算门控 + 槽位真开 + 终层直达胜利）
 
 **T5 收口**: 严格门禁绿 → 合 main。
 

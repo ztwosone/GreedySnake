@@ -593,7 +593,7 @@ func _walk_floor_until_endpoint(run_system: Node) -> void:
 
 func _drive_world_to_next_floor(t, world: Node, from_floor: int) -> bool:
 	## 面板公共 API 驱动一层（test_l3_smoke_run 模式扩展）：
-	## 战斗类房 record progress → 决议鳞片/奖励模态 → Next；boss 完成 → 等延迟切层
+	## 战斗类房 record progress → 决议鳞片/奖励/Boss 结算模态 → Next；boss 完成 → 等延迟切层
 	var run_system: Node = world.get_node("RunProgressionSystem")
 	var room_flow: Node = world.get_node("RoomFlowSystem")
 	var floor_panel: Node = world.get_node("UI/FloorProgressPanel")
@@ -601,6 +601,8 @@ func _drive_world_to_next_floor(t, world: Node, from_floor: int) -> bool:
 	var scale_panel: Node = world.get_node("UI/ScaleChoicePanel")
 	var reward_flow: Node = world.get_node("RewardFlowSystem")
 	var scale_system: Node = world.get_node("ScaleRewardSystem")
+	var floor_reward_system: Node = world.get_node("FloorRewardSystem")
+	var floor_reward_panel: Node = world.get_node("UI/FloorRewardPanel")
 
 	for _step in range(64):
 		if int(run_system.get_state().get("floor_index", 0)) != from_floor:
@@ -612,6 +614,13 @@ func _drive_world_to_next_floor(t, world: Node, from_floor: int) -> bool:
 			continue
 		if reward_flow.has_pending_offer():
 			reward_panel.choose_option_by_index(0)
+			continue
+		# T5b：Boss 结算两段式（槽位定位选择 → 3 选 1），决议先于切层（FR-007）
+		if floor_reward_system.has_pending_offer():
+			if floor_reward_panel.get_step() == "slot_unlock":
+				floor_reward_panel.choose_slot_by_index(0)
+			else:
+				floor_reward_panel.choose_option_by_index(0)
 			continue
 		if not room_flow.is_current_room_complete():
 			var objective: Dictionary = room_flow.get_current_room().get("objective", {})

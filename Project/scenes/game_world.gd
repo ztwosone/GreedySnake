@@ -16,6 +16,7 @@ extends Node2D
 @onready var scale_reward_system: Node = get_node_or_null("ScaleRewardSystem")
 @onready var shop_system: Node = get_node_or_null("ShopSystem")
 @onready var slot_expansion_system: Node = get_node_or_null("SlotExpansionSystem")
+@onready var floor_reward_system: Node = get_node_or_null("FloorRewardSystem")
 @onready var room_director: Node = get_node_or_null("RoomDirector")
 @onready var camera: Camera2D = $Camera2D
 
@@ -111,6 +112,10 @@ func _ready() -> void:
 		shop_system.setup(shedskin_system, scale_slot_mgr, snake_parts_mgr)
 	if slot_expansion_system and slot_expansion_system.has_method("setup"):
 		slot_expansion_system.setup(scale_slot_mgr)
+
+	# spec 002 T027: Boss 结算（固定槽位解锁 + 楼层奖励 3 选 1，决议先于切层——FR-007）
+	if floor_reward_system and floor_reward_system.has_method("setup"):
+		floor_reward_system.setup(scale_slot_mgr, slot_expansion_system)
 
 	# spec 002 T021/T022: RoomDirector 按房型布场；切层重置经 floor_generated 触发
 	# （L1/L2 验收场景无 RoomDirector/RunProgressionSystem 节点，保持原行为）
@@ -212,6 +217,10 @@ func _ready() -> void:
 	if shop_panel and shop_panel.has_method("setup"):
 		shop_panel.setup(shop_system)
 
+	var floor_reward_panel: Node = $UI.get_node_or_null("FloorRewardPanel")
+	if floor_reward_panel and floor_reward_panel.has_method("setup"):
+		floor_reward_panel.setup(floor_reward_system)
+
 
 func _exit_tree() -> void:
 	if EventBus.floor_generated.is_connected(_on_world_floor_generated):
@@ -264,6 +273,8 @@ func cleanup() -> void:
 	_active_floor_index = 0
 	if room_director and room_director.has_method("cleanup"):
 		room_director.cleanup()
+	if floor_reward_system and floor_reward_system.has_method("cleanup"):
+		floor_reward_system.cleanup()
 	if shop_system and shop_system.has_method("cleanup"):
 		shop_system.cleanup()
 	if slot_expansion_system and slot_expansion_system.has_method("cleanup"):

@@ -192,6 +192,14 @@ func get_open_slots(position: String) -> int:
 	return int(_open_slots.get(position, 0))
 
 
+## 槽位原始视图（含 null 空槽，索引 = 真实槽位号；spec 002 T025 楼层奖励
+## 升级最低级件/同 tag 换鳞需按槽位号定位——get_scales 压缩了空槽，索引会漂移）
+func get_slot_layout(position: String) -> Array:
+	if not _slots.has(position):
+		return []
+	return _slots[position].duplicate()
+
+
 ## 指定位置最大槽位数（JSON growth.slot_expansion.max）
 func get_max_slots(position: String) -> int:
 	return int(_max_slots.get(position, 0))
