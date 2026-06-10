@@ -373,6 +373,11 @@ func get_acceptance_config() -> Dictionary:
 	return presentation.get("acceptance", {})
 
 
+func get_game_feel() -> Dictionary:
+	## §9 game-feel 强度/数量调参（VFXManager 默认参数来源）
+	return presentation.get("game_feel", {})
+
+
 func get_glyph_def(glyph_id: String) -> Array:
 	## §3 glyph 定义（≤4 矩形）；"_" 前缀为元数据键，非 glyph
 	var glyphs: Dictionary = presentation.get("glyphs", {})

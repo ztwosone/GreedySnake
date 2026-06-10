@@ -23,9 +23,9 @@
 
 ### F-C 仪表缝
 
-- [ ] T006 [F-C] TickManager `manual_mode` + `step_once()`（pause 期间无效）；
+- [x] T006 [F-C] TickManager `manual_mode` + `step_once()`（pause 期间无效）；
   扩展 test_t03
-- [ ] T007 [F-C] VFXManager：参数 JSON 化 + `vfx_invoked` 仪表信号 +
+- [x] T007 [F-C] VFXManager：参数 JSON 化 + `vfx_invoked` 仪表信号 +
   `shatter_at/ring_at/fly_to_hud`；单测信号发射与参数来源
 
 ### F-D 验收基建

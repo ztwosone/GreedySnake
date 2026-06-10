@@ -1208,7 +1208,23 @@
         { "rect": [12, 5, 1, 6], "rotation": 0 }
       ]
     },
-    "game_feel": { "enabled": true, "triggers": {} },
+    "game_feel": {
+      "enabled": true,
+      "bounce_peak": 1.3,
+      "lunge_distance_ratio": 0.3,
+      "burst_size": 24,
+      "shake_intensity": 3.0,
+      "hit_stop_sec": 0.02,
+      "shatter_count": 8,
+      "shatter_size": 6,
+      "shatter_distance": 28,
+      "shatter_fall": 24,
+      "ring_radius_cells": 2,
+      "ring_width": 2,
+      "ring_start_scale": 0.25,
+      "fly_size": 8,
+      "triggers": {}
+    },
     "audio": { "enabled": true, "master_volume_db": -6, "dedup_ms": 50, "sfx": {} },
     "hints": {},
     "death_causes": {},
