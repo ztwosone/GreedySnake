@@ -113,11 +113,11 @@
 
 **Independent Test**: `test_l4_acceptance.gd` 对照 SC 逐条绿；VirtualPlayer 多层冒烟绿；严格门禁 STRICT PASSED；QuickReference/CurrentState 与实现零偏差。
 
-- [ ] T033 重写 `Project/Test/cases/test_l4_acceptance.gd` 对照修订版 spec（SC-001..SC-012 逐条映射，含 SC-012 四 offer 系统空选项自动决议 + 门控用例）。测试套件：`test_l4_acceptance.gd`
-- [ ] T034 VirtualPlayer 冒烟卡：`Test/experience/` harness（TickDriver+UIActor）playbook 覆盖鳞片/商店/楼层奖励三类模态响应；pending 无人响应即 FAIL 的防死锁断言；新面板加入契约表（`presentation.game_feel.triggers`）与 stager 状态行。测试套件：`test_l4_multifloor_run.gd` + Layer A 契约
-- [ ] T035 [P] Layer C 截图装置骨架卡：建 `Project/AcceptanceShots/` 骨架 + `Tools/run_acceptance_shots.ps1`，S2 Gate 首用（带窗逐状态截图 → AI 读图 findings.md 归档 `AgentOps/`）。证据：findings.md
-- [ ] T036 文档清偿卡（/syncdocs）：`TechDocs/QuickReference.md`（L4 实现事实 + RewardFlowSystem 合成 `room_completed` 显式契约注记 + 事件发射方→监听方表全量）、`AgentOps/CurrentState.md`（S2 收口 + S1 Gate-H 补录提醒）、`DailyLogs/`、tasks.md 勾卡核对
-- [ ] T037 S2 Gate-A 卡：严格门禁 STRICT PASSED + 套件数核对 + 多层冒烟 + PCG 性质测试 + 几何探测覆盖新面板 + 截图评审证据 → 合 main。Gate-H（不阻塞合入，S3 收口前补录）：层间压力递增可感知（静态缩放）；反应式 DDA 按设计不可见、仅测试验证
+- [x] T033 重写 `Project/Test/cases/test_l4_acceptance.gd` 对照修订版 spec（SC-001..SC-012 逐条映射，含 SC-012 四 offer 系统空选项自动决议 + 门控用例）。测试套件：`test_l4_acceptance.gd`
+- [x] T034 VirtualPlayer 冒烟卡：`Test/experience/` harness（TickDriver+UIActor）playbook 覆盖鳞片/商店/楼层奖励三类模态响应；pending 无人响应即 FAIL 的防死锁断言；新面板加入契约表（`presentation.game_feel.triggers`）与 stager 状态行。测试套件：`test_l4_multifloor_run.gd` + Layer A 契约（注：落地为新套件 `test_xp_contracts_l4.gd`——CompositeBrain 真实步进 + 面板驱动多层 run；契约表以 recorder 时间线断言表达（`game_feel.triggers` 仍空，填表属 S4 Phase P）；stager 状态行 T2/T3/T5b 已备齐，本卡零新面板；顺手修复 recorder 同前缀叠层与 game_perception 双参 get 两处 harness 缺陷（Red 实证））
+- [x] T035 [P] Layer C 截图装置骨架卡：建 `Project/AcceptanceShots/` 骨架 + `Tools/run_acceptance_shots.ps1`，S2 Gate 首用（带窗逐状态截图 → AI 读图 findings.md 归档 `AgentOps/`）。证据：findings.md（`AgentOps/acceptance_shots/2026-06-11/`，7/7 捕获，7 PASS / 2 SUSPECT 不阻塞）
+- [x] T036 文档清偿卡（/syncdocs）：`TechDocs/QuickReference.md`（L4 实现事实 + RewardFlowSystem 合成 `room_completed` 显式契约注记 + 事件发射方→监听方表全量）、`AgentOps/CurrentState.md`（S2 收口 + S1 Gate-H 补录提醒）、`DailyLogs/`、tasks.md 勾卡核对
+- [x] T037 S2 Gate-A 卡：严格门禁 STRICT PASSED + 套件数核对 + 多层冒烟 + PCG 性质测试 + 几何探测覆盖新面板 + 截图评审证据 → 合 main。Gate-H（不阻塞合入，S3 收口前补录）：层间压力递增可感知（静态缩放）；反应式 DDA 按设计不可见、仅测试验证（Gate-A 记录见 `AgentOps/CurrentState.md`「S2 Gate-A 记录」节）
 
 ---
 

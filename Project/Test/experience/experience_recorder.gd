@@ -108,8 +108,18 @@ func _current_tick() -> int:
 
 func _update_pending(event_name: String, data: Variant, tick: int) -> void:
 	if event_name.ends_with(MODAL_PUSH_SUFFIX):
+		var prefix: String = event_name.trim_suffix(MODAL_PUSH_SUFFIX)
+		# 同前缀重呈现 = 同一 offer 家族的步骤推进（floor_reward 两段结算的
+		# slot_unlock → choice 各发一次 presented），pending 原地更新不叠层——
+		# 镜像 RunProgressionSystem 的家族登记语义（spec 002 T034）
+		for entry in _pending:
+			if str(entry.get("prefix", "")) == prefix:
+				entry["name"] = event_name
+				entry["data"] = data
+				entry["tick"] = tick
+				return
 		_pending.append({
-			"prefix": event_name.trim_suffix(MODAL_PUSH_SUFFIX),
+			"prefix": prefix,
 			"name": event_name,
 			"data": data,
 			"tick": tick,

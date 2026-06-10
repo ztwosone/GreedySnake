@@ -17,7 +17,7 @@ Godot 4.6 + GDScript 贪吃蛇 Roguelite。Grid-based、Tick-driven、Event-driv
 | L2 | 蛇头/蛇尾/蛇鳞统一 Atom Chain | ✅ 完成 T27A~T33（1518 测试） |
 | L2.5 | Virtual Player 自动化测试基础设施 | ✅ 完成 |
 | L3 | 完整一局：地图 / 房间 / 奖励 / 终局 | ✅ v1 完成并已提交（RunState、FloorMap、房间流程、奖励选择、楼层推进、终局、占位 UI smoke） |
-| L4 | 成长循环（蜕皮/鳞片奖励/槽位/商店/PCG/难度） | 🟡 2026-06-05 草稿已提交在库：**零场景集成、任务 0 勾选、已知逻辑缺陷**，待按 spec 002 逐卡重验收 |
+| L4 | 成长循环（蜕皮/鳞片奖励/槽位/商店/PCG/难度） | ✅ 完成（S2 重验收，spec 002 修订版 SC-001..SC-012 全量自动验收 + 多层冒烟 + VirtualPlayer 体验冒烟 + Layer C 截图证据） |
 | L5 | 元成长（解锁/传承石/拾取/user:// 存档） | 🟡 同上，待按 spec 003 重验收；`run_ended` 生产代码无发射方 |
 | 体验层 | 程序化美学 + 游戏手感（SpecKit 004） | 📋 已规划：设计文档 `Designs/Interactive/presentation_design.md` 先行 |
 
@@ -52,7 +52,8 @@ Project/Test/cases/test_l3_smoke_run.gd      # L3 v1 固定路径占位 UI smoke
 - Tick = 0.25s
 - 测试入口：`res://Test/test_runner.tscn`
 - 严格测试入口：`$env:GODOT_DISABLE_CRASH_HANDLER="1"; powershell -ExecutionPolicy Bypass -File Tools/run_tests_strict.ps1`
-- 当前验证事实（2026-06-11，S2 T2 簇收口）：普通测试 `2969/2969` 断言通过，套件 `68/68`（T004/T006 重写后的断言基数；runner 现核对"发现/运行"数）；严格门禁 `STRICT PASSED`。严格脚本先跑 `--headless --import` 重建 class cache/.uid（导入器输出不进扫描），再跑测试并扫描 stderr，豁免 AtomRegistry 负向测试、lambda capture 清理日志和 headless 退出期资源日志。
+- 当前验证事实（2026-06-11，S2 T7 收口 = spec 002 封口）：普通测试 `3635/3635` 断言通过，套件 `71/71`（runner 现核对"发现/运行"数）；严格门禁 `STRICT PASSED`。严格脚本先跑 `--headless --import` 重建 class cache/.uid（导入器输出不进扫描），再跑测试并扫描 stderr，豁免 AtomRegistry 负向测试、lambda capture 清理日志和 headless 退出期资源日志。
+- Layer C 截图装置（spec 002 T035）：`Project/AcceptanceShots/acceptance_shots.tscn`（自承载主场景，与 Layer A/B 共用 state_stager）经 `Tools/run_acceptance_shots.ps1` **带窗**运行（headless 截图全黑），输出 `AgentOps/acceptance_shots/<date>/`（PNG + manifest.json + AI 读图 findings.md）；Stage Gate 时点使用。
 - 测试约定：禁止裸引用全局 class_name，一律 `const XxxScript := preload(...)`（见 ScriptingLeading 附录 C.8）；坏套件计 FAIL 不再静默吞测（2026-06-05 的"ALL PASSED 758/758"假绿根因已修复）。
 
 ## 表现内核事实（SpecKit 004 Phase F，2026-06-11）
@@ -355,6 +356,40 @@ FR-018 显式保留契约：**RewardFlowSystem 为 L3 `reward` 房发射的合�
   场景节点存在）；反应式用例全部为生成参数级断言（无玩家感知措辞）；
   `test_l4_config`/`test_l4_pcg_rooms` 补 T032 节奏互证（v1 集合恰为双件、params 形状、
   权重引用真实修饰符、2 层起精英/修饰从数据出现且 id 全落 v1 集合——固定种子确定性）。
+
+## L4 验收与封口事实（S2 T7，T033-T037，2026-06-11）
+
+- `test_l4_acceptance.gd` 重写为修订版 spec SC-001..SC-012 逐条映射：
+  SC-001 世界级一屏决议（战斗完成 → 3 选项 → 面板选择 → 真实装备 + 未选 2 项
+  放弃入账）；SC-002 经济三常数（1/3/2）JSON==spec、跨层保留、楼层物价
+  `ceil(基准×mult^(层-1))`；SC-003 经 state_stager 布景商店购买扣款；SC-004 两段
+  结算 + 终层事件路径门控（pcg 档 + 终层 floor_completed 不呈现）；SC-005 定种子
+  9090 三层主题/布局各异；SC-006 静态层逐层严格更难 + 反应式纯生成参数级；
+  SC-007 修饰符双件；SC-008 严格门禁装置存在性；SC-009 配置文本零 `max_floors_v1`
+  残留；SC-010 多种子（9090/4242/20260611）商店保底 DFS 全路径性质；SC-011 双档
+  开关 + 定种子 pcg 两次 var_to_str 全等；SC-012 四 offer 系统（RewardFlow/Scale/
+  FloorReward/Shop）空选项自动决议 + 未决时推进忽略/Next 禁用/决议后恢复。
+- `test_xp_contracts_l4.gd`（VirtualPlayer 冒烟，L4 新模态体验契约）：
+  CompositeBrain（确定性种子 4242）经 `tick_pre_process` 注入方向真实步进穿过
+  首个战斗房（目标余量 record_objective_progress 补足）→ 面板公共 API 驱动 3 层
+  pcg run（种子 9090）至胜利；**防死锁断言**——任一 pending 模态无人决议即 FAIL；
+  契约表：scale/floor_reward presented → 面板 ui 变化在 `feedback_window_ticks` 内、
+  presented/决议恰好配对、两段结算 step 序 `[slot_unlock, choice]×2`（楼层 [1,1,2,2]）、
+  shop_entered 非模态不门控、并发 pending 家族 ≤ `max_pending_modals`。
+- **experience_recorder pending 语义修订（T034）**：同前缀重呈现（floor_reward 两段
+  结算各发一次 presented）= 同一 offer 家族的步骤推进，pending **原地更新不叠层**
+  （镜像 RunProgression 家族登记；修订前两段结算叠出悬挂模态 → 驱动死锁）。
+- **game_perception 修复（L2.5 草稿缺陷，T034 Red 实证）**：`Object.get` 双参误用
+  （Dictionary API 形态）——任何敌人/状态格进入 `GridWorld.cell_map` 即整个快照
+  运行时中断，VirtualPlayer 盲飞；改 `_get_node_prop`（`prop in entity` + 单参 get）。
+- Layer C 截图装置 `Project/AcceptanceShots/`（T035，自承载主场景模式）+
+  `Tools/run_acceptance_shots.ps1`（带窗，路径读 EnvPath.json，已登记
+  `EnvPath.json.commands.run_acceptance_shots`）；S2 Gate 首用证据
+  `AgentOps/acceptance_shots/2026-06-11/`（7 镜头 + findings.md：7 PASS /
+  2 SUSPECT 不阻塞——choice 镜头零装备致三卡全扩展替补（spec Edge Case 行为）、
+  GO! 过渡字定格（ui_settle 不含 GameTransition），均登记 S4 顺手项）。
+- S2 验证基线：套件 `71/71`，断言 `3635/3635`，`STRICT PASSED`；几何探测覆盖
+  8 典型状态（title/game_over/l3 run/reward + l4 scale/shop/floor_reward 两段）。
 
 ## L1 战斗循环关键事实
 
