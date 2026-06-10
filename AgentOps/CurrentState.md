@@ -1,9 +1,9 @@
 # 当前状态
 
-**更新时间**：2026-06-11（S2 T5b 收口）
+**更新时间**：2026-06-11（S2 T6 收口）
 **当前分支**：`002-l4-growth-cycle`（spec 002 重验收进行中，每簇过严格门禁后合 main）
 **当前 feature**：`.specify/specs/002-l4-growth-cycle/`（重验收）
-**当前阶段**：S2 T5 簇全部完成（T020-T028）；下一簇 T6（T029-T032 难度缩放 + 房间修饰符）
+**当前阶段**：S2 T6 簇完成（T029-T032）；下一簇 T7（T033-T037 验收与封口）
 
 ## 阶段路线图
 
@@ -56,10 +56,32 @@ S1 统一设计语言。此后任何中断，项目仍是「打开就能感受�
 
 ## 最近验证基线
 
-- 普通测试：`3391/3391` 断言，套件 `70/70`（新增 `test_l4_multifloor_run`）。
-- 严格测试：`STRICT PASSED`（2026-06-11，S2 T5b 门禁）。
+- 普通测试：`3529/3529` 断言，套件 `70/70`。
+- 严格测试：`STRICT PASSED`（2026-06-11，S2 T6 门禁）。
 
 ## S2 进度
+
+- T6 ✅（T029-T032 难度缩放 + 房间修饰符）：`DifficultyScaler` 重写为 FR-008 两层——
+  静态层 MUST（floor_table − baseline 敌数 delta + enemy_hp_bonus，楼层经
+  floor_generated 跟踪；食物静态基数仍由 RoomDirector 直读 floor_table，scaler 食物
+  delta 只含反应式分量防双计）+ 反应式 DDA SHOULD（设计不可见，Designs §11.5；
+  单房口径度量：room_entered 起算 tick/room_completed 计差，命中源 snake_body_attacked
+  + snake_hit_boundary，状态源 reaction_triggered + status_added_to_carrier(enemy)，
+  归一化分母/clamp 全 JSON；reactive.enabled 砍单开关 + difficulty.enabled 总开关 +
+  run_started 重置 FR-013）；唯一消费者 RoomDirector（duck-typed 钩子拉取，
+  difficulty_adjusted 事件仅观测）。`EnemyManager.spawn_hp_bonus` 增量（spawn_enemy_at
+  不吃加成）；RoomDirector 预算/食物钳制改走 difficulty.[min|max]_* 配置
+  （required_count 压过 cap）。`RoomModifierSystem` 重写-扩展：v1 = shield_enemies
+  （随机 max_shielded 个敌 hp+hp_bonus + ShieldOutline palette 描边 + meta 标记）+
+  preset_status_tiles（StatusTileManager 预置 tile_count 格，距蛇头 ≥ min_distance），
+  经 RoomDirector 注入点应用（先布怪后修饰）、room_completed 按账本只回收自己放置的
+  格/盾、应用层复核 enabled、v1 集合外 id 拒绝；game_world.tscn/gd 接线两节点。
+  JSON：room_modifiers 草稿残留（darkness/speed_strips/mine_tiles）删除、schema 改
+  params+visual、overperform_threshold 0.7→0.75（浮点临界防抖）、min_food_count 0、
+  死键 baseline_food_count 删除。`test_l4_difficulty` 全量重写（反应式用例纯生成参数级
+  断言）；`test_l4_acceptance` SC-006/SC-007 同卡更新；`test_l4_config`/`test_l4_pcg_rooms`
+  补 T032 节奏互证。接线副作用：全 world 测试楼层 2+ 敌数 = 房 enemy_count + 静态
+  delta（test_l4_room_director e2e 断言已按 scaler 读数适配）。
 
 - T5b ✅（T024-T028 楼层奖励 + 多层冒烟）：`FloorRewardSystem` 重写为 Boss 结算两段式
   （FR-007/Designs §10.3-10.5）——固定槽位解锁步骤（选前/中/后，经 SlotExpansionSystem
@@ -131,24 +153,18 @@ S1 统一设计语言。此后任何中断，项目仍是「打开就能感受�
   `l4_scale_pending` 状态；JSON 增量 `growth.scale_reward.default_pool`。
   测试事实：全局 `enemy_killed` 的 `enemy_def` 必须是 Node 派生或 null（EnemyManager 按 Node 收参）。
 
-## 下一张建议任务（S2 T6 开卡）
+## 下一张建议任务（S2 T7 开卡）
 
-T5 簇（T020-T028）已收口合 main。T6（T029-T032 难度缩放 + 房间修饰符）：
-1. T029 Red：重写 `test_l4_difficulty.gd`——静态层表缩放 MUST 用例组；反应式 DDA
-   SHOULD 用例组（**仅生成参数级断言，无任何玩家感知措辞**，Designs §11.5「隐性」）；
-   clamp 边界。重写时删除 `room_modifiers` 中 darkness/speed_strips/mine_tiles 草稿残留
-   （T1 注记的欠账，test_l4_acceptance SC-007 草稿用例同卡更新）。
-2. T030 重写 `difficulty_scaler.gd`：修全局 tick 当单房用时（:114）、分母硬编码（:93）；
-   度量改单房口径并 JSON 化（`difficulty.reactive` 归一化参数已在 T1 落地）；
-   **唯一消费者 = RoomDirector**——duck-typed 钩子缝已留（`set_difficulty_scaler` +
-   `get_enemy_count_delta`/`get_food_count_delta`，T5a 零桩）；静态层缩放 MUST
-   （`difficulty.floor_table` 已被 RoomDirector 食物/敌数消费）+ 反应式 DDA SHOULD 分层。
-3. T031 重写-扩展 `room_modifier_system.gd`：v1 = `shield_enemies` + `preset_status_tiles`
-   （复用状态格视觉）；经 RoomDirector 注入点 `set_modifier_system(obj).apply_modifiers(room)`
-   实际应用（game_world 接线）；逐项 JSON disable（配置已在 T1 落地）。
-4. T032 节奏数据验证：首层 modifier/elite 权重 0、2 层起生效（`test_l4_config` +
-   `test_l4_pcg_rooms` 互证，大多已有——查缺补漏）。
-5. 砍单阶梯首位 = 反应式 DDA（T030 SHOULD 部分），超时即砍。
-6. 后续 T7 验收封口（T033 acceptance 对照 SC-001..SC-012 重写 + T034 VirtualPlayer
-   playbook + T035 截图装置 + T036 /syncdocs + T037 Gate-A）。每簇合 main。
+T6 簇（T029-T032）已收口合 main。T7（T033-T037 验收与封口）：
+1. T033 重写 `test_l4_acceptance.gd`：SC-001..SC-012 逐条映射（含 SC-012 四 offer 系统
+   空选项自动决议 + 门控用例）。注意 T5a 裁定：多层推进/楼层奖励是 pcg 档行为，
+   fixed_v1 终点即胜利（FR-016 回退语义）；SC-004/SC-006/SC-007 已有 v2 API 适配可扩展。
+2. T034 VirtualPlayer 冒烟：`Test/experience/` harness playbook 覆盖鳞片/商店/楼层奖励
+   三类模态响应；pending 无人响应即 FAIL 防死锁断言；新面板入契约表
+   （`presentation.game_feel.triggers`）与 stager 状态行。
+3. T035 Layer C 截图装置骨架：`Project/AcceptanceShots/` + `Tools/run_acceptance_shots.ps1`，
+   S2 Gate 首用（findings.md 归档 AgentOps/）。
+4. T036 文档清偿（/syncdocs）+ T037 S2 Gate-A（严格门禁 + 套件数核对 + 多层冒烟 +
+   PCG 性质 + 几何探测 + 截图证据 → 合 main；Gate-H 人工通跑欠账 S3 收口前补录）。
+5. 砍单阶梯参考：反应式 DDA 已落地（reactive.enabled 开关可整层关闭）；
    13 文件判决表见 plan.md「重验收策略」。

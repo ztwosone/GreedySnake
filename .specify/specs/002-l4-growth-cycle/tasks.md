@@ -98,10 +98,10 @@
 
 **Independent Test**: 自动测试断言层 N+1 生成参数严格更难；模拟过强/过弱 → 生成参数在 clamp 内微调；`shield_enemies`/`preset_status_tiles` 房内效果可见可读。
 
-- [ ] T029 [US6] Red 卡：对照修订版 spec 重写 `Project/Test/cases/test_l4_difficulty.gd`——静态层表缩放 MUST 用例组；反应式 DDA SHOULD 用例组（仅生成参数级断言，**无任何玩家感知措辞**）；clamp 边界。测试套件：`test_l4_difficulty.gd`
-- [ ] T030 [US6] 重写 `Project/systems/difficulty/difficulty_scaler.gd`（判决：重写）：修全局 tick 当单房用时（:114）、分母硬编码（:93）；度量改为单房口径并 JSON 化；**唯一消费者 = RoomDirector**；静态层缩放 MUST + 反应式 DDA SHOULD 分层实现。测试套件：`test_l4_difficulty.gd`
-- [ ] T031 [US6] 重写-扩展 `Project/systems/difficulty/room_modifier_system.gd`（判决：重写-扩展——草稿从不被应用）：v1 = `shield_enemies` + `preset_status_tiles`（复用状态格视觉，Designs §11.5）；经 RoomDirector 实际应用；逐项 JSON disable。测试套件：`test_l4_difficulty.gd`
-- [ ] T032 [P] [US6] 节奏数据验证卡：首层 modifier/elite 权重为 0、2 层起主题蒙色+首修饰+首精英的概念节奏从配置数据生效（SC-010 与 PCG 侧断言互证）。测试套件：`test_l4_config.gd` + `test_l4_pcg_rooms.gd`
+- [x] T029 [US6] Red 卡：对照修订版 spec 重写 `Project/Test/cases/test_l4_difficulty.gd`——静态层表缩放 MUST 用例组；反应式 DDA SHOULD 用例组（仅生成参数级断言，**无任何玩家感知措辞**）；clamp 边界。测试套件：`test_l4_difficulty.gd`（注：同卡清偿 T1 欠账——`room_modifiers` 草稿残留键 darkness/speed_strips/mine_tiles 删除，`test_l4_acceptance` SC-006/SC-007 草稿用例同卡更新到 v2 API）
+- [x] T030 [US6] 重写 `Project/systems/difficulty/difficulty_scaler.gd`（判决：重写）：修全局 tick 当单房用时（:114）、分母硬编码（:93）；度量改为单房口径并 JSON 化；**唯一消费者 = RoomDirector**；静态层缩放 MUST + 反应式 DDA SHOULD 分层实现。测试套件：`test_l4_difficulty.gd`（注：附带 EnemyManager.spawn_hp_bonus 增量 + RoomDirector 预算/食物钳制走 difficulty 配置 + overperform_threshold 0.7→0.75 防浮点临界抖动；反应式层带 reactive.enabled 砍单开关）
+- [x] T031 [US6] 重写-扩展 `Project/systems/difficulty/room_modifier_system.gd`（判决：重写-扩展——草稿从不被应用）：v1 = `shield_enemies` + `preset_status_tiles`（复用状态格视觉，Designs §11.5）；经 RoomDirector 实际应用；逐项 JSON disable。测试套件：`test_l4_difficulty.gd`（注：game_world.tscn/gd 接线两节点；移除按 [pos,type] 账本只回收自己放置的格/盾；应用层复核 enabled 纵深防御）
+- [x] T032 [P] [US6] 节奏数据验证卡：首层 modifier/elite 权重为 0、2 层起主题蒙色+首修饰+首精英的概念节奏从配置数据生效（SC-010 与 PCG 侧断言互证）。测试套件：`test_l4_config.gd` + `test_l4_pcg_rooms.gd`（注：补 v1 集合恰为双件/params 形状/权重引用校验/2 层起精英与修饰从固定种子数据确定性出现）
 
 **T6 收口**: 严格门禁绿 → 合 main。
 

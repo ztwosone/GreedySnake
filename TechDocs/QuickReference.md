@@ -105,8 +105,8 @@ Project/Test/cases/test_l3_smoke_run.gd      # L3 v1 固定路径占位 UI smoke
 - `shop.price_multiplier_per_floor: 1.25`（FR-003：蜕皮跨层保留，下层物价上涨是唯一经济压力阀）。
 - `room_types.shop`（`auto_complete_on_enter: true`，退店无目标门槛）、`room_types.elite`（clear_enemies，不自动完成）。
 - `enemy_types.elite_wanderer|elite_chaser|elite_bog_crawler`：`is_elite: true` + `base_type`，复用基础型 shape/color，`visual_scale: 1.25` + `outline_palette_token: "room_elite"`（描边表现留待 UI 卡）；三个基础型显式 `is_elite: false`。精英不入 `enemy.spawn_weights` 常驻池，由 RoomDirector（T021）按 `floor.elite_weights` 注入。
-- `difficulty.floor_table`（FR-008 MUST 静态层表：enemy_count 3/4/5、enemy_hp_bonus 0/1/2 严格递增，food_count 不回落）+ `difficulty.reactive`（SHOULD：normalization 分母 room_clear_ticks/damage_taken_per_room/status_usage_per_room + delta clamp，隐性、仅生成参数级验证）。
-- `room_modifiers` v1 = `shield_enemies` + `preset_status_tiles`（各带逐项 `enabled` 开关，FR-009）。`darkness`/`speed_strips`/`mine_tiles` 为 6-5 草稿残留键，已入 backlog.md，随 T029/T031/T033 测试重写一并删除（现仍被草稿测试引用，不可先删）。
+- `difficulty.floor_table`（FR-008 MUST 静态层表：enemy_count 3/4/5、enemy_hp_bonus 0/1/2 严格递增，food_count 不回落）+ `difficulty.reactive`（SHOULD：normalization 分母 room_clear_ticks/damage_taken_per_room/status_usage_per_room + delta clamp，隐性、仅生成参数级验证）。T030 增量：`overperform_threshold: 0.75`（0.7 恰为「秒清零受击零状态」驱动器分数 0.4+0.3 的浮点临界，全 world 测试会抖）、`min_food_count: 0`（食物可被压到零）、死键 `baseline_food_count` 删除（食物静态基数 = floor_table.food_count）。
+- `room_modifiers` 恰为 v1 双件 = `shield_enemies` + `preset_status_tiles`（各带逐项 `enabled` 开关，FR-009）；schema = `params`（应用参数）+ `visual`（表现参数），草稿 `apply_chains/remove_chains/visual_config` 键废弃。`darkness`/`speed_strips`/`mine_tiles` 草稿残留键已随 T029/T031 删除（backlog.md 收容，`test_l4_config` 文本级断言零残留）。
 
 ConfigManager 新 accessor：`get_max_floors()`、`get_floor_generator()`、`get_floor_modifier_weights(floor)`、`get_floor_elite_weight(floor)`、`get_shop_guarantee()`、`get_shop_price_multiplier_per_floor()`、`get_difficulty_floor_table()`、`get_difficulty_floor_params(floor)`、`get_difficulty_reactive_config()`；楼层键表查询统一走 `_get_floor_keyed_value`（精确命中 → 钳制到 ≤floor 的最高定义层 → 最低定义层）。
 
@@ -123,8 +123,8 @@ L4 事件契约「发射方 → 监听方」对照表（T1 落地信号定义；
 | `slot_unlocked` | {position, total_slots, source} | SlotExpansionSystem（T3） | Build 面板（T3） |
 | `floor_reward_presented` | {reward_id, floor_index, source_room_id, step: "slot_unlock"\|"choice", slot_options, options} | FloorRewardSystem（T5b ✅，Boss 结算两段各发一次） | floor_reward_panel、RunProgression/FloorProgressPanel 模态门控（T5b ✅） |
 | `floor_reward_chosen` | {floor_index, category, option_id, skipped} | FloorRewardSystem（T5b ✅，skipped=true 为空选项自动决议 FR-014） | RunProgression（决议先于 advance_floor/floor_generated，T027 ✅）、floor_reward_panel 收面板 |
-| `difficulty_adjusted` | {reason, adjustment} | DifficultyScaler（T6） | RoomDirector（唯一消费者，duck-typed 钩子缝已留 T5a ✅） |
-| `room_modifier_applied` | {room_id, modifier_id} | RoomModifierSystem（T6，经 RoomDirector 应用——注入点已留 T5a ✅） | RoomDirector/表现层（T6） |
+| `difficulty_adjusted` | {reason, adjustment: {score, floor_index, enemy_delta, food_delta, reactive_enemy_delta, reactive_food_delta}} | DifficultyScaler（T030 ✅，每 rooms_between_adjustments 房重算时发射） | 监听方为空——RoomDirector 经 duck-typed 钩子拉取（唯一消费者），事件供表现层/调试观测（S4） |
+| `room_modifier_applied` | {room_id, modifier_id} | RoomModifierSystem（T031 ✅，经 RoomDirector 注入点应用） | 表现层（S4）；测试观测 |
 | `floor_theme_set` | {theme, pressure, floor_index} | RoomDirector（T5a ✅，生成器保持纯函数） | 表现层（S4） |
 
 FR-018 显式保留契约：**RewardFlowSystem 为 L3 `reward` 房发射的合成 `room_completed` 是该类房间唯一完成通路（load-bearing），保留不动**；草稿 ScaleRewardSystem 的合成 `room_completed` 是缺陷（幻影二次 offer 根因之一），T005 拆除——拆除范围仅限 ScaleRewardSystem。空选项 offer 一律自动决议（chosen 带 `skipped: true` 或 discarded，FR-014）；任一 `*_presented` 未决时推进请求被忽略（FR-015，T007 落地）。
@@ -243,13 +243,16 @@ FR-018 显式保留契约：**RewardFlowSystem 为 L3 `reward` 房发射的合�
 - `RoomDirector`（T021，`systems/rooms/room_director.gd`，game_world.tscn 常驻节点）：
   `floor_generated` → 缓存楼层/主题并发 `floor_theme_set`（主题空不发——fixed_v1 档）；
   `room_entered` → 清场（clear_enemies/clear_foods）→ 重新布怪布食：仅 `clear_enemies`
-  目标房有敌（预算 = 房 dict `enemy_count` + 难度 delta，**钳 >= required_count** 保
-  目标可达成）；主题敌池经 `set_spawn_weights` 注入；elite/`is_boss` 房映射
+  目标房有敌（预算 = 房 dict `enemy_count` + 难度 delta，钳入
+  `difficulty.[min|max]_enemy_count` 后 **required_count 始终压过 cap** 保目标可达成，
+  T030 起）；主题敌池经 `set_spawn_weights` 注入；elite/`is_boss` 房映射
   `enemy_types.elite_*` 变体（无变体回退基础型——spec「boss 未配置 → 精英回退」边界）；
-  食物数 = `difficulty.floor_table[层].food_count` + delta（钳 >= 0）。
+  食物数 = `difficulty.floor_table[层].food_count` + delta（钳入
+  `difficulty.[min|max]_food_count`，min 默认 0，T030 起）。
   难度钩子 `set_difficulty_scaler(obj)` duck-typed 读 `get_enemy_count_delta`/
-  `get_food_count_delta`（T6 前零桩）；修饰符注入点 `set_modifier_system(obj)` →
-  布场后调 `apply_modifiers(room)`（T031 消费）。
+  `get_food_count_delta`/`get_enemy_hp_bonus`（T030 实装，hp bonus 落点
+  `EnemyManager.spawn_hp_bonus`）；修饰符注入点 `set_modifier_system(obj)` →
+  布场后调 `apply_modifiers(room)`（T031 实装，先布怪后修饰）。
 - `RunProgressionSystem` 多层推进（T022）：run state 增 `seed` 键；`advance_floor()`
   以同一 run seed 生成下一层（种子推导含 floor_index，SC-011 跨层确定性）、
   completed/available 按层重置（房 id 是楼层作用域）、`floor_generated` →
@@ -306,6 +309,52 @@ FR-018 显式保留契约：**RewardFlowSystem 为 L3 `reward` 房发射的合�
 - JSON 增量：`growth.floor_reward.slot_unlock_source: "boss"`、`expansion.scale_pool/
   advanced_level`；三类 description 对齐 Designs §10.4 措辞（诅咒鳞/头尾升级/槽位重排
   变体在 backlog.md，不入 v1）。
+
+## L4 难度缩放 + 房间修饰符事实（S2 T6，T029-T032，2026-06-11）
+
+- `DifficultyScaler` 重写落地（`systems/difficulty/difficulty_scaler.gd`，game_world.tscn
+  常驻节点）。FR-008 两层结构：
+  - **静态层（MUST，玩家可感）**：`get_static_enemy_delta()` = floor_table[层].enemy_count
+    − `baseline_enemy_count`；`get_enemy_hp_bonus()` = floor_table[层].enemy_hp_bonus；
+    楼层号经 `floor_generated` 跟踪。食物静态基数由 RoomDirector 直接读
+    floor_table.food_count，**scaler 的 `get_food_count_delta()` 只含反应式分量**（防双计）。
+  - **反应式层（SHOULD，设计不可见——Designs §11.5，验收仅生成参数级断言）**：
+    单房口径度量（草稿 :114 全局累计 tick 已修）——`room_entered` 记起算 tick、
+    `room_completed` 计差；命中源 = `snake_body_attacked` + `snake_hit_boundary`；
+    状态源 = `reaction_triggered` + `status_added_to_carrier(carrier_type=="enemy")`；
+    每 `rooms_between_adjustments` 房按 `metrics` 权重重算分数（归一化分母出自
+    `reactive.normalization`，草稿 :93 硬编码已修）→ 过 `overperform_threshold` 敌 +/食 −、
+    低于 `underperform_threshold` 反向，幅度 `adjustment_*_delta` 钳入 `reactive.clamp`；
+    `reactive.enabled=false` 整层归零（砍单阶梯首位）、`difficulty.enabled=false` 全部归零；
+    `run_started` 重置（FR-013）。`get_last_room_metrics()` 介观接口供测试。
+  - **唯一消费者 = RoomDirector**（duck-typed 钩子拉取）；`difficulty_adjusted` 事件
+    仅供观测，无系统监听方。
+- `EnemyManager.spawn_hp_bonus`（T030 增量）：随机生成敌人在 config hp 之上加成
+  （RoomDirector 每房写入 scaler 的 hp bonus；默认 0 保 L1/L2；`spawn_enemy_at`
+  定点放置不吃加成——l1/l2 验收场景/触发原子语义不变）。
+- `RoomModifierSystem` 重写-扩展落地（`systems/difficulty/room_modifier_system.gd`，
+  game_world.tscn 常驻节点，`setup(enemy_mgr, status_tile_mgr, snake)`）。v1 双件：
+  - `shield_enemies`：布场后随机 `params.max_shielded` 个敌人 hp += `params.hp_bonus`，
+    挂 `ShieldOutline` 描边（`visual.outline_palette_token` palette 色、外扩
+    `outline_pad`、z 序低于本体；与状态描边 3px 错开，叠加独立可读）+
+    meta `room_modifier_shield`；
+  - `preset_status_tiles`：经 StatusTileManager 预置 `params.tile_count` 个状态格
+    （类型抽 `params.tile_types`，距蛇头曼哈顿 ≥ `params.min_distance_from_snake`，
+    Designs §11.5「状态格已预置」，复用状态格视觉）。
+  - 生命周期：生成期选定（FloorMapGenerator ⑧ 按 `floor.modifier_weights`）→
+    RoomDirector 布场后 `apply_modifiers(room)`（注入点，重入先回收旧账）→
+    `room_completed` 移除（**按 [pos,type] 账本只回收自己放置的格/盾**，不误伤外部
+    状态格；存活敌人 hp 回退）→ `run_started` 清账（FR-013）。应用层复核逐项
+    `enabled`（生成层之外纵深防御）；v1 集合外 id（含草稿残留）一律拒绝。
+- `game_world.tscn/gd` 接线：`DifficultyScaler`/`RoomModifierSystem` 场景节点；
+  `room_director.set_difficulty_scaler/set_modifier_system` + `room_modifier_system.setup`；
+  `cleanup()` 扩展。接线后全 world 多层测试的楼层 2+ 敌数 = 房 enemy_count + 静态
+  delta（`test_l4_room_director` e2e 断言已按 scaler 读数计算预期）。
+- 测试事实：`test_l4_difficulty.gd` 重写（静态层/钳制/单房度量/事件源/clamp/分母
+  JSON 反证/开关/FR-013 + 修饰符应用-移除-禁用-叠加-拒绝 + RoomDirector e2e +
+  场景节点存在）；反应式用例全部为生成参数级断言（无玩家感知措辞）；
+  `test_l4_config`/`test_l4_pcg_rooms` 补 T032 节奏互证（v1 集合恰为双件、params 形状、
+  权重引用真实修饰符、2 层起精英/修饰从数据出现且 id 全落 v1 集合——固定种子确定性）。
 
 ## L1 战斗循环关键事实
 

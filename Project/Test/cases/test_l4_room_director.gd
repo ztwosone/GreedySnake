@@ -472,8 +472,16 @@ func _test_game_world_reset_for_floor(t) -> void:
 	var start_room: Dictionary = run_system.get_current_room()
 	t.assert_eq(str(start_room.get("room_type", "")), "combat",
 		"[T022] floor 2 starts at its combat start room")
-	t.assert_eq(enemy_mgr.current_enemies.size(), int(start_room.get("enemy_count", 0)),
-		"[T022] floor 2 start room repopulated by RoomDirector after the reset")
+	# T030 起 game_world 接线了真 DifficultyScaler：预算 = 房 enemy_count + 难度 delta
+	#（楼层 2 静态层 MUST 生效），并钳到 >= required_count
+	var scaler: Node = world.get_node_or_null("DifficultyScaler")
+	var scaler_delta: int = scaler.get_enemy_count_delta() if scaler and scaler.has_method("get_enemy_count_delta") else 0
+	var expected_budget: int = maxi(
+		int(start_room.get("enemy_count", 0)) + scaler_delta,
+		int(start_room.get("objective", {}).get("required_count", 1))
+	)
+	t.assert_eq(enemy_mgr.current_enemies.size(), expected_budget,
+		"[T022] floor 2 start room repopulated by RoomDirector after the reset (含静态难度 delta)")
 	t.assert_true(food_mgr.current_foods.size() > 0, "[T022] food re-laid on the new floor")
 
 	world.cleanup()

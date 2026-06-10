@@ -17,6 +17,8 @@ extends Node2D
 @onready var shop_system: Node = get_node_or_null("ShopSystem")
 @onready var slot_expansion_system: Node = get_node_or_null("SlotExpansionSystem")
 @onready var floor_reward_system: Node = get_node_or_null("FloorRewardSystem")
+@onready var difficulty_scaler: Node = get_node_or_null("DifficultyScaler")
+@onready var room_modifier_system: Node = get_node_or_null("RoomModifierSystem")
 @onready var room_director: Node = get_node_or_null("RoomDirector")
 @onready var camera: Camera2D = $Camera2D
 
@@ -121,6 +123,16 @@ func _ready() -> void:
 	# （L1/L2 验收场景无 RoomDirector/RunProgressionSystem 节点，保持原行为）
 	if room_director and room_director.has_method("setup"):
 		room_director.setup(enemy_manager, food_manager)
+
+	# spec 002 T030/T031: 难度缩放唯一消费者 = RoomDirector；修饰符经注入点
+	# 在布场后应用（先布怪后修饰——护盾需要已生成的敌人，FR-008/FR-009）
+	if room_modifier_system and room_modifier_system.has_method("setup"):
+		room_modifier_system.setup(enemy_manager, status_tile_manager, snake)
+	if room_director:
+		if difficulty_scaler and room_director.has_method("set_difficulty_scaler"):
+			room_director.set_difficulty_scaler(difficulty_scaler)
+		if room_modifier_system and room_director.has_method("set_modifier_system"):
+			room_director.set_modifier_system(room_modifier_system)
 	if run_progression_system and not EventBus.floor_generated.is_connected(_on_world_floor_generated):
 		EventBus.floor_generated.connect(_on_world_floor_generated)
 
@@ -273,6 +285,10 @@ func cleanup() -> void:
 	_active_floor_index = 0
 	if room_director and room_director.has_method("cleanup"):
 		room_director.cleanup()
+	if room_modifier_system and room_modifier_system.has_method("cleanup"):
+		room_modifier_system.cleanup()
+	if difficulty_scaler and difficulty_scaler.has_method("cleanup"):
+		difficulty_scaler.cleanup()
 	if floor_reward_system and floor_reward_system.has_method("cleanup"):
 		floor_reward_system.cleanup()
 	if shop_system and shop_system.has_method("cleanup"):

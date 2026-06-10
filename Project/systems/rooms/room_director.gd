@@ -12,9 +12,14 @@ extends Node
 ##     空主题 = 回退 enemy.spawn_weights）；
 ##   * elite 房 / is_boss 房把敌池映射为 elite_* 变体（enemy_types.elite_*；
 ##     无变体配置时回退基础型——spec 边界「boss 未配置 → 精英回退」）；
-##   * 食物数 = difficulty.floor_table[楼层].food_count + 难度 delta（钳 >= 0）。
-## 难度修正钩子（T6 前为零桩）：set_difficulty_scaler() 注入 duck-typed 对象，
-## 读 get_enemy_count_delta()/get_food_count_delta()；唯一消费者契约见 plan.md。
+##   * 食物数 = difficulty.floor_table[楼层].food_count + 难度 delta，
+##     钳入 [difficulty.min_food_count, difficulty.max_food_count]；
+##   * 敌人预算钳入 [difficulty.min_enemy_count, difficulty.max_enemy_count]，
+##     required_count 始终压过 cap（目标必须可达成）。
+## 难度修正钩子（T030 实装 DifficultyScaler）：set_difficulty_scaler() 注入 duck-typed
+## 对象，读 get_enemy_count_delta()/get_food_count_delta()/get_enemy_hp_bonus()
+## （静态层 MUST + 反应式 SHOULD 合流；hp bonus 落点 EnemyManager.spawn_hp_bonus）；
+## 唯一消费者契约见 plan.md「重验收策略」。
 ## 修饰符注入点（T031 消费）：set_modifier_system() 注入后，布场完成把房 dict
 ## 转交 apply_modifiers(room)。
 ## L1/L2 验收场景不含本节点（game_world.gd 以 get_node_or_null 守护），行为不变。
@@ -95,6 +100,8 @@ func _on_room_entered(room: Dictionary) -> void:
 
 	_enemy_manager.respawn_policy = "room_budget"
 	_enemy_manager.set_spawn_weights(_spawn_weights_for(room_type, room_cfg))
+	if "spawn_hp_bonus" in _enemy_manager:
+		_enemy_manager.spawn_hp_bonus = maxi(0, _scaler_delta("get_enemy_hp_bonus"))
 	_enemy_manager.clear_enemies()
 	_enemy_manager.spawn_budget = budget
 	_enemy_manager.init_enemies(budget)
@@ -106,7 +113,8 @@ func _on_room_entered(room: Dictionary) -> void:
 		_modifier_system.apply_modifiers(room)
 
 
-## 敌人预算：仅 clear_enemies 目标房布敌；难度 delta 后钳到 >= required_count
+## 敌人预算：仅 clear_enemies 目标房布敌；难度 delta（静态层 + 反应式层）后
+## 钳入 difficulty.[min|max]_enemy_count，required_count 始终压过 cap（目标必须可达成）
 func _enemy_budget(room: Dictionary, room_cfg: Dictionary) -> int:
 	var objective: Dictionary = room.get("objective", {})
 	var objective_type: String = str(objective.get("objective_type", room_cfg.get("objective_type", "")))
@@ -114,6 +122,12 @@ func _enemy_budget(room: Dictionary, room_cfg: Dictionary) -> int:
 		return 0
 	var budget: int = int(room.get("enemy_count", room_cfg.get("enemy_count", 0)))
 	budget += _scaler_delta("get_enemy_count_delta")
+	var difficulty_cfg: Dictionary = ConfigManager.get_difficulty_config()
+	budget = clampi(
+		budget,
+		int(difficulty_cfg.get("min_enemy_count", 0)),
+		int(difficulty_cfg.get("max_enemy_count", 0x7FFFFFFF))
+	)
 	return maxi(budget, int(objective.get("required_count", room_cfg.get("required_count", 1))))
 
 
@@ -142,9 +156,16 @@ func _elite_variant_weights(base_weights: Dictionary) -> Dictionary:
 
 
 func _food_count() -> int:
+	## 静态基数 = floor_table[层].food_count；反应式 delta 经 scaler 钩子；
+	## 钳入 difficulty.[min|max]_food_count（min 默认 0——食物可被压到零）
 	var food_count: int = int(ConfigManager.get_difficulty_floor_params(_floor_index).get("food_count", 3))
 	food_count += _scaler_delta("get_food_count_delta")
-	return maxi(0, food_count)
+	var difficulty_cfg: Dictionary = ConfigManager.get_difficulty_config()
+	return clampi(
+		food_count,
+		int(difficulty_cfg.get("min_food_count", 0)),
+		int(difficulty_cfg.get("max_food_count", 0x7FFFFFFF))
+	)
 
 
 func _scaler_delta(method: String) -> int:

@@ -1144,14 +1144,13 @@
   "difficulty": {
     "enabled": true,
     "baseline_enemy_count": 3,
-    "baseline_food_count": 3,
-    "overperform_threshold": 0.7,
+    "overperform_threshold": 0.75,
     "underperform_threshold": 0.3,
     "adjustment_enemy_delta": 1,
     "adjustment_food_delta": 1,
     "min_enemy_count": 1,
     "max_enemy_count": 8,
-    "min_food_count": 1,
+    "min_food_count": 0,
     "max_food_count": 6,
     "rooms_between_adjustments": 2,
     "metrics": {
@@ -1181,45 +1180,18 @@
   },
 
   "room_modifiers": {
-    "darkness": {
-      "display_name": "黑暗",
-      "description": "降低可见度，非相邻格变暗",
-      "enabled": true,
-      "apply_chains": [],
-      "remove_chains": [],
-      "visual_config": { "alpha": 0.6, "blind_radius": 2 }
-    },
-    "speed_strips": {
-      "display_name": "加速带",
-      "description": "部分格子提供移动速度加成",
-      "enabled": true,
-      "apply_chains": [],
-      "remove_chains": [],
-      "visual_config": { "strip_count": 4, "speed_mult": 2.0 }
-    },
     "shield_enemies": {
       "display_name": "护盾敌人",
-      "description": "随机敌人获得额外护盾",
+      "description": "部分敌人获得护盾，需要额外一击",
       "enabled": true,
-      "apply_chains": [],
-      "remove_chains": [],
-      "visual_config": { "shield_hp_bonus": 2, "shield_count": 2 }
+      "params": { "hp_bonus": 1, "max_shielded": 2 },
+      "visual": { "outline_palette_token": "text_primary", "outline_pad": 6.0, "outline_alpha": 0.5 }
     },
     "preset_status_tiles": {
       "display_name": "状态预置",
       "description": "进房时预置少量状态格，引导接触状态系统",
       "enabled": true,
-      "apply_chains": [],
-      "remove_chains": [],
-      "visual_config": { "tile_count": 6, "tile_types": ["fire", "ice", "poison"], "min_distance_from_snake": 4 }
-    },
-    "mine_tiles": {
-      "display_name": "地雷格",
-      "description": "随机格子上放置可触发伤害的地雷",
-      "enabled": true,
-      "apply_chains": [],
-      "remove_chains": [],
-      "visual_config": { "mine_count": 3, "damage": 2 }
+      "params": { "tile_count": 4, "tile_types": ["fire", "ice", "poison"], "min_distance_from_snake": 4 }
     }
   },
 

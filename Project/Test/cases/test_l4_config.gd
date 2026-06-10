@@ -252,6 +252,44 @@ func _test_room_modifier_v1_configs(t) -> void:
 		t.assert_true(mod.get("enabled") is bool, "[FR-009] %s has per-item enabled switch" % modifier_id)
 		t.assert_true(mod.get("enabled", false), "[FR-009] %s enabled in v1" % modifier_id)
 
+	# T032/backlog 收容：room_modifiers 恰为 v1 双件，darkness/speed_strips/mine_tiles 草稿残留已清
+	var sorted_ids: Array = ids.duplicate()
+	sorted_ids.sort()
+	var sorted_v1: Array = V1_MODIFIER_IDS.duplicate()
+	sorted_v1.sort()
+	t.assert_eq(sorted_ids, sorted_v1,
+		"[T032] room_modifiers contains EXACTLY the v1 set (draft residue removed per backlog.md)")
+
+	# T032：v1 参数形状（应用层消费的全部数值出自 JSON，FR-010）
+	var shield_params: Dictionary = ConfigManager.get_room_modifier("shield_enemies").get("params", {})
+	t.assert_true(int(shield_params.get("hp_bonus", 0)) >= 1, "[T032] shield_enemies.params.hp_bonus >= 1")
+	t.assert_true(int(shield_params.get("max_shielded", 0)) >= 1, "[T032] shield_enemies.params.max_shielded >= 1")
+	var tile_params: Dictionary = ConfigManager.get_room_modifier("preset_status_tiles").get("params", {})
+	t.assert_true(int(tile_params.get("tile_count", 0)) >= 1, "[T032] preset_status_tiles.params.tile_count >= 1")
+	t.assert_true(int(tile_params.get("min_distance_from_snake", 0)) >= 1,
+		"[T032] preset_status_tiles keeps distance from the snake spawn")
+	var tile_types: Array = tile_params.get("tile_types", [])
+	t.assert_true(tile_types.size() >= 1, "[T032] preset_status_tiles.params.tile_types non-empty")
+	for tile_type in tile_types:
+		t.assert_true(not ConfigManager.get_status_effect(str(tile_type)).is_empty(),
+			"[T032] preset tile type is a real status effect: %s" % tile_type)
+
+	# T032：floor.modifier_weights 只引用真实存在的 v1 修饰符
+	var weights: Dictionary = ConfigManager.get_floor_config().get("modifier_weights", {})
+	for floor_key in weights:
+		for modifier_id in weights[floor_key]:
+			t.assert_true(V1_MODIFIER_IDS.has(str(modifier_id)),
+				"[T032] floor %s modifier weight references a v1 modifier: %s" % [floor_key, modifier_id])
+
+	# T032：JSON 文本零草稿残留（与 max_floors_v1 检查同款）
+	var file := FileAccess.open(CONFIG_JSON_PATH, FileAccess.READ)
+	if file != null:
+		var text: String = file.get_as_text()
+		file.close()
+		for residue in ["darkness", "speed_strips", "mine_tiles"]:
+			t.assert_false(text.contains("\"%s\"" % residue),
+				"[T032] no draft modifier residue in game_config.json: %s" % residue)
+
 
 func _test_l4_event_contracts(t) -> void:
 	## T003: plan.md L4 信号清单全量存在（scale_option_discarded/floor_theme_set 为重验收补缺）
