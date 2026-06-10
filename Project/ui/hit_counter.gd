@@ -36,7 +36,7 @@ func _rebuild_dots() -> void:
 	for i in range(_max_hits):
 		var dot := ColorRect.new()
 		dot.custom_minimum_size = Vector2(DOT_SIZE, DOT_SIZE)
-		dot.color = Color(0.3, 0.3, 0.3, 0.6)  # Inactive: dim gray
+		dot.color = ConfigManager.get_palette_color("frame_line")  # Inactive
 		add_child(dot)
 		_dots.append(dot)
 
@@ -57,11 +57,12 @@ func _on_segment_lost(_data: Dictionary) -> void:
 
 
 func _update_dots() -> void:
+	# T013：受击 pip 走 palette token（presentation_design.md §2.1）
 	for i in range(_dots.size()):
 		if i < _current_hits:
-			_dots[i].color = Color(1.0, 0.2, 0.2, 1.0)  # Active: red
+			_dots[i].color = ConfigManager.get_palette_color("accent_danger")  # Active
 		else:
-			_dots[i].color = Color(0.3, 0.3, 0.3, 0.6)  # Inactive: gray
+			_dots[i].color = ConfigManager.get_palette_color("frame_line")  # Inactive
 
 
 func _burst_all() -> void:
@@ -70,6 +71,6 @@ func _burst_all() -> void:
 	_burst_tween = create_tween().set_parallel(true)
 	for dot in _dots:
 		if is_instance_valid(dot):
-			dot.color = Color(1.0, 0.8, 0.0)  # Flash yellow
+			dot.color = ConfigManager.get_palette_color("accent_shedskin")  # Flash
 			_burst_tween.tween_property(dot, "color:a", 0.0, 0.2)
 			_burst_tween.tween_property(dot, "custom_minimum_size", Vector2(DOT_SIZE * 1.5, DOT_SIZE * 1.5), 0.2)

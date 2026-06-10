@@ -131,12 +131,6 @@ func _ready() -> void:
 	danger_indicator.snake = snake
 	add_child(danger_indicator)
 
-	# 击杀/事件简讯
-	var KillFeedScript: GDScript = preload("res://ui/kill_feed.gd")
-	var kill_feed: VBoxContainer = KillFeedScript.new()
-	kill_feed.name = "KillFeed"
-	$UI.add_child(kill_feed)
-
 	# 无身体倒计时全屏效果
 	var CountdownOverlayScript: GDScript = preload("res://ui/countdown_overlay.gd")
 	var countdown_overlay: CanvasLayer = CountdownOverlayScript.new()
@@ -149,26 +143,35 @@ func _ready() -> void:
 	game_transition.name = "GameTransition"
 	add_child(game_transition)
 
-	# Debug 面板（按 C 切换）
-	var DebugPanelScript: GDScript = preload("res://ui/debug_panel.gd")
-	var debug_panel: PanelContainer = DebugPanelScript.new()
-	debug_panel.name = "DebugPanel"
-	debug_panel.set_snake(snake)
-	$UI.add_child(debug_panel)
+	# debug UI（§11.7）：kill feed / debug 面板 / build 测试面板 / 事件日志
+	# 统一收进 presentation.debug_ui 开关（默认关闭）；不创建即热键 (C/B/V) no-op
+	if ConfigManager.is_debug_ui_enabled():
+		# 击杀/事件简讯
+		var KillFeedScript: GDScript = preload("res://ui/kill_feed.gd")
+		var kill_feed: VBoxContainer = KillFeedScript.new()
+		kill_feed.name = "KillFeed"
+		$UI.add_child(kill_feed)
 
-	# T33: Build 测试面板（按 B 切换）
-	var BuildPanelScript: GDScript = preload("res://ui/build_test_panel.gd")
-	var build_panel: PanelContainer = BuildPanelScript.new()
-	build_panel.name = "BuildTestPanel"
-	build_panel.setup(snake, snake_parts_mgr, scale_slot_mgr, resonance_mgr, window_mgr)
-	$UI.add_child(build_panel)
+		# Debug 面板（按 C 切换）
+		var DebugPanelScript: GDScript = preload("res://ui/debug_panel.gd")
+		var debug_panel: PanelContainer = DebugPanelScript.new()
+		debug_panel.name = "DebugPanel"
+		debug_panel.set_snake(snake)
+		$UI.add_child(debug_panel)
 
-	# 事件日志面板（按 V 切换）
-	var EventLogScript: GDScript = preload("res://ui/event_log_panel.gd")
-	var event_log: PanelContainer = EventLogScript.new()
-	event_log.name = "EventLogPanel"
-	event_log.setup(snake)
-	$UI.add_child(event_log)
+		# T33: Build 测试面板（按 B 切换）
+		var BuildPanelScript: GDScript = preload("res://ui/build_test_panel.gd")
+		var build_panel: PanelContainer = BuildPanelScript.new()
+		build_panel.name = "BuildTestPanel"
+		build_panel.setup(snake, snake_parts_mgr, scale_slot_mgr, resonance_mgr, window_mgr)
+		$UI.add_child(build_panel)
+
+		# 事件日志面板（按 V 切换）
+		var EventLogScript: GDScript = preload("res://ui/event_log_panel.gd")
+		var event_log: PanelContainer = EventLogScript.new()
+		event_log.name = "EventLogPanel"
+		event_log.setup(snake)
+		$UI.add_child(event_log)
 
 	var reward_panel: Node = $UI.get_node_or_null("RewardChoicePanel")
 	if reward_panel and reward_panel.has_method("setup"):

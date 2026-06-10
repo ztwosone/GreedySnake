@@ -73,6 +73,10 @@ func init_snake(start_pos: Vector2i, length: int, dir: Vector2i) -> void:
 func move() -> void:
 	if not is_alive:
 		return
+	# 防御前置：空身躯（残留态——销毁中的蛇在 queue_free 落地前仍连着 tick 信号）
+	# 直接跳过移动；仅剩蛇头的无身体倒计时态（body.size() == 1）不受影响
+	if body.is_empty():
+		return
 
 	# 1. Process buffered input
 	process_input()

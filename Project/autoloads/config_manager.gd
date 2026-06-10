@@ -35,6 +35,7 @@ var room_modifiers: Dictionary = {}
 var floor_themes: Dictionary = {}
 var meta_growth: Dictionary = {}
 var event_pickups: Dictionary = {}
+var presentation: Dictionary = {}
 
 # 反应查找表：("fire", "ice") → reaction_dict
 var _reaction_lookup: Dictionary = {}
@@ -106,6 +107,7 @@ func _populate_sections() -> void:
 	floor_themes = _data.get("floor_themes", {})
 	meta_growth = _data.get("meta_growth", {})
 	event_pickups = _data.get("event_pickups", {})
+	presentation = _data.get("presentation", {})
 
 
 func _build_reaction_lookup() -> void:
@@ -337,6 +339,56 @@ func get_event_pickups_config() -> Dictionary:
 func get_pickup(pickup_id: String) -> Dictionary:
 	var pickups: Dictionary = event_pickups.get("pickups", {})
 	return pickups.get(pickup_id, {})
+
+
+# === Presentation（SpecKit 004，设计文档 presentation_design.md §14） ===
+
+func get_presentation_config() -> Dictionary:
+	return presentation
+
+
+func get_palette_color(token: String) -> Color:
+	## §2.1 语义色 token → Color；未知/非法 token 警告并回退品红
+	var palette: Dictionary = presentation.get("palette", {})
+	var hex: String = str(palette.get(token, ""))
+	if hex.is_empty() or not Color.html_is_valid(hex):
+		push_warning("ConfigManager: unknown palette token '%s', falling back to magenta" % token)
+		return Color.MAGENTA
+	return Color.html(hex)
+
+
+func get_typography() -> Dictionary:
+	return presentation.get("typography", {})
+
+
+func get_motion() -> Dictionary:
+	return presentation.get("motion", {})
+
+
+func get_layout_config() -> Dictionary:
+	return presentation.get("layout", {})
+
+
+func get_acceptance_config() -> Dictionary:
+	return presentation.get("acceptance", {})
+
+
+func get_game_feel() -> Dictionary:
+	## §9 game-feel 强度/数量调参（VFXManager 默认参数来源）
+	return presentation.get("game_feel", {})
+
+
+func get_glyph_def(glyph_id: String) -> Array:
+	## §3 glyph 定义（≤4 矩形）；"_" 前缀为元数据键，非 glyph
+	var glyphs: Dictionary = presentation.get("glyphs", {})
+	var def: Variant = glyphs.get(glyph_id, [])
+	if def is Array:
+		return def
+	return []
+
+
+func is_debug_ui_enabled() -> bool:
+	return bool(presentation.get("debug_ui", false))
 
 
 func _build_resonance_lookups() -> void:

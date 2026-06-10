@@ -13,6 +13,8 @@ var _acceptance_level: int = 1  # 1 = L1, 2 = L2
 
 
 func _ready() -> void:
+	# §2.1：bg_deep 即屏幕底色（palette 单一事实源，标题屏等无战场屏幕的窗口底色）
+	RenderingServer.set_default_clear_color(ConfigManager.get_palette_color("bg_deep"))
 	title_screen.start_pressed.connect(_on_start_pressed)
 	game_over_screen.restart_pressed.connect(_on_restart_pressed)
 	game_over_screen.test_mode_pressed.connect(_on_test_mode_pressed)
@@ -24,6 +26,9 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# §7/§11.7：T/Y 验收捷径属 debug UI，presentation.debug_ui 关闭时 no-op
+	if not ConfigManager.is_debug_ui_enabled():
+		return
 	if not (title_screen.visible and event is InputEventKey and event.pressed):
 		return
 	# Press T on title screen to launch L1 acceptance test

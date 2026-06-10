@@ -16,9 +16,11 @@ var _flash_tween: Tween
 func _ready() -> void:
 	add_theme_constant_override("separation", int(GAP))
 
+	# T013：溢出标签走 kit 字号阶梯 + palette token（presentation_design.md §2/§4）
 	_overflow_label = Label.new()
-	_overflow_label.add_theme_font_size_override("font_size", 14)
-	_overflow_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
+	_overflow_label.theme_type_variation = "CaptionLabel"
+	_overflow_label.add_theme_color_override(
+		"font_color", ConfigManager.get_palette_color("text_dim"))
 	_overflow_label.visible = false
 	add_child(_overflow_label)
 
@@ -74,13 +76,14 @@ func _refresh() -> void:
 
 
 func _get_segment_color(seg: SnakeSegment) -> Color:
+	# T013：状态色走 palette token（presentation_design.md §2.1 status_*）
 	if seg.carried_status == "fire":
-		return Color(1.0, 0.5, 0.1)
+		return ConfigManager.get_palette_color("status_fire")
 	elif seg.carried_status == "ice":
-		return Color(0.4, 0.7, 1.0)
+		return ConfigManager.get_palette_color("status_ice")
 	elif seg.carried_status == "poison":
-		return Color(0.3, 0.8, 0.2)
-	# Default: segment type color
+		return ConfigManager.get_palette_color("status_poison")
+	# 蛇灰阶（§1 HEAD 0.95 / BODY 0.78 / TAIL 0.6）：实体层调色随 Phase P（§2.2 迁移分期）
 	match seg.segment_type:
 		SnakeSegment.HEAD:
 			return Color(0.95, 0.95, 0.95)

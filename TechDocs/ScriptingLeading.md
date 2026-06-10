@@ -346,6 +346,11 @@ SnakeSegment (extends GridEntity):
 #### 3.1.3 Tick 内移动流程
 
 ```
+0. 防御前置：body 为空 → 直接 return（不移动、不发事件、不报错）
+   - 正常对局不会出现该状态；它来自生命周期残留（销毁中的 Snake 在 queue_free
+     落地前仍连着 tick_input_collected，如场景切换间隙、测试 harness 手动步进）
+   - 仅剩蛇头的无身体倒计时态（body.size() == 1，见 3.2 LengthSystem）不受影响，
+     仍走完整移动流程——倒计时期间玩家必须能移动进食以恢复身段
 1. 从 input_buffer 读取转向指令
 2. 验证转向合法性（不允许 180° 反向）
 3. 计算新蛇头位置：new_head = body[0] + direction
