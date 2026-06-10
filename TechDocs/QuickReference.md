@@ -52,7 +52,7 @@ Project/Test/cases/test_l3_smoke_run.gd      # L3 v1 固定路径占位 UI smoke
 - Tick = 0.25s
 - 测试入口：`res://Test/test_runner.tscn`
 - 严格测试入口：`$env:GODOT_DISABLE_CRASH_HANDLER="1"; powershell -ExecutionPolicy Bypass -File Tools/run_tests_strict.ps1`
-- 当前验证事实（2026-06-11，Phase F 完成）：普通测试 `2897/2897` 断言通过，套件 `67/67`（runner 现核对"发现/运行"数）；严格门禁 `STRICT PASSED`。严格脚本先跑 `--headless --import` 重建 class cache/.uid（导入器输出不进扫描），再跑测试并扫描 stderr，豁免 AtomRegistry 负向测试、lambda capture 清理日志和 headless 退出期资源日志。
+- 当前验证事实（2026-06-11，S2 T1 簇收口）：普通测试 `3016/3016` 断言通过，套件 `68/68`（runner 现核对"发现/运行"数）；严格门禁 `STRICT PASSED`。严格脚本先跑 `--headless --import` 重建 class cache/.uid（导入器输出不进扫描），再跑测试并扫描 stderr，豁免 AtomRegistry 负向测试、lambda capture 清理日志和 headless 退出期资源日志。
 - 测试约定：禁止裸引用全局 class_name，一律 `const XxxScript := preload(...)`（见 ScriptingLeading 附录 C.8）；坏套件计 FAIL 不再静默吞测（2026-06-05 的"ALL PASSED 758/758"假绿根因已修复）。
 
 ## 表现内核事实（SpecKit 004 Phase F，2026-06-11）
@@ -94,6 +94,40 @@ Project/Test/cases/test_l3_smoke_run.gd      # L3 v1 固定路径占位 UI smoke
 - `test_l3_smoke_run.gd` 已验证真实 `game_world.tscn` 能通过占位 UI 跑完固定一局：战斗 → 奖励 → 战斗 → 休整 → endpoint → victory/game over。
 - `game_world.gd` 的 L3 子节点引用使用 `get_node_or_null()`，继承的 L1/L2 验收场景可以不带 L3 节点进树。
 - `game_world.cleanup()` 已清理 L3 state、Build state、window state，以及 `TriggerManager` 对场景级 enemy/food/window manager 的引用；`VFXManager` 会在旧 VFX 层失效后重建。
+
+## L4 配置与契约基线（S2 T1，spec 002 修订版 2026-06-11）
+
+配置事实（`game_config.json`，测试套件 `Project/Test/cases/test_l4_config.gd`）：
+
+- `run.max_floors: 3` **显式取代并删除** `max_floors_v1`（FR-016/SC-009；grep 验证旧键零 GDScript 调用方，无需迁移；`run_progression_system` 在 T022 才消费新键）。
+- `floor.generator: "fixed_v1"`，枚举 `fixed_v1 | pcg`（FR-016）；fixed_v1 为回退/MDE 路径。
+- 概念节奏纯数据（FR-017/SC-010）：`floor.modifier_weights`（首层全 0，2 层起正权重）、`floor.elite_weights`（首层 0，逐层严格递增）、`floor.shop_guarantee`（`min_combat_rooms_before: 2`，每层保底商店）。
+- `shop.price_multiplier_per_floor: 1.25`（FR-003：蜕皮跨层保留，下层物价上涨是唯一经济压力阀）。
+- `room_types.shop`（`auto_complete_on_enter: true`，退店无目标门槛）、`room_types.elite`（clear_enemies，不自动完成）。
+- `enemy_types.elite_wanderer|elite_chaser|elite_bog_crawler`：`is_elite: true` + `base_type`，复用基础型 shape/color，`visual_scale: 1.25` + `outline_palette_token: "room_elite"`（描边表现留待 UI 卡）；三个基础型显式 `is_elite: false`。精英不入 `enemy.spawn_weights` 常驻池，由 RoomDirector（T021）按 `floor.elite_weights` 注入。
+- `difficulty.floor_table`（FR-008 MUST 静态层表：enemy_count 3/4/5、enemy_hp_bonus 0/1/2 严格递增，food_count 不回落）+ `difficulty.reactive`（SHOULD：normalization 分母 room_clear_ticks/damage_taken_per_room/status_usage_per_room + delta clamp，隐性、仅生成参数级验证）。
+- `room_modifiers` v1 = `shield_enemies` + `preset_status_tiles`（各带逐项 `enabled` 开关，FR-009）。`darkness`/`speed_strips`/`mine_tiles` 为 6-5 草稿残留键，已入 backlog.md，随 T029/T031/T033 测试重写一并删除（现仍被草稿测试引用，不可先删）。
+
+ConfigManager 新 accessor：`get_max_floors()`、`get_floor_generator()`、`get_floor_modifier_weights(floor)`、`get_floor_elite_weight(floor)`、`get_shop_guarantee()`、`get_shop_price_multiplier_per_floor()`、`get_difficulty_floor_table()`、`get_difficulty_floor_params(floor)`、`get_difficulty_reactive_config()`；楼层键表查询统一走 `_get_floor_keyed_value`（精确命中 → 钳制到 ≤floor 的最高定义层 → 最低定义层）。
+
+L4 事件契约「发射方 → 监听方」对照表（T1 落地信号定义；接线落在标注簇）：
+
+| 信号 | payload | 发射方（计划） | 监听方（计划） |
+|------|---------|----------------|----------------|
+| `currency_changed` | {currency, amount, total, source} | ShedskinSystem（T2） | shedskin_display（T2） |
+| `scale_reward_presented` | {room_id, options, offer_id} | ScaleRewardSystem（T2） | scale_choice_panel、RunProgression 模态门控（T2/T007） |
+| `scale_reward_chosen` | {option_id, scale_id, position, level, skipped} | ScaleRewardSystem（T2） | game_world 接线、门控解除（T010） |
+| `scale_option_discarded` | {offer_id, discarded_ids, shedskin_gained} | ScaleRewardSystem（T2） | ShedskinSystem（T6 卡接 discard 收入） |
+| `shop_entered` | {room_id, items} | ShopSystem（T3） | shop_panel（T3） |
+| `shop_purchase` | {item_id, category, cost, currency_remaining} | ShopSystem（T3） | ShedskinSystem、shop_panel（T3） |
+| `slot_unlocked` | {position, total_slots, source} | SlotExpansionSystem（T3） | Build 面板（T3） |
+| `floor_reward_presented` | {floor_index, options} | FloorRewardSystem（T5） | floor_reward_panel、模态门控（T5） |
+| `floor_reward_chosen` | {category, option_id, skipped?} | FloorRewardSystem（T5） | RunProgression（决议先于 advance_floor，T027） |
+| `difficulty_adjusted` | {reason, adjustment} | DifficultyScaler（T6） | RoomDirector（唯一消费者，T6） |
+| `room_modifier_applied` | {room_id, modifier_id} | RoomModifierSystem（T6，经 RoomDirector 应用） | RoomDirector/表现层（T6） |
+| `floor_theme_set` | {theme, pressure, floor_index} | FloorMapGenerator/RoomDirector（T4/T5） | 表现层（S4） |
+
+FR-018 显式保留契约：**RewardFlowSystem 为 L3 `reward` 房发射的合成 `room_completed` 是该类房间唯一完成通路（load-bearing），保留不动**；草稿 ScaleRewardSystem 的合成 `room_completed` 是缺陷（幻影二次 offer 根因之一），T005 拆除——拆除范围仅限 ScaleRewardSystem。空选项 offer 一律自动决议（chosen 带 `skipped: true` 或 discarded，FR-014）；任一 `*_presented` 未决时推进请求被忽略（FR-015，T007 落地）。
 
 ## L1 战斗循环关键事实
 

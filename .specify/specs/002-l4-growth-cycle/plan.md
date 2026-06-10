@@ -1,6 +1,6 @@
 # Implementation Plan: L4 Growth Cycle
 
-**Branch**: `codex/002-l4-growth-cycle` | **Date**: 2026-06-05 | **Spec**: `.specify/specs/002-l4-growth-cycle/spec.md`
+**Branch**: `002-l4-growth-cycle` | **Date**: 2026-06-05（Amended 2026-06-11 重验收治理：架构/门禁/重验收策略对齐修订版 spec） | **Spec**: `.specify/specs/002-l4-growth-cycle/spec.md`
 
 ## Summary
 
@@ -38,6 +38,7 @@ Implement the single-run growth cycle: scale acquisition with 3-choose-1 UI afte
 ├── data-model.md
 ├── quickstart.md
 ├── tasks.md
+├── backlog.md          # Amended 2026-06-11: 范围外收容（诅咒鳞/darkness/speed_strips/富愿景）
 └── checklists/
 
 Project/
@@ -54,7 +55,8 @@ Project/
 │   │   ├── difficulty_scaler.gd        # Dynamic difficulty adjustment
 │   │   └── room_modifier_system.gd     # Room modifier application
 │   └── rooms/
-│       └── floor_map_generator.gd      # Extended: multi-floor PCG
+│       ├── floor_map_generator.gd      # Rewritten: seeded PCG + fixed_v1 switch
+│       └── room_director.gd            # New: room population orchestrator
 ├── ui/
 │   ├── scale_choice_panel.gd           # 3-choose-1 scale UI
 │   ├── shop_panel.gd                   # Shop UI
@@ -75,14 +77,15 @@ Project/
 
 ## Architecture Plan
 
-- **ShedskinSystem** owns per-floor currency. Listens to `enemy_killed`, `scale_option_discarded`, `room_explored` for gains. Emits `currency_changed`. Resets on `floor_generated`.
-- **ScaleRewardSystem** presents 3-choose-1 after combat room completion. Reuses ScaleSlotManager.equip_scale() for application. Pools drawn from JSON `growth.scale_reward_pools`.
-- **ShopSystem** presents purchasable items when entering shop rooms. Item categories: scale (2-4 shedskin), slot unlock (5 shedskin), head/tail upgrade (4 shedskin). Emits `shop_purchase`.
-- **SlotExpansionSystem** tracks slot counts. Initial: front=1, middle=1, back=1. Max: front=2, middle=3, back=2. Unlocks via floor_reward (boss) and shop. Persists across floors within a run. Emits `slot_unlocked`.
-- **FloorRewardSystem** presents 3-choose-1 after boss defeat. Categories: Expansion (advanced/curse scale + compensation), Reinforcement (upgrade lowest scale/head/tail), Correction (reorder/same-tag swap). Emits `floor_reward_chosen`.
-- **FloorMapGenerator** extended with PCG: generates room graph instead of fixed v1 path. Supports floor themes (environment x pressure tags), terrain templates (open/corridor/island/spiral), and room modifier injection.
-- **DifficultyScaler** evaluates player performance metrics (clear speed, damage taken, status usage) at room boundaries and adjusts next room params (enemy count, armor chance, food density). All thresholds and deltas in JSON.
-- **RoomModifierSystem** applies modifier effects when entering a room (darkness vision reduction, speed strips movement bonus, shield enemies extra HP). Each modifier has on_apply/on_remove atom chains.
+- **ShedskinSystem** owns run-scoped currency that CARRIES OVER across floors (**Amended 2026-06-11** per Designs §10.2; FR-003). Listens to `enemy_killed`, `scale_option_discarded`, `room_explored` for gains. Emits `currency_changed`. Resets only on run restart (FR-013).
+- **ScaleRewardSystem** presents 3-choose-1 after combat room completion. Reuses ScaleSlotManager.equip_scale() for application. Pools drawn from JSON `growth.scale_reward_pools`, filtered by open slots; full-slot choice = replacement; empty pool auto-resolves (FR-014); discards grant shedskin; never emits synthetic `room_completed` (FR-018); exposes injectable sampling-bias hook for L5 legacy stones.
+- **ShopSystem** presents purchasable items when entering shop rooms. Item categories: scale (2-4 shedskin), slot unlock (5 shedskin), head/tail upgrade (4 shedskin); prices scale by `shop.price_multiplier_per_floor`. Emits `shop_purchase`; exits via `room_entered` of the next room.
+- **SlotExpansionSystem** is a THIN ADAPTER over ScaleSlotManager.open_slot() (**Amended 2026-06-11**: 草稿从不调 open_slot，买槽零效果). Initial: front=1, middle=1, back=1. Max: front=2, middle=3, back=2. Unlocks via boss fixed slot-unlock step and shop. Persists across floors within a run. Emits `slot_unlocked`.
+- **FloorRewardSystem** runs boss settlement on NON-final floors only: fixed slot-unlock step (player picks front/middle/back) then 3-choose-1 — random advanced scale / upgrade lowest-level scale / same-tag swap (**Amended 2026-06-11** per Designs §10.3-10.5; FR-007). Emits `floor_reward_chosen`; resolution precedes `advance_floor()`.
+- **FloorMapGenerator** PCG path REWRITTEN: seeded room-graph generation with config weights/branching, guaranteed shop after >=2 combat rooms, endpoint=boss; fixed v1 path retained behind `floor.generator` switch (**Amended 2026-06-11**). Supports floor themes (environment x pressure tags) and room modifier injection.
+- **DifficultyScaler** MUST: static per-floor pressure scaling from the JSON floor table. SHOULD: reactive adjustment from per-room performance metrics (per-room clear time, damage taken, status usage), designed-invisible per Designs §11.5, clamped, sole consumer = RoomDirector (**Amended 2026-06-11**).
+- **RoomModifierSystem** applies v1 modifiers when entering a room: `shield_enemies` (extra HP), `preset_status_tiles` (pre-placed status tiles per Designs §11.5). Each modifier has on_apply/on_remove atom chains and an individual JSON disable switch (**Amended 2026-06-11**: darkness/speed_strips → backlog.md).
+- **RoomDirector**（新增）: listens `room_entered`/`floor_generated`, clears the field, populates enemies/food by room type + theme weights + difficulty modifiers. Prerequisite: EnemyManager incremental retrofit (`respawn_policy` default `maintain` keeps L1/L2 behavior and tests green, injected weight table, spawn_budget).
 
 ## Public Interfaces and Events
 
@@ -90,7 +93,8 @@ New EventBus signals:
 
 - `currency_changed(data: Dictionary)` — {currency: "shedskin", amount: int, total: int, source: String}
 - `scale_reward_presented(data: Dictionary)` — {room_id: String, options: Array, offer_id: String}
-- `scale_reward_chosen(data: Dictionary)` — {option_id: String, scale_id: String, position: String, level: int}
+- `scale_reward_chosen(data: Dictionary)` — {option_id: String, scale_id: String, position: String, level: int, skipped: bool}
+- `scale_option_discarded(data: Dictionary)` — {offer_id: String, discarded_ids: Array, shedskin_gained: int}（**Amended 2026-06-11**：FR-018 拆除合成 room_completed 后的显式决议信号）
 - `shop_entered(data: Dictionary)` — {room_id: String, items: Array}
 - `shop_purchase(data: Dictionary)` — {item_id: String, category: String, cost: int, currency_remaining: int}
 - `slot_unlocked(data: Dictionary)` — {position: String, total_slots: int, source: String}
@@ -104,9 +108,41 @@ New EventBus signals:
 
 - Each scale reward screen shows exactly 3 options.
 - Shop items are capped at 5 visible items per visit.
-- Floor reward uses one option from each of 3 categories.
-- Slot unlocks are scarce (starting slots: 3, boss kills: +2, shop: +1, max: 7).
-- Shedskin resets per floor; no carry-over.
-- Dynamic difficulty has configurable min/max bounds.
-- All room modifiers are individually disableable via JSON.
-- Placeholder UI uses existing patterns (labels, color blocks, buttons).
+- Boss settlement = fixed slot-unlock step + separate 3-choose-1 floor reward (one option per category); none on the final floor. **Amended 2026-06-11** per Designs §10.3-10.5.
+- Slot unlocks are scarce (starting slots: 3, boss kills: +2~3, shop: +1, max: 7).
+- Shedskin carries over across floors; later-floor pressure = shop price multiplier. **Amended 2026-06-11** per Designs §10.2「蜕皮不跨层清零，但下层商人物价略有上涨」.
+- Static per-floor scaling is MUST; reactive DDA is SHOULD and designed-invisible with configurable min/max clamps. **Amended 2026-06-11** per Designs §11.5.
+- All room modifiers are individually disableable via JSON; v1 set = `shield_enemies` + `preset_status_tiles`.
+- No offer system may deadlock: zero eligible options auto-resolve; run progression ignores advance while an offer is pending (FR-014/FR-015).
+- All panels built on S1 `ui/kit/` (theme_builder/kit_panel/glyph/choice_card/banner/chip); zero in-kit orchestration (S4 scope).
+
+## 重验收策略（Amended 2026-06-11）
+
+> 本 feature 不是绿地开发：6-5 草稿的 13 个系统文件 + 4 个面板 + 13 个测试文件已存在（零场景集成，缺陷逐文件实证）。
+> 任务语义统一为「对照修订后 spec 验证/修复/重写」，判决如下。
+
+### 13 文件判决表（file:line 实证，前 8 个属本 spec，后 5 个属 spec 003 / S3，列出供全景）
+
+| 文件 | 判决 | 要点 |
+|---|---|---|
+| `systems/growth/shedskin_system.gd` | 保留+修 | Enemy 节点被当 Dictionary 判型（:87）→ elite 分支死代码；跨层清零改为保留（FR-003 修订后）；补 discard 收入 |
+| `systems/growth/scale_reward_system.gd` | 重写逻辑 | 幻影二次 offer + 状态互踩软锁（:85,:98）；拆除合成 `room_completed`（**仅此系统**，FR-018）；改发 `scale_reward_chosen`/`scale_option_discarded`；满槽替换/空池自动决议/按开放槽过滤/传承石偏置钩子 |
+| `systems/growth/slot_expansion_system.gd` | 重写为薄适配器 | 从不调 `open_slot()`（买槽零效果，shop:165 return true 什么也不做）；ScaleSlotManager MAX_SLOTS JSON 化 + accessor 并**同卡迁移 build_test_panel.gd:161 的直读** |
+| `systems/growth/shop_system.gd` | 修 | pool[0] 伪随机（:198）、容量误用已装数（:130）、exit_shop 无调用方（接 room_entered 退店）；补 room_types.shop；接 price_multiplier_per_floor |
+| `systems/growth/floor_reward_system.gd` | 重写逻辑 | 假实现（expansion 硬编码 equip、correction 是 pass）；改为 §10.3-10.5 模型：固定槽位解锁（选位）+ 3 选 1（高级鳞/升级最低级件/同 tag 换鳞）；**终层不弹**（floor_index < max_floors 才呈现） |
+| `systems/rooms/floor_map_generator.gd` | PCG 重写，fixed_v1 留作 `floor.generator` 开关 | 现 PCG 完全不用 seed、纯线性、无 shop/elite、魔数（:54-84）；重写为 seeded + config 权重/分支 + 每层保底 shop（≥2 战斗房后）+ endpoint=boss |
+| `systems/difficulty/difficulty_scaler.gd` | 重写 | 全局 tick 当单房用时（:114）、分母硬编码（:93）、无消费者；重写度量 + JSON 化 + 唯一消费者 RoomDirector；**层间静态缩放为 MUST，反应式 DDA 为 SHOULD** |
+| `systems/difficulty/room_modifier_system.gd` | 重写-扩展 | 从不被应用；v1 = `shield_enemies` + `preset_status_tiles`（darkness 入 backlog.md，可读性冲突） |
+| `systems/meta_growth/meta_save_system.gd` | 保留+微修（S3） | 注入 save_path、容错重置、schema 版本 |
+| `systems/meta_growth/run_stats_tracker.gd` | 保留+补（S3） | 补 near_death/low_length/damage_taken 源；finalize_run 为 run_ended 唯一发射点，调用方 = RunProgressionSystem |
+| `systems/meta_growth/unlock_system.gd` | 保留+修（S3） | 先补 Designs §12.3 v1 映射附录；gate 现有内容；RewardFlow 按解锁集过滤 |
+| `systems/meta_growth/legacy_stone_system.gd` | 保留+修（S3） | 阈值 JSON 化；bias 消费端落在奖励抽样加权；selected payload 带完整 stone |
+| `systems/meta_growth/pickup_system.gd` | 修+补实体层（S3 Should） | 节点判型 bug、elite 查 is_elite、网格实体化（仿 food）、randf 先于 elite 判定的顺序修正；v1 仅 broken_eye |
+
+### 集成架构摘要
+
+- **RoomDirector**（新节点）：监听 `room_entered`/`floor_generated` → 清场 → 按房型+主题权重+难度修正布怪布食。**前置契约变更：EnemyManager 增量改造**——新增 `respawn_policy`（默认 `maintain`，保 L1/L2「击杀即补怪、永续维持 max_enemy_count」行为与既有测试绿）+ 注入式权重表 + spawn_budget。
+- **多层切换**：`run.max_floors: 3`（显式取代 `max_floors_v1`，accessor 同卡更新全部调用方）；新增 `game_world.reset_for_floor()`（组合既有 clear_enemies/clear_foods/clear_all 原语）；蛇重建后 Build 装备存续有专门测试卡；楼层奖励决议**先于** `advance_floor()` 发 `floor_generated`；终层 `floor_completed` → 胜利路径（不弹楼层奖励）。
+- **模态门控**：任一 `*_presented` 未决时 RunProgression 忽略推进、Next 禁用；四 offer 系统（RewardFlow/Scale/FloorReward/Shop）空选项自动决议（FR-014/FR-015）。
+- **合入节奏**：每 US（任务簇）完成即严格门禁 + 合 main——针对本仓库两次「长分支搁浅」失败模式。
+- **MDE 存活检查点**：T3 簇完成后打 tag `mde-checkpoint`（F5 → S1 设计语言 → fixed_v1 单层 → 战斗 → 鳞片三选一 → 蜕皮 → 商店买槽 → Boss → 死亡结算）。此后任何中断，项目仍是可交付的最小体验。砍单阶梯（绝不低于 MDE）：反应式 DDA → 主题敌池 → 修饰符扩展。

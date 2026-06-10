@@ -239,6 +239,7 @@
       "attack_damage": 1,
       "prefer_attack_status": "",
       "drop_food_count": 2,
+      "is_elite": false,
       "color": "#CC1A4D",
       "shape": "square"
     },
@@ -257,6 +258,7 @@
       "threat_range": 3,
       "threat_speed_bonus": 1,
       "drop_food_count": 3,
+      "is_elite": false,
       "color": "#FF3366",
       "shape": "diamond"
     },
@@ -276,8 +278,74 @@
       "poison_speed_bonus": 2,
       "death_poison_tiles": 3,
       "drop_food_count": 4,
+      "is_elite": false,
       "color": "#2D5A27",
       "shape": "cross"
+    },
+    "elite_wanderer": {
+      "display_name": "游荡者·精英",
+      "base_type": "wanderer",
+      "is_elite": true,
+      "hp": 3,
+      "attack_cost": 1,
+      "speed": 0.5,
+      "status_response": "ignore",
+      "behavior": "random_move",
+      "can_attack": true,
+      "attack_cooldown": 3,
+      "attack_range": 1,
+      "attack_damage": 1,
+      "prefer_attack_status": "",
+      "drop_food_count": 4,
+      "color": "#CC1A4D",
+      "shape": "square",
+      "visual_scale": 1.25,
+      "outline_palette_token": "room_elite"
+    },
+    "elite_chaser": {
+      "display_name": "追踪者·精英",
+      "base_type": "chaser",
+      "is_elite": true,
+      "hp": 3,
+      "attack_cost": 1,
+      "speed": 1,
+      "status_response": "avoid",
+      "behavior": "track_head",
+      "can_attack": true,
+      "attack_cooldown": 2,
+      "attack_range": 1,
+      "attack_damage": 1,
+      "prefer_attack_status": "",
+      "threat_range": 3,
+      "threat_speed_bonus": 1,
+      "drop_food_count": 5,
+      "color": "#FF3366",
+      "shape": "diamond",
+      "visual_scale": 1.25,
+      "outline_palette_token": "room_elite"
+    },
+    "elite_bog_crawler": {
+      "display_name": "毒沼匍匐者·精英",
+      "base_type": "bog_crawler",
+      "is_elite": true,
+      "hp": 3,
+      "attack_cost": 1,
+      "speed": 0.33,
+      "status_response": "attract",
+      "status_preference": "poison",
+      "behavior": "seek_status",
+      "can_attack": true,
+      "attack_cooldown": 4,
+      "attack_range": 1,
+      "attack_damage": 1,
+      "prefer_attack_status": "",
+      "poison_speed_bonus": 2,
+      "death_poison_tiles": 5,
+      "drop_food_count": 6,
+      "color": "#2D5A27",
+      "shape": "cross",
+      "visual_scale": 1.25,
+      "outline_palette_token": "room_elite"
     }
   },
   "collision_rules": {
@@ -841,7 +909,7 @@
   "run": {
     "enabled": true,
     "start_floor": 1,
-    "max_floors_v1": 1,
+    "max_floors": 3,
     "victory_mode": "endpoint",
     "clear_on_restart": true
   },
@@ -849,8 +917,23 @@
   "floor": {
     "rooms_per_floor": 5,
     "reward_choices": 3,
+    "generator": "fixed_v1",
     "fixed_v1_path": ["combat_01", "reward_01", "combat_02", "rest_01", "endpoint_01"],
-    "default_seed": 1001
+    "default_seed": 1001,
+    "modifier_weights": {
+      "1": { "shield_enemies": 0, "preset_status_tiles": 0 },
+      "2": { "shield_enemies": 35, "preset_status_tiles": 35 },
+      "3": { "shield_enemies": 45, "preset_status_tiles": 45 }
+    },
+    "elite_weights": {
+      "1": 0,
+      "2": 15,
+      "3": 25
+    },
+    "shop_guarantee": {
+      "enabled": true,
+      "min_combat_rooms_before": 2
+    }
   },
 
   "room_types": {
@@ -894,6 +977,27 @@
       "placeholder_color": "#7D63B8",
       "enabled": true,
       "auto_complete_on_enter": true
+    },
+    "shop": {
+      "display_name": "商店房",
+      "primary_intent": "spend_shedskin",
+      "intent_label": "蜕皮交易",
+      "objective_type": "visit_shop",
+      "required_count": 1,
+      "placeholder_color": "#4A8FB8",
+      "enabled": true,
+      "auto_complete_on_enter": true
+    },
+    "elite": {
+      "display_name": "精英房",
+      "primary_intent": "clear_enemies",
+      "intent_label": "讨伐精英",
+      "objective_type": "clear_enemies",
+      "required_count": 2,
+      "enemy_count": 2,
+      "placeholder_color": "#C2185B",
+      "enabled": true,
+      "auto_complete_on_enter": false
     }
   },
 
@@ -994,6 +1098,7 @@
     "enabled": true,
     "max_items_per_shop": 5,
     "room_type": "shop",
+    "price_multiplier_per_floor": 1.25,
     "item_categories": {
       "scale_l1": { "price": 2, "display_name": "鳞片 (L1)", "category": "scale" },
       "scale_l2": { "price": 3, "display_name": "鳞片 (L2)", "category": "scale" },
@@ -1023,6 +1128,25 @@
       "clear_speed_weight": 0.4,
       "damage_taken_weight": 0.3,
       "status_usage_weight": 0.3
+    },
+    "floor_table": {
+      "1": { "enemy_count": 3, "enemy_hp_bonus": 0, "food_count": 3 },
+      "2": { "enemy_count": 4, "enemy_hp_bonus": 1, "food_count": 3 },
+      "3": { "enemy_count": 5, "enemy_hp_bonus": 2, "food_count": 2 }
+    },
+    "reactive": {
+      "enabled": true,
+      "normalization": {
+        "room_clear_ticks": 120,
+        "damage_taken_per_room": 3,
+        "status_usage_per_room": 5
+      },
+      "clamp": {
+        "enemy_delta_min": -1,
+        "enemy_delta_max": 1,
+        "food_delta_min": -1,
+        "food_delta_max": 1
+      }
     }
   },
 
@@ -1050,6 +1174,14 @@
       "apply_chains": [],
       "remove_chains": [],
       "visual_config": { "shield_hp_bonus": 2, "shield_count": 2 }
+    },
+    "preset_status_tiles": {
+      "display_name": "状态预置",
+      "description": "进房时预置少量状态格，引导接触状态系统",
+      "enabled": true,
+      "apply_chains": [],
+      "remove_chains": [],
+      "visual_config": { "tile_count": 6, "tile_types": ["fire", "ice", "poison"], "min_distance_from_snake": 4 }
     },
     "mine_tiles": {
       "display_name": "地雷格",

@@ -1,9 +1,9 @@
 # 当前状态
 
-**更新时间**：2026-06-11
-**当前分支**：`004-presentation-experience`（S1 完成已合 main；S2 将开 `002-l4-growth-cycle` 分支）
-**当前 feature**：S2 起为 `.specify/specs/002-l4-growth-cycle/`（重验收）
-**当前阶段**：S1 完成（SpecKit 004 Phase F 15/15 卡）；下一步 S2（L4 成长循环重验收）
+**更新时间**：2026-06-11（S2 T1 簇收口）
+**当前分支**：`002-l4-growth-cycle`（spec 002 重验收进行中，每簇过严格门禁后合 main）
+**当前 feature**：`.specify/specs/002-l4-growth-cycle/`（重验收）
+**当前阶段**：S2 T1 簇完成（T001-T003 配置与契约基线）；下一簇 T2（鳞片奖励链 + 蜕皮经济，T004-T010）
 
 ## 阶段路线图
 
@@ -33,19 +33,27 @@ S0 稳定化 ✅ → S1 体验设计文档+表现内核 ✅ → S2 L4 重验收(
 
 ## 最近验证基线
 
-- 普通测试：`2897/2897` 断言，套件 `67/67`。
-- 严格测试：`STRICT PASSED`（2026-06-11，Phase F 全六簇每簇过门禁）。
+- 普通测试：`3016/3016` 断言，套件 `68/68`（新增 `test_l4_config.gd`）。
+- 严格测试：`STRICT PASSED`（2026-06-11，S2 T1 簇门禁）。
 
-## 下一张建议任务（S2 开卡）
+## S2 进度
 
-**治理先行（改 spec 再写码）**，对照阶段计划（会话计划文件 + QuickReference 路线）：
-1. spec 002 修订：FR-003 蜕皮改跨层保留（依 Designs §10.2）；US3/US5 改 Boss 固定槽位
-   解锁 + 三类楼层奖励（依 Designs §10.4/10.5）；tasks.md 重切（Create→验证/重写语义，
-   加重集成卡，UI 卡基于 ui/kit）。
-2. T1 配置卡：room_types.shop|elite、enemy_types.elite_*、run.max_floors（显式取代
-   max_floors_v1）、floor.generator 开关、difficulty 归一化参数、概念节奏权重
-   （首层 modifier/elite 权重 0，商店保底 ≥2 战斗房后）+ accessor + 配置测试。
-3. T2 鳞片奖励链重写（拆合成 room_completed 仅限 ScaleRewardSystem、
-   scale_option_discarded 新信号、模态门控、四 offer 系统空选项自动决议）。
-4. 顺序：T1→T2→T3 槽位+商店→【MDE tag】→T4 PCG→T5 多层+RoomDirector→T6 难度+修饰符→T7 验收。
-   每 US 合 main。13 文件判决表见阶段计划。
+- T1 簇 ✅（T001-T003）：`run.max_floors: 3` 取代并删除 `max_floors_v1`（旧键零调用方）、`floor.generator` 开关、
+  节奏权重（首层 modifier/elite 全 0）、商店保底、`shop.price_multiplier_per_floor`、`room_types.shop|elite`、
+  elite 敌人类型（is_elite + 1.25x + room_elite 描边 token）、difficulty 静态层表 + reactive 归一化、
+  修饰符 v1 配置（shield_enemies/preset_status_tiles 逐项开关）；EventBus 补 `scale_option_discarded`/`floor_theme_set`、
+  `scale_reward_chosen` 带 skipped 契约；QuickReference 含 L4 事件发射方→监听方表 + FR-018 注记。
+  注意：`room_modifiers` 中 darkness/speed_strips/mine_tiles 为草稿残留（仍被草稿测试引用），
+  随 T029/T031/T033 测试重写时删除。
+
+## 下一张建议任务（S2 T2 簇开卡）
+
+治理项（spec 002 修订）与 T1 簇均已完成。下一簇 T2（T004-T010）：
+1. T004 Red：重写 `test_l4_scale_rewards.gd`——幻影二次 offer 回归、无合成 `room_completed`
+   断言（FR-018）、满槽替换、按开放槽过滤、空池自动决议（FR-014）、放弃蜕皮收入。
+2. T005 重写 `scale_reward_system.gd`（修 :85/:98 状态互踩软锁；拆合成 room_completed 仅限
+   此系统；改发 `scale_reward_chosen`/`scale_option_discarded`；传承石偏置钩子）。
+3. T006 修 `shedskin_system.gd`（节点判型 bug、跨层保留、discard 收入）；T007 模态门控
+   （RunProgression pending-offer 登记，FR-015）；T008/T009 UI 卡基于 ui/kit；T010 集成。
+4. 顺序：T2→T3 槽位+商店→【MDE tag T017】→T4 PCG→T5 多层+RoomDirector→T6 难度+修饰符→T7 验收。
+   每簇合 main。13 文件判决表见 plan.md「重验收策略」。
