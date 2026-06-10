@@ -30,11 +30,11 @@
 
 ### F-D 验收基建
 
-- [ ] T008 [F-D] `Test/experience/experience_recorder.gd`（四通道 + pending modal 集）
+- [x] T008 [F-D] `Test/experience/experience_recorder.gd`（四通道 + pending modal 集）
   + `tick_driver.gd`（模态感知步进）+ `ui_actor.gd`（playbook）；单测录制与步进
-- [ ] T009 [F-D] `Test/experience/state_stager.gd` + `ui_settle.gd` +
+- [x] T009 [F-D] `Test/experience/state_stager.gd` + `ui_settle.gd` +
   `ui_geometry_probe.gd`（几何五项 + 对比度合成）；探针自测（构造违规场景必须报红）
-- [ ] T010 [F-D] `test_xp_contracts_l3.gd`：L3 首批契约（模态唯一/reward 流 ui 变化/
+- [x] T010 [F-D] `test_xp_contracts_l3.gd`：L3 首批契约（模态唯一/reward 流 ui 变化/
   time-to-first-choice）
 
 ### F-E L3 面板迁移（kit 首批消费者）
