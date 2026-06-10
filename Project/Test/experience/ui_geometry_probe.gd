@@ -12,7 +12,7 @@ const EDGE_EPSILON: float = 0.5
 const SIZE_EPSILON: float = 0.1
 
 
-func probe(t, ui_root: Control, state_name: String, cfg: Dictionary = {}) -> void:
+func probe(t, ui_root: Node, state_name: String, cfg: Dictionary = {}) -> void:
 	## 断言模式：每条违规一条 FAIL，外加一条"零违规"总断言（干净时输出 PASS 证据）
 	var violations: Array = dry_run(ui_root, cfg)
 	for violation in violations:
@@ -21,7 +21,8 @@ func probe(t, ui_root: Control, state_name: String, cfg: Dictionary = {}) -> voi
 		"[geometry:%s] zero violations (%d found)" % [state_name, violations.size()])
 
 
-func dry_run(ui_root: Control, cfg: Dictionary = {}) -> Array:
+func dry_run(ui_root: Node, cfg: Dictionary = {}) -> Array:
+	## ui_root 接受任意 Node（Control 容器或 CanvasLayer UI 层根，T014 跨面板整层扫描）
 	## 违规清单：[{check, node, detail, ...}]；check ∈
 	## overlap | label_fit | viewport | hit_target | modal_count | contrast
 	var resolved: Dictionary = _resolve_cfg(cfg)
@@ -197,7 +198,7 @@ func _check_viewport(opaque_controls: Array, labels: Array, cfg: Dictionary, vio
 
 # ── (4) 命中目标 ≥ min_hit_target（ui_hit 组） ───────────────────────
 
-func _check_hit_targets(ui_root: Control, cfg: Dictionary, violations: Array) -> void:
+func _check_hit_targets(ui_root: Node, cfg: Dictionary, violations: Array) -> void:
 	if not ui_root.is_inside_tree():
 		return
 	var min_hit: float = float(cfg.get("min_hit_target", 0.0))
@@ -220,7 +221,7 @@ func _check_hit_targets(ui_root: Control, cfg: Dictionary, violations: Array) ->
 
 # ── (5) 可见模态计数 ─────────────────────────────────────────────────
 
-func _check_modal_count(ui_root: Control, cfg: Dictionary, violations: Array) -> void:
+func _check_modal_count(ui_root: Node, cfg: Dictionary, violations: Array) -> void:
 	if not ui_root.is_inside_tree():
 		return
 	var max_visible: int = int(cfg.get("max_visible_modals", 1))
@@ -243,7 +244,7 @@ func _check_modal_count(ui_root: Control, cfg: Dictionary, violations: Array) ->
 
 # ── 对比度：有效底色合成（§12.1 运行时对） ───────────────────────────
 
-func _check_contrast(labels: Array, ui_root: Control, cfg: Dictionary, violations: Array) -> void:
+func _check_contrast(labels: Array, ui_root: Node, cfg: Dictionary, violations: Array) -> void:
 	var heading_size: int = int(ConfigManager.get_typography().get("heading", 0))
 	var min_body: float = float(cfg.get("contrast_min_body", 0.0))
 	var min_large: float = float(cfg.get("contrast_min_large", 0.0))
@@ -266,7 +267,7 @@ func _check_contrast(labels: Array, ui_root: Control, cfg: Dictionary, violation
 			})
 
 
-func _effective_background(label: Label, ui_root: Control) -> Color:
+func _effective_background(label: Label, ui_root: Node) -> Color:
 	## 从 ui_root 向内逐层把 ColorRect/PanelContainer 底色按 α 合成到 palette bg_deep 上
 	var chain: Array = []
 	var node: Node = label.get_parent()

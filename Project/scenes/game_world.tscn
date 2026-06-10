@@ -79,8 +79,8 @@ offset_left = 16.0
 offset_top = 16.0
 offset_right = 300.0
 offset_bottom = 50.0
-theme_override_font_sizes/font_size = 24
-text = "Length: 0"
+theme_type_variation = &"HeadingLabel"
+text = "长度 0"
 
 [node name="StatusLabel" type="Label" parent="UI/HUD"]
 layout_mode = 1
@@ -88,7 +88,7 @@ offset_left = 16.0
 offset_top = 80.0
 offset_right = 400.0
 offset_bottom = 114.0
-theme_override_font_sizes/font_size = 18
+theme_type_variation = &"CaptionLabel"
 text = ""
 
 [node name="RoomIntentPanel" type="PanelContainer" parent="UI"]

@@ -28,8 +28,10 @@ func _build_ui() -> void:
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(_title_label)
 
+	# §12.1：横幅文字按 large 阈值（≥3.0）设计（theme_builder ROOM_BANNER_FG 契约），
+	# 副标题必须 ≥ heading 字号——body 字号在 room_combat 等暗房色底上达不到 4.5 body 阈值
 	_subtitle_label = Label.new()
-	_subtitle_label.theme_type_variation = "BodyLabel"
+	_subtitle_label.theme_type_variation = "HeadingLabel"
 	_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(_subtitle_label)
 

@@ -41,9 +41,9 @@
 
 - [x] T011 [F-E] room_intent_panel + floor_progress_panel 迁移 kit；旧测试回归
 - [x] T012 [F-E] reward_choice_panel 迁移 kit（choice_card）；旧测试回归
-- [ ] T013 [F-E] title_screen + game_over_screen + hud 换 kit 样式；
+- [x] T013 [F-E] title_screen + game_over_screen + hud 换 kit 样式；
   debug UI 收进 `presentation.debug_ui` 开关
-- [ ] T014 [F-E] `test_xp_ui_geometry.gd`：全部 L3 面板典型状态几何探测绿
+- [x] T014 [F-E] `test_xp_ui_geometry.gd`：全部 L3 面板典型状态几何探测绿
 
 ### F-Gate
 

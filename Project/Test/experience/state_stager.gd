@@ -6,19 +6,25 @@ extends RefCounted
 ## 非套件 harness 文件：不得命名 test_*.gd、不得放进 Test/cases/。
 
 const GAME_WORLD_SCENE_PATH: String = "res://scenes/game_world.tscn"
+const MAIN_SCENE_PATH: String = "res://scenes/main.tscn"
 
 
 static func stage(state_name: String, host: Node) -> Dictionary:
 	## 已支持状态：
+	##   "title_screen" / "game_over"：App 壳层屏幕（main.tscn，不开局；T014）
 	##   "l3_run_start" / "l3_floor_panel"：run 起始态（FloorProgressPanel 可见，combat_01 进行中）
 	##   "l3_reward_pending"：combat_01 完成 + 进奖励房（RewardChoicePanel 可见，选项就绪）
+	## ctx["ui_root"]：几何探针扫描根（壳层屏 = UILayer，局内 = game_world 的 UI 层）
 	var ctx: Dictionary = {
 		"state_name": state_name,
 		"world": null,
+		"ui_root": null,
 		"saved_state": GameManager.current_state,
 		"saved_score": GameManager.current_score,
 		"saved_best": GameManager.best_score,
 	}
+	if state_name == "title_screen" or state_name == "game_over":
+		return _stage_app_screen(state_name, host, ctx)
 	var scene: PackedScene = load(GAME_WORLD_SCENE_PATH) as PackedScene
 	if scene == null:
 		push_warning("state_stager: game_world scene failed to load")
@@ -28,6 +34,7 @@ static func stage(state_name: String, host: Node) -> Dictionary:
 	world.start_game()
 	GameManager.start_game()
 	ctx["world"] = world
+	ctx["ui_root"] = world.get_node("UI")
 	match state_name:
 		"l3_run_start", "l3_floor_panel":
 			pass
@@ -39,6 +46,26 @@ static func stage(state_name: String, host: Node) -> Dictionary:
 			floor_panel.request_next_room()
 		_:
 			push_warning("state_stager: unknown state '%s', staged bare run" % state_name)
+	return ctx
+
+
+## 壳层屏幕布景：标题屏原样；game_over = 隐标题 + show_results 既有契约
+static func _stage_app_screen(state_name: String, host: Node, ctx: Dictionary) -> Dictionary:
+	var scene: PackedScene = load(MAIN_SCENE_PATH) as PackedScene
+	if scene == null:
+		push_warning("state_stager: main scene failed to load")
+		return ctx
+	var app: Node = scene.instantiate()
+	host.add_child(app)
+	ctx["world"] = app
+	ctx["ui_root"] = app.get_node("UILayer")
+	if state_name == "game_over":
+		app.get_node("UILayer/TitleScreen").hide()
+		app.get_node("UILayer/GameOverScreen").show_results({
+			"score": 3,
+			"best_score": 5,
+			"cause": "self_collision",
+		})
 	return ctx
 
 
