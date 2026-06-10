@@ -224,6 +224,72 @@ func get_floor_config() -> Dictionary:
 	return floor
 
 
+# === L4 重验收基线 accessor（spec 002 FR-016/FR-017，2026-06-11） ===
+
+func get_max_floors() -> int:
+	## FR-016: run.max_floors（取代已删除的 max_floors_v1）
+	return int(run.get("max_floors", 1))
+
+
+func get_floor_generator() -> String:
+	## FR-016: 楼层生成器开关，枚举 "fixed_v1" | "pcg"
+	return str(floor.get("generator", "fixed_v1"))
+
+
+func get_floor_modifier_weights(floor_index: int) -> Dictionary:
+	## FR-017: 逐层修饰符权重（首层全 0）；超出表的楼层钳制到最高已定义层
+	return _get_floor_keyed_value(floor.get("modifier_weights", {}), floor_index, {})
+
+
+func get_floor_elite_weight(floor_index: int) -> int:
+	## FR-017: 逐层精英权重（首层 0）；超出表的楼层钳制到最高已定义层
+	return int(_get_floor_keyed_value(floor.get("elite_weights", {}), floor_index, 0))
+
+
+func get_shop_guarantee() -> Dictionary:
+	## FR-017: 每层保底商店参数（>= min_combat_rooms_before 战斗房后）
+	return floor.get("shop_guarantee", {})
+
+
+func get_shop_price_multiplier_per_floor() -> float:
+	## FR-003: 跨层物价压力阀（蜕皮不清零，下层物价上涨）
+	return float(shop.get("price_multiplier_per_floor", 1.0))
+
+
+func get_difficulty_floor_table() -> Dictionary:
+	## FR-008 MUST: 静态层间压力表
+	return difficulty.get("floor_table", {})
+
+
+func get_difficulty_floor_params(floor_index: int) -> Dictionary:
+	## FR-008 MUST: 指定楼层的静态压力参数；超出表的楼层钳制到最高已定义层
+	return _get_floor_keyed_value(get_difficulty_floor_table(), floor_index, {})
+
+
+func get_difficulty_reactive_config() -> Dictionary:
+	## FR-008 SHOULD: 反应式 DDA 归一化/钳制参数（隐性，仅生成参数级生效）
+	return difficulty.get("reactive", {})
+
+
+func _get_floor_keyed_value(table: Dictionary, floor_index: int, fallback: Variant) -> Variant:
+	## 楼层键表查询："1"/"2"/... 精确命中；否则钳制到 <= floor_index 的最高层；再否则取最低层
+	var exact: String = str(floor_index)
+	if table.has(exact):
+		return table[exact]
+	var best_floor: int = -1
+	var lowest_floor: int = 0x7FFFFFFF
+	for key in table:
+		var key_floor: int = int(str(key))
+		lowest_floor = mini(lowest_floor, key_floor)
+		if key_floor <= floor_index and key_floor > best_floor:
+			best_floor = key_floor
+	if best_floor > 0:
+		return table[str(best_floor)]
+	if lowest_floor != 0x7FFFFFFF:
+		return table[str(lowest_floor)]
+	return fallback
+
+
 func get_room_type(room_type: String) -> Dictionary:
 	return room_types.get(room_type, {})
 

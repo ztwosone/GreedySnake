@@ -14,9 +14,9 @@
 
 **Independent Test**: 新套件 `test_l4_config.gd` 全绿：max_floors/generator 开关/节奏权重/物价乘数均可从 JSON 读出且无 `max_floors_v1` 残留。
 
-- [ ] T001 配置修订卡：在 `Project/data/json/game_config.json` 落地 `run.max_floors: 3`（**显式取代并删除 `max_floors_v1`**）、`floor.generator: "fixed_v1"`（枚举 `fixed_v1|pcg`）、`floor.modifier_weights`（首层全 0）、elite 权重（首层 0）、商店保底参数（≥2 战斗房后）、`shop.price_multiplier_per_floor`、`room_types.shop|elite`、elite 敌人类型、difficulty 静态层表+反应式归一化参数、修饰符 v1 配置（`shield_enemies`/`preset_status_tiles`，逐项 disable 开关）。测试套件：`Project/Test/cases/test_l4_config.gd`（新建，FR-016/FR-017/SC-009/SC-010 数据断言）
-- [ ] T002 ConfigManager accessor 卡：`Project/autoloads/config_manager.gd` 新增/迁移 accessor（max_floors 取代 max_floors_v1 的 accessor，**同卡迁移全部调用方**；generator/节奏权重/物价乘数 accessor）。测试套件：`test_l4_config.gd` + 全量回归
-- [ ] T003 [P] EventBus 契约卡：对照 plan.md 信号清单验证 `Project/autoloads/event_bus.gd` 中 L4 信号（补 `scale_option_discarded`、`scale_reward_chosen` 带 `skipped` 字段）；同提交更新 `TechDocs/QuickReference.md` 事件「发射方→监听方」对照表增量（含 RewardFlowSystem 合成 `room_completed` 为 L3 奖励房显式保留契约的注记，FR-018）。测试套件：`test_l4_config.gd`（信号存在性断言）
+- [x] T001 配置修订卡：在 `Project/data/json/game_config.json` 落地 `run.max_floors: 3`（**显式取代并删除 `max_floors_v1`**）、`floor.generator: "fixed_v1"`（枚举 `fixed_v1|pcg`）、`floor.modifier_weights`（首层全 0）、elite 权重（首层 0）、商店保底参数（≥2 战斗房后）、`shop.price_multiplier_per_floor`、`room_types.shop|elite`、elite 敌人类型、difficulty 静态层表+反应式归一化参数、修饰符 v1 配置（`shield_enemies`/`preset_status_tiles`，逐项 disable 开关）。测试套件：`Project/Test/cases/test_l4_config.gd`（新建，FR-016/FR-017/SC-009/SC-010 数据断言）
+- [x] T002 ConfigManager accessor 卡：`Project/autoloads/config_manager.gd` 新增/迁移 accessor（max_floors 取代 max_floors_v1 的 accessor，**同卡迁移全部调用方**；generator/节奏权重/物价乘数 accessor）。测试套件：`test_l4_config.gd` + 全量回归
+- [x] T003 [P] EventBus 契约卡：对照 plan.md 信号清单验证 `Project/autoloads/event_bus.gd` 中 L4 信号（补 `scale_option_discarded`、`scale_reward_chosen` 带 `skipped` 字段）；同提交更新 `TechDocs/QuickReference.md` 事件「发射方→监听方」对照表增量（含 RewardFlowSystem 合成 `room_completed` 为 L3 奖励房显式保留契约的注记，FR-018）。测试套件：`test_l4_config.gd`（信号存在性断言）
 
 **T1 收口**: 严格门禁绿 → 合 main。
 
