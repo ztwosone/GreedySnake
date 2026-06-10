@@ -1,5 +1,13 @@
-class_name FloorProgressPanel
-extends PanelContainer
+extends "res://ui/kit/kit_panel.gd"
+## 楼层进度面板（SpecKit 004 T011：L3 占位 → kit 迁移）
+## 设计: Designs/Interactive/presentation_design.md §8.2（楼层小地图语义：
+## 当前=高亮/完成=暗化/未达=深灰）/§3（房型 glyph）/§6（最小命中目标）。
+## 无 class_name：消费方一律按路径加载（ScriptingLeading 附录 C.8）。
+## 表现层只听不驱动（§11.1）：Next 仅沿既有契约 emit room_advance_requested。
+## 公共契约不变（既有 test_l3_* 依赖）：visible on floor_generated +
+## get_progress_text / get_status_text / request_next_room()。
+
+const _GlyphScript := preload("res://ui/kit/glyph.gd")
 
 var _path: Array = []
 var _current_room_id: String = ""
@@ -11,6 +19,11 @@ var _progress_label: Label
 var _status_label: Label
 var _path_row: HBoxContainer
 var _next_button: Button
+var _block_infos: Array = []
+
+
+func _init() -> void:
+	super._init("hud")
 
 
 func _ready() -> void:
@@ -39,41 +52,58 @@ func request_next_room() -> bool:
 	return true
 
 
-func _build_ui() -> void:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.035, 0.045, 0.055, 0.86)
-	style.border_color = Color(0.42, 0.78, 1.0, 0.35)
-	style.set_border_width_all(1)
-	style.set_content_margin_all(8)
-	add_theme_stylebox_override("panel", style)
+## T011 新增：路径块数量（每房一块）
+func get_path_block_count() -> int:
+	return _block_infos.size()
 
+
+## T011 新增：路径块渲染状态（room_id/state/color/glyph_id/highlighted）
+func get_path_block_info(index: int) -> Dictionary:
+	if index < 0 or index >= _block_infos.size():
+		return {}
+	return _block_infos[index].duplicate()
+
+
+## T011 新增：Next 按钮（ui_hit 命中目标，供几何探针与 ui_actor 取用）
+func get_next_button() -> Button:
+	return _next_button
+
+
+func _build_ui() -> void:
+	var layout: Dictionary = ConfigManager.get_layout_config()
+	var base_unit: float = float(layout.get("base_unit", 0))
+	var screen_margin: float = float(layout.get("screen_margin", 0))
+
+	# §6 布局：左上小地图区（宽 18 基准单位，顶部让出 8 单位给既有 HUD）；高度随内容
 	set_anchors_preset(Control.PRESET_TOP_LEFT)
-	offset_left = 16
-	offset_right = 300
-	offset_top = 124
-	offset_bottom = 240
+	offset_left = screen_margin
+	offset_right = screen_margin + base_unit * 18.0
+	offset_top = base_unit * 8.0
+	offset_bottom = base_unit * 8.0
 	mouse_filter = Control.MOUSE_FILTER_STOP
 
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 4)
+	column.add_theme_constant_override("separation", int(base_unit * 0.25))
 	add_child(column)
 
 	_progress_label = Label.new()
-	_progress_label.add_theme_font_size_override("font_size", 16)
+	_progress_label.theme_type_variation = "HeadingLabel"
 	column.add_child(_progress_label)
 
 	_status_label = Label.new()
-	_status_label.add_theme_font_size_override("font_size", 13)
+	_status_label.theme_type_variation = "CaptionLabel"
 	column.add_child(_status_label)
 
 	_path_row = HBoxContainer.new()
-	_path_row.add_theme_constant_override("separation", 4)
+	_path_row.add_theme_constant_override("separation", int(base_unit * 0.25))
 	column.add_child(_path_row)
 
 	_next_button = Button.new()
-	_next_button.text = "Next"
+	_next_button.text = "下一房间"
 	_next_button.disabled = true
 	_next_button.pressed.connect(_on_next_pressed)
+	# §6/§12.1：交互件入 ui_hit 组并保证最小命中目标
+	register_hit_target(_next_button)
 	column.add_child(_next_button)
 
 
@@ -139,6 +169,9 @@ func _refresh() -> void:
 		_progress_label.text = _progress_text
 	if _status_label:
 		_status_label.text = _status_text
+		# 完成态反馈 confirm 绿；其余次要文本色
+		var status_token: String = "accent_confirm" if _status_text.find("完成") >= 0 else "text_dim"
+		_status_label.add_theme_color_override("font_color", ConfigManager.get_palette_color(status_token))
 	_refresh_path_row()
 	_refresh_next_button()
 
@@ -149,19 +182,77 @@ func _refresh_path_row() -> void:
 	for child in _path_row.get_children():
 		_path_row.remove_child(child)
 		child.free()
+	_block_infos.clear()
+	var base_unit: float = float(ConfigManager.get_layout_config().get("base_unit", 0))
 	for room in _path:
+		var room_id: String = str(room.get("room_id", ""))
+		var room_type: String = str(room.get("room_type", ""))
+		var state: String = _block_state(room_id)
+		var color: Color = _block_color(state, room_type, str(room.get("placeholder_color", "")))
+		var glyph_id: String = room_type if not ConfigManager.get_glyph_def(room_type).is_empty() else ""
+		var highlighted: bool = state == "current"
+		_path_row.add_child(_make_path_block(glyph_id, color, highlighted, base_unit))
+		_block_infos.append({
+			"room_id": room_id,
+			"state": state,
+			"color": color,
+			"glyph_id": glyph_id,
+			"highlighted": highlighted,
+		})
+
+
+## §8.2 路径块：房型 glyph（1 基准单位）+ 当前房高亮下划线（accent_resonance）
+func _make_path_block(glyph_id: String, color: Color, highlighted: bool, base_unit: float) -> Control:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 0)
+	if glyph_id != "":
+		var glyph: Control = _GlyphScript.new()
+		glyph.custom_minimum_size = Vector2(base_unit, base_unit)
+		glyph.set_glyph(glyph_id, color)
+		box.add_child(glyph)
+	else:
+		# 无 glyph 定义的房型回退色块（§2.2 迁移期兼容）
 		var block := ColorRect.new()
-		block.custom_minimum_size = Vector2(28, 10)
-		var base_color := Color.html(room.get("placeholder_color", "#FFFFFF"))
-		if _completed_room_ids.has(room.get("room_id", "")):
-			block.color = base_color.darkened(0.45)
-		elif room.get("room_id", "") == _current_room_id:
-			block.color = base_color
-		elif _available_room_ids.has(room.get("room_id", "")):
-			block.color = base_color.lightened(0.2)
-		else:
-			block.color = base_color.darkened(0.72)
-		_path_row.add_child(block)
+		block.custom_minimum_size = Vector2(base_unit, base_unit)
+		block.color = color
+		box.add_child(block)
+	var underline := ColorRect.new()
+	underline.custom_minimum_size = Vector2(base_unit, base_unit * 0.125)
+	underline.color = ConfigManager.get_palette_color("accent_resonance") if highlighted else Color.TRANSPARENT
+	box.add_child(underline)
+	return box
+
+
+func _block_state(room_id: String) -> String:
+	if _completed_room_ids.has(room_id):
+		return "completed"
+	if room_id == _current_room_id:
+		return "current"
+	if _available_room_ids.has(room_id):
+		return "available"
+	return "locked"
+
+
+## §8.2：完成=暗化（text_dim）/未达=深灰（frame_line）/当前与可达=房间意图色
+func _block_color(state: String, room_type: String, fallback_hex: String) -> Color:
+	match state:
+		"completed":
+			return ConfigManager.get_palette_color("text_dim")
+		"locked":
+			return ConfigManager.get_palette_color("frame_line")
+		_:
+			return _room_color(room_type, fallback_hex)
+
+
+## §2.1：room_* palette token 优先；palette 外房型回退事件 placeholder_color
+func _room_color(room_type: String, fallback_hex: String) -> Color:
+	var token: String = "room_%s" % room_type
+	var palette: Dictionary = ConfigManager.get_presentation_config().get("palette", {})
+	if palette.has(token):
+		return ConfigManager.get_palette_color(token)
+	if Color.html_is_valid(fallback_hex):
+		return Color.html(fallback_hex)
+	return ConfigManager.get_palette_color("text_primary")
 
 
 func _refresh_next_button() -> void:
