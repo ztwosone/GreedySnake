@@ -915,10 +915,10 @@
   },
 
   "floor": {
-    "rooms_per_floor": 5,
+    "rooms_per_floor": 6,
     "reward_choices": 3,
     "generator": "fixed_v1",
-    "fixed_v1_path": ["combat_01", "reward_01", "combat_02", "rest_01", "endpoint_01"],
+    "fixed_v1_path": ["combat_01", "reward_01", "combat_02", "shop_01", "rest_01", "endpoint_01"],
     "default_seed": 1001,
     "modifier_weights": {
       "1": { "shield_enemies": 0, "preset_status_tiles": 0 },
@@ -1100,13 +1100,15 @@
     "max_items_per_shop": 5,
     "room_type": "shop",
     "price_multiplier_per_floor": 1.25,
+    "scale_pool": "l1_basic",
+    "shelf_plan": { "scale": 2, "slot": 1, "head_upgrade": 1, "tail_upgrade": 1 },
     "item_categories": {
-      "scale_l1": { "price": 2, "display_name": "鳞片 (L1)", "category": "scale" },
-      "scale_l2": { "price": 3, "display_name": "鳞片 (L2)", "category": "scale" },
-      "scale_l3": { "price": 4, "display_name": "鳞片 (L3)", "category": "scale" },
-      "slot_front": { "price": 5, "display_name": "扩展前排槽位", "category": "slot" },
-      "slot_middle": { "price": 5, "display_name": "扩展中排槽位", "category": "slot" },
-      "slot_back": { "price": 5, "display_name": "扩展后排槽位", "category": "slot" },
+      "scale_l1": { "price": 2, "level": 1, "display_name": "鳞片 L1", "category": "scale" },
+      "scale_l2": { "price": 3, "level": 2, "display_name": "鳞片 L2", "category": "scale" },
+      "scale_l3": { "price": 4, "level": 3, "display_name": "鳞片 L3", "category": "scale" },
+      "slot_front": { "price": 5, "position": "front", "display_name": "扩展前段槽位", "category": "slot" },
+      "slot_middle": { "price": 5, "position": "middle", "display_name": "扩展中段槽位", "category": "slot" },
+      "slot_back": { "price": 5, "position": "back", "display_name": "扩展后段槽位", "category": "slot" },
       "head_upgrade": { "price": 4, "display_name": "蛇头升级", "category": "head_upgrade" },
       "tail_upgrade": { "price": 4, "display_name": "蛇尾升级", "category": "tail_upgrade" }
     }

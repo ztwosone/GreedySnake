@@ -125,12 +125,15 @@ func _test_v1_rest_and_endpoint_auto_complete_on_entry(t) -> void:
 	flow.record_objective_progress(1, {"method": "test_reward"})
 	run_system.advance_to_room(path[2])
 	flow.record_objective_progress(3, {"method": "test"})
-	run_system.advance_to_room(path[3])
+	run_system.advance_to_room(path[3])  # shop_01：spec 002 T016，auto_complete_on_enter
+	run_system.advance_to_room(path[4])  # rest_01
 
 	var state_after_rest: Dictionary = run_system.get_state()
 	t.assert_true(state_after_rest.get("completed_room_ids", []).has(path[3]),
+		"[L3-US3-fix] entering shop auto-completes the shop room")
+	t.assert_true(state_after_rest.get("completed_room_ids", []).has(path[4]),
 		"[L3-US3-fix] entering rest auto-completes the rest room")
-	t.assert_true(state_after_rest.get("available_room_ids", []).has(path[4]),
+	t.assert_true(state_after_rest.get("available_room_ids", []).has(path[5]),
 		"[L3-US3-fix] rest completion unlocks endpoint")
 
 	flow.cleanup()
@@ -175,15 +178,15 @@ func _test_floor_progress_panel_state(t) -> void:
 	var floor_map: Dictionary = _make_floor_map()
 	EventBus.floor_generated.emit(floor_map)
 	t.assert_true(panel.visible, "[L3-US3] floor progress panel appears when floor is generated")
-	t.assert_eq(panel.get_progress_text(), "1/5", "[L3-US3] floor progress starts at first room")
+	t.assert_eq(panel.get_progress_text(), "1/6", "[L3-US3] floor progress starts at first room")
 
 	EventBus.room_completed.emit({"room_id": "combat_01", "room_type": "combat"})
-	t.assert_eq(panel.get_progress_text(), "1/5", "[L3-US3] progress does not advance until next room entered")
+	t.assert_eq(panel.get_progress_text(), "1/6", "[L3-US3] progress does not advance until next room entered")
 	t.assert_true(panel.get_status_text().find("完成") >= 0,
 		"[L3-US3-fix] floor progress shows completed/advance feedback")
 
 	EventBus.room_entered.emit({"room_id": "reward_01", "room_type": "reward", "intent_label": "选择奖励"})
-	t.assert_eq(panel.get_progress_text(), "2/5", "[L3-US3] progress advances when next room entered")
+	t.assert_eq(panel.get_progress_text(), "2/6", "[L3-US3] progress advances when next room entered")
 	t.assert_true(panel.get_status_text().find("选择奖励") >= 0, "[L3-US3] floor progress shows current room intent")
 
 	panel.queue_free()

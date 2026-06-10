@@ -30,15 +30,15 @@ func _test_sc001_full_smoke_run(t) -> void:
 	var reward_panel: Control = world.get_node("UI/RewardChoicePanel")
 
 	var path: Array = ConfigManager.get_floor_config().get("fixed_v1_path", [])
-	t.assert_eq(path.size(), 5, "[SC-001] fixed v1 path has 5 rooms")
+	t.assert_eq(path.size(), 6, "[SC-001] fixed v1 path has 6 rooms (incl. shop, spec 002 T016)")
 	t.assert_eq(run_sys.get_state().get("current_room_id", ""), path[0],
 		"[SC-001] run starts in %s" % path[0])
 
 	# combat_01: verify room flow started
 	t.assert_false(room_flow.is_current_room_complete(),
 		"[SC-001] combat_01 starts incomplete")
-	t.assert_eq(floor_panel.get_progress_text(), "1/5",
-		"[SC-001] floor progress shows 1/5")
+	t.assert_eq(floor_panel.get_progress_text(), "1/6",
+		"[SC-001] floor progress shows 1/6")
 	room_flow.record_objective_progress(3, {"method": "acceptance"})
 	t.assert_true(room_flow.is_current_room_complete(),
 		"[SC-001] combat_01 completes after 3 kills")
@@ -70,10 +70,18 @@ func _test_sc001_full_smoke_run(t) -> void:
 	t.assert_true(world.get_node("UI/ScaleChoicePanel").discard_offer(),
 		"[SC-001] resolve scale offer after combat_02")
 
+	# shop_01（spec 002 T016：固定路径保底商店——进店即完成、可径直离开）
+	t.assert_true(floor_panel.request_next_room(),
+		"[SC-001] advance to shop_01")
+	t.assert_eq(run_sys.get_state().get("current_room_id", ""), path[3],
+		"[SC-001] run reaches shop_01")
+	t.assert_true(room_flow.is_current_room_complete(),
+		"[SC-001] shop_01 auto-completes")
+
 	# rest_01
 	t.assert_true(floor_panel.request_next_room(),
 		"[SC-001] advance to rest_01")
-	t.assert_eq(run_sys.get_state().get("current_room_id", ""), path[3],
+	t.assert_eq(run_sys.get_state().get("current_room_id", ""), path[4],
 		"[SC-001] run reaches rest_01")
 	t.assert_true(room_flow.is_current_room_complete(),
 		"[SC-001] rest_01 auto-completes")
@@ -83,8 +91,8 @@ func _test_sc001_full_smoke_run(t) -> void:
 		"[SC-001] advance to endpoint_01")
 	t.assert_eq(run_sys.get_state().get("outcome", ""), "victory",
 		"[SC-001] endpoint triggers victory")
-	t.assert_eq(floor_panel.get_progress_text(), "5/5",
-		"[SC-001] floor progress reaches 5/5")
+	t.assert_eq(floor_panel.get_progress_text(), "6/6",
+		"[SC-001] floor progress reaches 6/6")
 
 	_cleanup_world(world)
 
@@ -92,7 +100,7 @@ func _test_sc001_full_smoke_run(t) -> void:
 # ── SC-002: Room type independence ──────────────────────────────────
 
 func _test_sc002_room_type_independence(t) -> void:
-	for room_type in ["combat", "reward", "rest", "endpoint"]:
+	for room_type in ["combat", "reward", "shop", "rest", "endpoint"]:
 		var cfg: Dictionary = ConfigManager.get_room_type(room_type)
 		t.assert_true(not cfg.is_empty(),
 			"[SC-002] %s room config loads" % room_type)

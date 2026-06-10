@@ -158,8 +158,8 @@ func _append_scales(lines: Array[String]) -> void:
 
 	for pos in ["front", "middle", "back"]:
 		var scales: Array = _scale_slot_mgr.get_scales(pos)
-		var open: int = _scale_slot_mgr._open_slots.get(pos, 0)
-		var max_s: int = _scale_slot_mgr.MAX_SLOTS.get(pos, 0)
+		var open: int = _scale_slot_mgr.get_open_slots(pos)
+		var max_s: int = _scale_slot_mgr.get_max_slots(pos)
 		if scales.is_empty():
 			lines.append("  [color=gray]%s (%d/%d): --[/color]" % [pos, 0, max_s])
 		else:

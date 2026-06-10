@@ -9,8 +9,10 @@ const PROBE_PATH: String = "res://Test/experience/ui_geometry_probe.gd"
 const SETTLE_PATH: String = "res://Test/experience/ui_settle.gd"
 const STAGER_PATH: String = "res://Test/experience/state_stager.gd"
 
-## §12.1：每个典型状态一次沉降态探测（l4_scale_pending = spec 002 T2 鳞片模态 + 蜕皮 chip）
-const STATES: Array = ["title_screen", "game_over", "l3_run_start", "l3_reward_pending", "l4_scale_pending"]
+## §12.1：每个典型状态一次沉降态探测（l4_scale_pending = spec 002 T2 鳞片模态 + 蜕皮 chip；
+## l4_shop_open = spec 002 T3 商店货架 + 蜕皮 chip）
+const STATES: Array = ["title_screen", "game_over", "l3_run_start", "l3_reward_pending",
+	"l4_scale_pending", "l4_shop_open"]
 
 
 func run(t) -> void:

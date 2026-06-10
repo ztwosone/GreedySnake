@@ -8,11 +8,11 @@ var _chain_resolver: RefCounted = null
 
 var PartDataScript: GDScript = load("res://systems/snake_parts/snake_part_data.gd")
 
-# 每个位置的最大槽位数
-const MAX_SLOTS: Dictionary = { "front": 2, "middle": 3, "back": 2 }
+# 每个位置的最大/初始开放槽位数（spec 002 T012：JSON 化，growth.slot_expansion，FR-010）
+var _max_slots: Dictionary = {}
 
 # 已开放槽位数
-var _open_slots: Dictionary = { "front": 1, "middle": 1, "back": 1 }
+var _open_slots: Dictionary = {}
 
 # 已装备鳞片: { "front": [ScaleData, null], "middle": [null, null, null], "back": [null, null] }
 var _slots: Dictionary = {}
@@ -22,10 +22,18 @@ func init_manager(p_snake: Node, p_trigger_mgr: Node, p_chain_resolver: RefCount
 	snake = p_snake
 	_trigger_manager = p_trigger_mgr
 	_chain_resolver = p_chain_resolver
-	# 初始化空槽位
-	for pos in MAX_SLOTS:
+	# 槽位上限与初始开放数来自 JSON（growth.slot_expansion.max/initial）
+	var cfg: Dictionary = ConfigManager.get_slot_expansion_config()
+	var max_cfg: Dictionary = cfg.get("max", {})
+	var initial_cfg: Dictionary = cfg.get("initial", {})
+	_max_slots = {}
+	_open_slots = {}
+	_slots = {}
+	for pos in max_cfg:
+		_max_slots[pos] = int(max_cfg[pos])
+		_open_slots[pos] = int(initial_cfg.get(pos, 0))
 		_slots[pos] = []
-		for i in range(MAX_SLOTS[pos]):
+		for i in range(_max_slots[pos]):
 			_slots[pos].append(null)
 
 
@@ -173,10 +181,20 @@ func open_slot(position: String) -> bool:
 	if not _slots.has(position):
 		return false
 	var current: int = _open_slots.get(position, 0)
-	if current >= MAX_SLOTS.get(position, 0):
+	if current >= get_max_slots(position):
 		return false
 	_open_slots[position] = current + 1
 	return true
+
+
+## 指定位置已开放槽位数（spec 002 T012 accessor，消费方不得直读 _open_slots）
+func get_open_slots(position: String) -> int:
+	return int(_open_slots.get(position, 0))
+
+
+## 指定位置最大槽位数（JSON growth.slot_expansion.max）
+func get_max_slots(position: String) -> int:
+	return int(_max_slots.get(position, 0))
 
 
 ## 卸载所有鳞片

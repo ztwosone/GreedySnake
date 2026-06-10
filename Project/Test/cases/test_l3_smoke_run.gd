@@ -55,13 +55,17 @@ func _test_fixed_v1_run_reaches_visual_victory(t) -> void:
 	room_flow.record_objective_progress(3, {"method": "smoke_combat_02"})
 	t.assert_true(scale_panel.discard_offer(), "[L3-smoke] discard second scale offer")
 
+	# spec 002 T016：固定路径保底商店——进店自动完成、不买也能径直离开
+	t.assert_true(floor_panel.request_next_room(), "[L3-smoke] Next enters shop room")
+	t.assert_eq(run_system.get_state().get("current_room_id", ""), "shop_01",
+		"[L3-smoke] run reaches shop room")
 	t.assert_true(floor_panel.request_next_room(), "[L3-smoke] Next enters rest room")
 	t.assert_eq(run_system.get_state().get("current_room_id", ""), "rest_01",
 		"[L3-smoke] run reaches rest room")
 	t.assert_true(floor_panel.request_next_room(), "[L3-smoke] Next enters endpoint room")
 
 	t.assert_eq(run_system.get_state().get("outcome", ""), "victory", "[L3-smoke] run outcome is victory")
-	t.assert_eq(floor_panel.get_progress_text(), "5/5", "[L3-smoke] floor progress reaches endpoint")
+	t.assert_eq(floor_panel.get_progress_text(), "6/6", "[L3-smoke] floor progress reaches endpoint")
 	t.assert_eq(_run_victory_events.size(), 1, "[L3-smoke] run_victory emitted once")
 	t.assert_eq(_game_over_events.size(), 1, "[L3-smoke] GameManager emits one game_over")
 	var game_over_cause: String = _game_over_events[0].get("cause", "") if _game_over_events.size() > 0 else ""

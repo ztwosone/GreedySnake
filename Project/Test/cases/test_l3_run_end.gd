@@ -35,7 +35,7 @@ func _test_endpoint_auto_completion_ends_run_in_victory(t) -> void:
 	t.assert_eq(_run_victory_events.size(), 1,
 		"[L3-US4] endpoint completion emits run_victory once")
 	var victory_endpoint_id: String = _run_victory_events[0].get("endpoint_room_id", "") if _run_victory_events.size() > 0 else ""
-	t.assert_eq(victory_endpoint_id, path[4],
+	t.assert_eq(victory_endpoint_id, path[path.size() - 1],
 		"[L3-US4] victory event identifies endpoint room")
 
 	EventBus.floor_completed.disconnect(_on_floor_completed)
@@ -125,8 +125,9 @@ func _enter_and_complete_path_until_endpoint(run_system: Node, flow: Node, path:
 	flow.record_objective_progress(1, {"method": "test_reward"})
 	run_system.advance_to_room(path[2])
 	flow.record_objective_progress(3, {"method": "test_combat_02"})
-	run_system.advance_to_room(path[3])
-	run_system.advance_to_room(path[4])
+	run_system.advance_to_room(path[3])  # shop_01（spec 002 T016，auto_complete_on_enter）
+	run_system.advance_to_room(path[4])  # rest_01
+	run_system.advance_to_room(path[5])  # endpoint_01
 
 
 func _on_floor_completed(data: Dictionary) -> void:

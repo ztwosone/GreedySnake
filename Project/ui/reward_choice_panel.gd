@@ -128,6 +128,8 @@ func _connect_events() -> void:
 		EventBus.reward_presented.connect(_on_reward_presented)
 	if not EventBus.reward_chosen.is_connected(_on_reward_chosen):
 		EventBus.reward_chosen.connect(_on_reward_chosen)
+	if not EventBus.room_entered.is_connected(_on_room_entered):
+		EventBus.room_entered.connect(_on_room_entered)
 
 
 func _disconnect_events() -> void:
@@ -135,6 +137,8 @@ func _disconnect_events() -> void:
 		EventBus.reward_presented.disconnect(_on_reward_presented)
 	if EventBus.reward_chosen.is_connected(_on_reward_chosen):
 		EventBus.reward_chosen.disconnect(_on_reward_chosen)
+	if EventBus.room_entered.is_connected(_on_room_entered):
+		EventBus.room_entered.disconnect(_on_room_entered)
 
 
 func _on_reward_presented(data: Dictionary) -> void:
@@ -149,6 +153,20 @@ func _on_reward_chosen(data: Dictionary) -> void:
 	_status_text = "已选择: %s" % option.get("display_name", data.get("chosen_option_id", ""))
 	_options.clear()
 	_refresh()
+
+
+## spec 002 T016（几何探针实证缺陷）：已决议面板在离开奖励房后收起——
+## 否则「已选择」反馈悬挂到商店等后续模态上（模态唯一违例）。
+## 奖励触发房的呈现由 reward_presented 接管（RewardFlow 在同一 room_entered 派发中先行），
+## 此处跳过以免吃掉刚呈现的 offer。
+func _on_room_entered(data: Dictionary) -> void:
+	var trigger_room_types: Array = ConfigManager.get_reward_config().get("trigger_room_types", [])
+	if trigger_room_types.has(str(data.get("room_type", ""))):
+		return
+	if visible and _options.is_empty():
+		_status_text = ""
+		_refresh()
+		visible = false
 
 
 func _refresh() -> void:
