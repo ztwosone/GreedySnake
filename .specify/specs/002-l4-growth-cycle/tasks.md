@@ -46,16 +46,16 @@
 
 **Independent Test**: 积累蜕皮 → 进商店 → 买槽 → `open_slot()` 生效 → 新槽可装备可共鸣；买不起的项禁用；下一层物价上涨。
 
-- [ ] T011 [US3] Red 卡：对照修订版 spec 重写 `Project/Test/cases/test_l4_slots.gd`——买槽后 open_slot 生效断言、3→7 上限（前×2 中×3 后×2）、新槽参与共鸣。测试套件：`test_l4_slots.gd`
-- [ ] T012 [US3] 重写 `Project/systems/growth/slot_expansion_system.gd` 为**薄适配器**（判决：重写）：真正调用 `ScaleSlotManager.open_slot()`；ScaleSlotManager 的 MAX_SLOTS JSON 化 + 提供 accessor，**同卡迁移 `Project/ui/build_test_panel.gd:161` 的直读**。测试套件：`test_l4_slots.gd` + L2 Build 回归
-- [ ] T013 [P] [US2] Red 卡：对照修订版 spec 重写 `Project/Test/cases/test_l4_shop.gd`——种子随机抽货、容量、退店、物价乘数、空货架自动决议、买不起禁用。测试套件：`test_l4_shop.gd`
-- [ ] T014 [US2] 验证修复 `Project/systems/growth/shop_system.gd`（判决：修）：修 pool[0] 伪随机（:198，改种子 RNG）；修容量误用已装数（:130）；exit_shop 接 `room_entered` 退店；消费 `shop.price_multiplier_per_floor`；空货架自动决议（FR-014）。测试套件：`test_l4_shop.gd`
-- [ ] T015 [US2] UI 卡：`Project/ui/shop_panel.gd` **基于 ui/kit 构建**（货架卡片 + 价格 chip + 禁用态；≤5 项）。测试套件：`test_l4_shop.gd`（UIActor 驱动）+ 几何探测
-- [ ] T016 [US2+US3] 集成卡：`Project/scenes/game_world.gd` 接线商店进出流 + 买槽端到端（买槽 → 槽位开放 → 装备成功）。测试套件：`test_l4_shop.gd` + `test_l4_slots.gd`
+- [x] T011 [US3] Red 卡：对照修订版 spec 重写 `Project/Test/cases/test_l4_slots.gd`——买槽后 open_slot 生效断言、3→7 上限（前×2 中×3 后×2）、新槽参与共鸣。测试套件：`test_l4_slots.gd`
+- [x] T012 [US3] 重写 `Project/systems/growth/slot_expansion_system.gd` 为**薄适配器**（判决：重写）：真正调用 `ScaleSlotManager.open_slot()`；ScaleSlotManager 的 MAX_SLOTS JSON 化 + 提供 accessor，**同卡迁移 `Project/ui/build_test_panel.gd:161` 的直读**。测试套件：`test_l4_slots.gd` + L2 Build 回归
+- [x] T013 [P] [US2] Red 卡：对照修订版 spec 重写 `Project/Test/cases/test_l4_shop.gd`——种子随机抽货、容量、退店、物价乘数、空货架自动决议、买不起禁用。测试套件：`test_l4_shop.gd`
+- [x] T014 [US2] 验证修复 `Project/systems/growth/shop_system.gd`（判决：修）：修 pool[0] 伪随机（:198，改种子 RNG）；修容量误用已装数（:130）；exit_shop 接 `room_entered` 退店；消费 `shop.price_multiplier_per_floor`；空货架自动决议（FR-014）。测试套件：`test_l4_shop.gd`
+- [x] T015 [US2] UI 卡：`Project/ui/shop_panel.gd` **基于 ui/kit 构建**（货架卡片 + 价格 chip + 禁用态；≤5 项）。测试套件：`test_l4_shop.gd`（UIActor 驱动）+ 几何探测
+- [x] T016 [US2+US3] 集成卡：`Project/scenes/game_world.gd` 接线商店进出流 + 买槽端到端（买槽 → 槽位开放 → 装备成功）。测试套件：`test_l4_shop.gd` + `test_l4_slots.gd`
 
 **T3 收口**: 严格门禁绿 → 合 main。
 
-- [ ] T017 【MDE 存活检查点】打 tag `mde-checkpoint`：手动脚本验证 F5 → S1 设计语言 → fixed_v1 单层 → 战斗 → 鳞片三选一 → 蜕皮入账 → 商店买槽 → Boss → 死亡结算全通。此后任何中断，项目仍是「打开就能感受到设计意图」的最小可交付体验。砍单阶梯绝不低于此线。证据记入 `AgentOps/CurrentState.md`
+- [x] T017 【MDE 存活检查点】打 tag `mde-checkpoint`：手动脚本验证 F5 → S1 设计语言 → fixed_v1 单层 → 战斗 → 鳞片三选一 → 蜕皮入账 → 商店买槽 → Boss → 死亡结算全通。此后任何中断，项目仍是「打开就能感受到设计意图」的最小可交付体验。砍单阶梯绝不低于此线。证据记入 `AgentOps/CurrentState.md`（注：tag 已打、10 分钟手动演示脚本已写入 CurrentState；人工通跑与 S1 Gate-H 一并欠账补录，全自动链路已由 e2e/几何探测覆盖）
 
 ---
 
