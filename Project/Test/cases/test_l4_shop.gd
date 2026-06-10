@@ -6,6 +6,7 @@ extends RefCounted
 ## 消费（FR-003 经济压力阀）、空货架自动决议（FR-014）、买不起标记禁用（US2 场景 4）。
 
 const SHOP_PATH: String = "res://systems/growth/shop_system.gd"
+const SHOP_PANEL_PATH: String = "res://ui/shop_panel.gd"
 const SHEDSKIN_PATH: String = "res://systems/growth/shedskin_system.gd"
 const SLOT_EXPANSION_PATH: String = "res://systems/growth/slot_expansion_system.gd"
 const SCALE_SLOT_MANAGER_PATH: String = "res://systems/snake_parts/scale_slot_manager.gd"
@@ -24,6 +25,7 @@ func run(t) -> void:
 	_test_exit_shop_via_room_entered(t)
 	_test_empty_shelf_auto_resolves(t)
 	_test_purchase_flow(t)
+	_test_shop_panel_public_api(t)
 
 
 # ── T013: 配置（FR-010/SC-003） ──────────────────────────────────────
@@ -292,6 +294,90 @@ func _test_purchase_flow(t) -> void:
 	slot_adapter.cleanup()
 	slot_adapter.queue_free()
 	_teardown_shop_setup(setup)
+
+
+# ── T015: 商店面板（ui/kit 重建，货架行 + 价格 chip + 禁用去饱和） ───
+
+func _test_shop_panel_public_api(t) -> void:
+	t.assert_file_exists(SHOP_PANEL_PATH)
+	if not FileAccess.file_exists(SHOP_PANEL_PATH):
+		return
+
+	var setup: Dictionary = _make_shop_setup(t, true)
+	var shop: Node = setup["shop"]
+	var shedskin: Node = setup["shedskin"]
+	var panel: Control = load(SHOP_PANEL_PATH).new()
+	panel.setup(shop)
+	t.add_child(panel)
+
+	t.assert_false(panel.visible, "[L4-US2] panel starts hidden")
+	t.assert_true(panel.is_in_group("ui_kit"), "[L4-US2] panel born on ui/kit base")
+	t.assert_true(panel.is_in_group("ui_modal"), "[L4-US2] panel joins ui_modal group (geometry probe)")
+	t.assert_eq(str(panel.get_meta("ui_layer", "")), "modal", "[L4-US2] panel carries modal ui_layer meta")
+
+	EventBus.run_started.emit({"run_id": "panel_test", "floor_index": 1, "seed": 777})
+	shedskin.earn(4, "panel_bankroll")  # 鳞片/头尾(≤4)可买、槽位(5)买不起 → 禁用态混排
+	EventBus.room_entered.emit({"room_id": "shop_01", "room_type": "shop"})
+
+	t.assert_true(panel.visible, "[L4-US2] panel visible on shop_entered")
+	var items: Array = shop.get_inventory()
+	t.assert_eq(panel.get_visible_item_count(), items.size(), "[L4-US2] panel mirrors inventory size")
+	t.assert_true(panel.get_visible_item_count() <= 5, "[L4-US2] at most 5 shelf rows")
+	t.assert_eq(panel.get_item_rows().size(), items.size(), "[L4-US2] one shelf row per item")
+	t.assert_eq(panel.get_balance_text(), str(shedskin.get_amount()), "[L4-US2] balance chip shows shedskin")
+
+	for index in range(items.size()):
+		var item: Dictionary = items[index]
+		t.assert_true(panel.get_item_labels().has(str(item.get("display_name", ""))),
+			"[L4-US2] item label readable: %s" % item.get("display_name", ""))
+		var row: Control = panel.get_item_rows()[index]
+		t.assert_true(row.is_in_group("ui_hit"), "[L4-US2] shelf row registered as hit target")
+		t.assert_true(panel.get_row_price_text(index).find(str(int(item.get("price", 0)))) >= 0,
+			"[L4-US2] price chip shows the price for %s" % item.get("item_id", ""))
+		t.assert_eq(panel.is_item_disabled(index), not bool(item.get("affordable", false)),
+			"[L4-US2] US2 scenario 4: unaffordable item visibly disabled (%s)" % item.get("item_id", ""))
+
+	# 买不起的行：点击购买被拒
+	var slot_index: int = _index_by_category(items, "slot")
+	t.assert_true(slot_index >= 0, "[L4-US2] shelf carries a slot row")
+	if slot_index >= 0:
+		t.assert_true(panel.is_item_disabled(slot_index), "[L4-US2] 5-cost slot disabled at 4 shedskin")
+		t.assert_false(panel.purchase_by_index(slot_index), "[L4-US2] disabled row refuses purchase")
+
+	# 买得起的行：购买成功 → 已购禁用 + 余额刷新
+	var head_index: int = _index_by_category(items, "head_upgrade")
+	t.assert_true(head_index >= 0, "[L4-US2] shelf carries a head upgrade row")
+	if head_index >= 0:
+		t.assert_true(panel.purchase_by_index(head_index), "[L4-US2] purchase via panel public API")
+		t.assert_eq(panel.get_balance_text(), str(shedskin.get_amount()),
+			"[L4-US2] balance chip refreshes after purchase")
+		t.assert_true(panel.is_item_disabled(head_index), "[L4-US2] sold row goes disabled (已购)")
+		t.assert_false(panel.purchase_by_index(head_index), "[L4-US2] sold row refuses re-purchase")
+
+	# 入账触发可买性刷新（货币变化重渲染）
+	shedskin.earn(20, "panel_topup")
+	if slot_index >= 0:
+		t.assert_false(panel.is_item_disabled(slot_index), "[L4-US2] funding re-enables the slot row")
+
+	# 退店通路：进入其他房间隐藏面板
+	EventBus.room_entered.emit({"room_id": "rest_01", "room_type": "rest"})
+	t.assert_false(panel.visible, "[L4-US2] panel hides when leaving via room_entered")
+	t.assert_eq(panel.get_visible_item_count(), 0, "[L4-US2] rows cleared on exit")
+
+	EventBus.room_entered.emit({"room_id": "shop_01", "room_type": "shop"})
+	t.assert_true(panel.visible, "[L4-US2] panel reopens on next shop visit")
+	EventBus.game_over.emit({"cause": "test"})
+	t.assert_false(panel.visible, "[L4-US2] panel hides on game over")
+
+	panel.queue_free()
+	_teardown_shop_setup(setup)
+
+
+func _index_by_category(items: Array, category: String) -> int:
+	for index in range(items.size()):
+		if items[index] is Dictionary and str(items[index].get("category", "")) == category:
+			return index
+	return -1
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
