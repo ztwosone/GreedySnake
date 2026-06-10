@@ -42,6 +42,9 @@ func _test_sc001_full_smoke_run(t) -> void:
 	room_flow.record_objective_progress(3, {"method": "acceptance"})
 	t.assert_true(room_flow.is_current_room_complete(),
 		"[SC-001] combat_01 completes after 3 kills")
+	# spec 002 T010：战斗房完成弹鳞片 offer（FR-015 门控），放弃后才能推进
+	t.assert_true(world.get_node("UI/ScaleChoicePanel").discard_offer(),
+		"[SC-001] resolve scale offer after combat_01")
 
 	# reward_01
 	t.assert_true(floor_panel.request_next_room(),
@@ -64,6 +67,8 @@ func _test_sc001_full_smoke_run(t) -> void:
 	t.assert_eq(run_sys.get_state().get("current_room_id", ""), path[2],
 		"[SC-001] run reaches combat_02")
 	room_flow.record_objective_progress(3, {"method": "acceptance"})
+	t.assert_true(world.get_node("UI/ScaleChoicePanel").discard_offer(),
+		"[SC-001] resolve scale offer after combat_02")
 
 	# rest_01
 	t.assert_true(floor_panel.request_next_room(),
@@ -141,6 +146,8 @@ func _test_sc003_room_intent_visible(t) -> void:
 		"[SC-003] status shows completion after objective met")
 
 	# Advance to reward_01 and check intent changed
+	# spec 002 T010：先决议鳞片 offer（FR-015 门控）
+	world.get_node("UI/ScaleChoicePanel").discard_offer()
 	var floor_panel: Control = world.get_node("UI/FloorProgressPanel")
 	floor_panel.request_next_room()
 	t.assert_eq(intent_panel.get_intent_text(), "选择奖励",
@@ -161,6 +168,8 @@ func _test_sc004_reward_cap(t) -> void:
 	var reward_panel: Control = world.get_node("UI/RewardChoicePanel")
 
 	room_flow.record_objective_progress(3, {"method": "acceptance"})
+	# spec 002 T010：先决议鳞片 offer（FR-015 门控）
+	world.get_node("UI/ScaleChoicePanel").discard_offer()
 	floor_panel.request_next_room()
 
 	t.assert_true(reward_panel.visible,
@@ -199,6 +208,8 @@ func _test_sc005_cleanup_restart(t) -> void:
 
 	# Complete combat_01
 	room_flow.record_objective_progress(3, {"method": "acceptance"})
+	# spec 002 T010：先决议鳞片 offer（FR-015 门控）
+	world.get_node("UI/ScaleChoicePanel").discard_offer()
 
 	# Enter reward_01 and choose a reward
 	floor_panel.request_next_room()

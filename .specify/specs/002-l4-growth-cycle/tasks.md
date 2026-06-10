@@ -28,13 +28,13 @@
 
 **Independent Test**: 清战斗房 → 恰 3 选项呈现 → 选中装备到对应槽且 Build 面板更新；放弃 → +2 蜕皮；空池 → 自动决议且流程继续。
 
-- [ ] T004 [US1] Red 卡：对照修订版 spec 重写 `Project/Test/cases/test_l4_scale_rewards.gd`——幻影二次 offer 回归用例、无合成 `room_completed` 断言（FR-018）、满槽替换、按开放槽过滤、空池自动决议（FR-014）、放弃蜕皮收入。测试套件：`test_l4_scale_rewards.gd`
-- [ ] T005 [US1] 重写 `Project/systems/growth/scale_reward_system.gd` 逻辑（判决：重写）：修软锁（:85,:98 状态互踩）；**拆除合成 `room_completed`（仅此系统）**；改发 `scale_reward_chosen`/`scale_option_discarded`；满槽替换/空池自动决议/按开放槽过滤；预留传承石偏置注入钩子（L5 用）。测试套件：`test_l4_scale_rewards.gd`
-- [ ] T006 [P] [US2] 验证修复 `Project/systems/growth/shedskin_system.gd`（判决：保留+修）：修 Enemy 节点被当 Dictionary 判型（:87，elite 分支死代码）；**跨层保留**（FR-003 修订后，删除 floor_generated 清零路径）；补 discard 收入接线。测试套件：重写 `Project/Test/cases/test_l4_shedskin.gd`（含跨层保留用例）
-- [ ] T007 [横切] 模态门控卡：`Project/systems/run/run_progression_system.gd` 增加 pending-offer 登记（任一 `*_presented` 未决 → 忽略推进请求、Next 禁用，FR-015）；L3 `RewardFlowSystem` 补空选项自动决议（四 offer 系统中 Scale/Shop/FloorReward 的自动决议在各自重写卡内，FR-014）。测试套件：`test_l4_scale_rewards.gd`（门控用例）+ `test_l3_*` 全量回归
-- [ ] T008 [US1] UI 卡：`Project/ui/scale_choice_panel.gd` **基于 ui/kit 构建**（choice_card×3 + 放弃入口标注 +2 蜕皮；进 ui_modal 组自动纳入几何探测）。测试套件：`test_l4_scale_rewards.gd`（UIActor 公共 API 驱动用例）+ 几何探测（自动覆盖）
-- [ ] T009 [P] [US2] UI 卡：`Project/ui/shedskin_display.gd` **基于 ui/kit chip 构建**（HUD 蜕皮计数，首次入账才出现——概念节奏）。测试套件：`test_l4_shedskin.gd` + 几何探测
-- [ ] T010 [US1] 集成卡：`Project/scenes/game_world.gd` 接线鳞片奖励链（清怪 → offer → 决议 → 房间流程继续，不经合成 `room_completed`）。测试套件：`test_l4_scale_rewards.gd` + `test_l3_room_flow.gd` 回归
+- [x] T004 [US1] Red 卡：对照修订版 spec 重写 `Project/Test/cases/test_l4_scale_rewards.gd`——幻影二次 offer 回归用例、无合成 `room_completed` 断言（FR-018）、满槽替换、按开放槽过滤、空池自动决议（FR-014）、放弃蜕皮收入。测试套件：`test_l4_scale_rewards.gd`
+- [x] T005 [US1] 重写 `Project/systems/growth/scale_reward_system.gd` 逻辑（判决：重写）：修软锁（:85,:98 状态互踩）；**拆除合成 `room_completed`（仅此系统）**；改发 `scale_reward_chosen`/`scale_option_discarded`；满槽替换/空池自动决议/按开放槽过滤；预留传承石偏置注入钩子（L5 用）。测试套件：`test_l4_scale_rewards.gd`
+- [x] T006 [P] [US2] 验证修复 `Project/systems/growth/shedskin_system.gd`（判决：保留+修）：修 Enemy 节点被当 Dictionary 判型（:87，elite 分支死代码）；**跨层保留**（FR-003 修订后，删除 floor_generated 清零路径）；补 discard 收入接线。测试套件：重写 `Project/Test/cases/test_l4_shedskin.gd`（含跨层保留用例）
+- [x] T007 [横切] 模态门控卡：`Project/systems/run/run_progression_system.gd` 增加 pending-offer 登记（任一 `*_presented` 未决 → 忽略推进请求、Next 禁用，FR-015）；L3 `RewardFlowSystem` 补空选项自动决议（四 offer 系统中 Scale/Shop/FloorReward 的自动决议在各自重写卡内，FR-014）。测试套件：`test_l4_scale_rewards.gd`（门控用例）+ `test_l3_*` 全量回归
+- [x] T008 [US1] UI 卡：`Project/ui/scale_choice_panel.gd` **基于 ui/kit 构建**（choice_card×3 + 放弃入口标注 +2 蜕皮；进 ui_modal 组自动纳入几何探测）。测试套件：`test_l4_scale_rewards.gd`（UIActor 公共 API 驱动用例）+ 几何探测（自动覆盖）
+- [x] T009 [P] [US2] UI 卡：`Project/ui/shedskin_display.gd` **基于 ui/kit chip 构建**（HUD 蜕皮计数，首次入账才出现——概念节奏）。测试套件：`test_l4_shedskin.gd` + 几何探测
+- [x] T010 [US1] 集成卡：`Project/scenes/game_world.gd` 接线鳞片奖励链（清怪 → offer → 决议 → 房间流程继续，不经合成 `room_completed`）。测试套件：`test_l4_scale_rewards.gd` + `test_l3_room_flow.gd` 回归
 
 **T2 收口**: 严格门禁绿 → 合 main。
 

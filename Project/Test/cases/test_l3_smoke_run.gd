@@ -35,8 +35,13 @@ func _test_fixed_v1_run_reaches_visual_victory(t) -> void:
 	var room_flow: Node = world.get_node("RoomFlowSystem")
 	var reward_panel: Control = world.get_node("UI/RewardChoicePanel")
 	var floor_panel: Control = world.get_node("UI/FloorProgressPanel")
+	var scale_panel: Control = world.get_node("UI/ScaleChoicePanel")
 
 	room_flow.record_objective_progress(3, {"method": "smoke_combat_01"})
+	# spec 002 T010：战斗房完成弹鳞片三选一（FR-015 门控），决议后才能推进
+	t.assert_true(scale_panel.visible, "[L3-smoke] scale offer appears after combat")
+	t.assert_false(floor_panel.request_next_room(), "[L3-smoke] advance blocked while scale offer pending")
+	t.assert_true(scale_panel.discard_offer(), "[L3-smoke] discard scale offer via panel API")
 	t.assert_true(floor_panel.request_next_room(), "[L3-smoke] Next enters reward room")
 	t.assert_eq(run_system.get_state().get("current_room_id", ""), "reward_01",
 		"[L3-smoke] run reaches reward room")
@@ -48,6 +53,7 @@ func _test_fixed_v1_run_reaches_visual_victory(t) -> void:
 	t.assert_eq(run_system.get_state().get("current_room_id", ""), "combat_02",
 		"[L3-smoke] run reaches second combat room")
 	room_flow.record_objective_progress(3, {"method": "smoke_combat_02"})
+	t.assert_true(scale_panel.discard_offer(), "[L3-smoke] discard second scale offer")
 
 	t.assert_true(floor_panel.request_next_room(), "[L3-smoke] Next enters rest room")
 	t.assert_eq(run_system.get_state().get("current_room_id", ""), "rest_01",

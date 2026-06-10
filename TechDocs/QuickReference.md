@@ -52,7 +52,7 @@ Project/Test/cases/test_l3_smoke_run.gd      # L3 v1 固定路径占位 UI smoke
 - Tick = 0.25s
 - 测试入口：`res://Test/test_runner.tscn`
 - 严格测试入口：`$env:GODOT_DISABLE_CRASH_HANDLER="1"; powershell -ExecutionPolicy Bypass -File Tools/run_tests_strict.ps1`
-- 当前验证事实（2026-06-11，S2 T1 簇收口）：普通测试 `3016/3016` 断言通过，套件 `68/68`（runner 现核对"发现/运行"数）；严格门禁 `STRICT PASSED`。严格脚本先跑 `--headless --import` 重建 class cache/.uid（导入器输出不进扫描），再跑测试并扫描 stderr，豁免 AtomRegistry 负向测试、lambda capture 清理日志和 headless 退出期资源日志。
+- 当前验证事实（2026-06-11，S2 T2 簇收口）：普通测试 `2969/2969` 断言通过，套件 `68/68`（T004/T006 重写后的断言基数；runner 现核对"发现/运行"数）；严格门禁 `STRICT PASSED`。严格脚本先跑 `--headless --import` 重建 class cache/.uid（导入器输出不进扫描），再跑测试并扫描 stderr，豁免 AtomRegistry 负向测试、lambda capture 清理日志和 headless 退出期资源日志。
 - 测试约定：禁止裸引用全局 class_name，一律 `const XxxScript := preload(...)`（见 ScriptingLeading 附录 C.8）；坏套件计 FAIL 不再静默吞测（2026-06-05 的"ALL PASSED 758/758"假绿根因已修复）。
 
 ## 表现内核事实（SpecKit 004 Phase F，2026-06-11）
@@ -114,10 +114,10 @@ L4 事件契约「发射方 → 监听方」对照表（T1 落地信号定义；
 
 | 信号 | payload | 发射方（计划） | 监听方（计划） |
 |------|---------|----------------|----------------|
-| `currency_changed` | {currency, amount, total, source} | ShedskinSystem（T2） | shedskin_display（T2） |
-| `scale_reward_presented` | {room_id, options, offer_id} | ScaleRewardSystem（T2） | scale_choice_panel、RunProgression 模态门控（T2/T007） |
-| `scale_reward_chosen` | {option_id, scale_id, position, level, skipped} | ScaleRewardSystem（T2） | game_world 接线、门控解除（T010） |
-| `scale_option_discarded` | {offer_id, discarded_ids, shedskin_gained} | ScaleRewardSystem（T2） | ShedskinSystem（T6 卡接 discard 收入） |
+| `currency_changed` | {currency, amount, total, source} | ShedskinSystem（T2 ✅） | shedskin_display（T2 ✅） |
+| `scale_reward_presented` | {room_id, options, offer_id, pool_id} | ScaleRewardSystem（T2 ✅） | scale_choice_panel、RunProgression/FloorProgressPanel 模态门控（T2/T007 ✅） |
+| `scale_reward_chosen` | {offer_id, option_id, scale_id, position, level, skipped} | ScaleRewardSystem（T2 ✅） | scale_choice_panel、门控解除（T2 ✅） |
+| `scale_option_discarded` | {offer_id, discarded_ids, shedskin_gained} | ScaleRewardSystem（T2 ✅） | ShedskinSystem（discard 收入）、scale_choice_panel、门控解除（T2 ✅） |
 | `shop_entered` | {room_id, items} | ShopSystem（T3） | shop_panel（T3） |
 | `shop_purchase` | {item_id, category, cost, currency_remaining} | ShopSystem（T3） | ShedskinSystem、shop_panel（T3） |
 | `slot_unlocked` | {position, total_slots, source} | SlotExpansionSystem（T3） | Build 面板（T3） |
@@ -128,6 +128,36 @@ L4 事件契约「发射方 → 监听方」对照表（T1 落地信号定义；
 | `floor_theme_set` | {theme, pressure, floor_index} | FloorMapGenerator/RoomDirector（T4/T5） | 表现层（S4） |
 
 FR-018 显式保留契约：**RewardFlowSystem 为 L3 `reward` 房发射的合成 `room_completed` 是该类房间唯一完成通路（load-bearing），保留不动**；草稿 ScaleRewardSystem 的合成 `room_completed` 是缺陷（幻影二次 offer 根因之一），T005 拆除——拆除范围仅限 ScaleRewardSystem。空选项 offer 一律自动决议（chosen 带 `skipped: true` 或 discarded，FR-014）；任一 `*_presented` 未决时推进请求被忽略（FR-015，T007 落地）。
+
+## L4 鳞片奖励链 + 蜕皮经济事实（S2 T2，T004-T010，2026-06-11）
+
+- `ScaleRewardSystem` 重写落地：战斗房 `room_completed`（`growth.scale_reward.trigger_room_types`）→ 恰 3 选项 offer；
+  选择经 `ScaleSlotManager.equip_scale` 装备，**满槽替换**（卸该位置首槽旧鳞再装新鳞）；
+  选项按「位置可承载」过滤（有空开放槽或可替换）；**无合成 `room_completed`**（FR-018）；
+  决议顺序先清状态再发事件（草稿 :85/:98 幻影二次 offer/软锁根因已修）；
+  `set_sampling_bias(Callable)` 传承石偏置钩子留给 L5（收合格选项 Array → 返回重排 Array）。
+- 决议事件语义：选择 → `scale_reward_chosen`（skipped=false）+ `scale_option_discarded`（未选 2 项，每项 +`scale_discard`）；
+  放弃全部（`discard_offer()`）→ 仅 `scale_option_discarded`（全部选项 × `scale_discard`）；
+  空池/零合格 → 仅 `scale_reward_chosen`（skipped=true，不发 `scale_reward_presented`，FR-014）。
+- `ShedskinSystem` 修复落地：`enemy_killed` 的 `enemy_def` 按 **Enemy 节点**取 `enemy_type`（草稿当 Dictionary 判型的死代码已修），
+  精英判定走 `ConfigManager.get_enemy_type(...).is_elite`；**跨层保留**（`floor_generated` 清零路径已删，FR-003）；
+  `run_started` 清零（FR-013）；消费 `scale_option_discarded.shedskin_gained` 入账（source=`scale_discard`）。
+- 模态门控（FR-015）落地两处：`RunProgressionSystem._pending_offers` 家族登记
+  （reward/scale_reward/floor_reward 三家族，`has_pending_offer()` 公共查询，未决时忽略 `room_advance_requested`）；
+  `FloorProgressPanel` 同步登记（Next 按钮禁用 + `request_next_room()` 返回 false，`is_advance_blocked()` 公共查询）。
+- `RewardFlowSystem` 回补（FR-014）：零可应用选项时自动决议——发 `reward_chosen`（payload 带 `skipped: true`）+
+  合成 `room_completed`（完成通路保留），不发 `reward_presented`；choose 路径同步改为先清状态再发事件。
+- UI：`ui/scale_choice_panel.gd` 基于 ui/kit 重建（modal 层 + ui_modal 组；choice_card×3 + 放弃入口
+  「放弃全部 +N 蜕皮」，N = 选项数 × `growth.shedskin.scale_discard`）；`ui/shedskin_display.gd` 基于 ui/kit chip 重建
+  （hud 层右上角，shedskin glyph + accent_shedskin；**渐进披露**：首次入账 amount>0 才出现）。
+  两面板均已去 class_name（按路径加载，ScriptingLeading C.8）。
+- `game_world.tscn/gd` 接线：`ShedskinSystem`/`ScaleRewardSystem` 场景节点 + `UI/ScaleChoicePanel`/`UI/ShedskinDisplay`；
+  `cleanup()` 扩展。L3 全量回归套件（smoke/acceptance/xp_contracts/stager）已适配鳞片模态：
+  战斗房完成 → 决议鳞片 offer → 才能推进。
+- JSON 增量：`growth.scale_reward.default_pool: "l1_basic"`（present_offer 缺省池走配置，不写死池 id）。
+- 几何探测新增状态 `l4_scale_pending`（state_stager + test_xp_ui_geometry：鳞片模态 + 蜕皮 chip 同屏探测）。
+- 测试事实：`enemy_killed` 全局总线 payload 的 `enemy_def` 必须是 Node 派生或 null
+  （EnemyManager 按 Node 收参；测试 mock 用 Node2D + enemy_type 属性）。
 
 ## L1 战斗循环关键事实
 

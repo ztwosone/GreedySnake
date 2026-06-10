@@ -8,6 +8,11 @@ var current_floor_map: Dictionary = {}
 
 var _generator = FloorMapGeneratorScript.new()
 
+## FR-015 模态门控（spec 002 T007）：任一 *_presented 未决时忽略推进请求。
+## 按 offer 家族登记（reward / scale_reward / floor_reward），各 offer 系统单 offer 在飞，
+## 家族键足够；shop 进出流由 T014 卡接入。
+var _pending_offers: Dictionary = {}
+
 
 func _ready() -> void:
 	connect_events()
@@ -24,6 +29,20 @@ func connect_events() -> void:
 		EventBus.snake_died.connect(_on_snake_died)
 	if not EventBus.room_advance_requested.is_connected(_on_room_advance_requested):
 		EventBus.room_advance_requested.connect(_on_room_advance_requested)
+	if not EventBus.reward_presented.is_connected(_on_reward_presented):
+		EventBus.reward_presented.connect(_on_reward_presented)
+	if not EventBus.reward_chosen.is_connected(_on_reward_chosen):
+		EventBus.reward_chosen.connect(_on_reward_chosen)
+	if not EventBus.scale_reward_presented.is_connected(_on_scale_reward_presented):
+		EventBus.scale_reward_presented.connect(_on_scale_reward_presented)
+	if not EventBus.scale_reward_chosen.is_connected(_on_scale_reward_chosen):
+		EventBus.scale_reward_chosen.connect(_on_scale_reward_chosen)
+	if not EventBus.scale_option_discarded.is_connected(_on_scale_option_discarded):
+		EventBus.scale_option_discarded.connect(_on_scale_option_discarded)
+	if not EventBus.floor_reward_presented.is_connected(_on_floor_reward_presented):
+		EventBus.floor_reward_presented.connect(_on_floor_reward_presented)
+	if not EventBus.floor_reward_chosen.is_connected(_on_floor_reward_chosen):
+		EventBus.floor_reward_chosen.connect(_on_floor_reward_chosen)
 
 
 func disconnect_events() -> void:
@@ -33,6 +52,20 @@ func disconnect_events() -> void:
 		EventBus.snake_died.disconnect(_on_snake_died)
 	if EventBus.room_advance_requested.is_connected(_on_room_advance_requested):
 		EventBus.room_advance_requested.disconnect(_on_room_advance_requested)
+	if EventBus.reward_presented.is_connected(_on_reward_presented):
+		EventBus.reward_presented.disconnect(_on_reward_presented)
+	if EventBus.reward_chosen.is_connected(_on_reward_chosen):
+		EventBus.reward_chosen.disconnect(_on_reward_chosen)
+	if EventBus.scale_reward_presented.is_connected(_on_scale_reward_presented):
+		EventBus.scale_reward_presented.disconnect(_on_scale_reward_presented)
+	if EventBus.scale_reward_chosen.is_connected(_on_scale_reward_chosen):
+		EventBus.scale_reward_chosen.disconnect(_on_scale_reward_chosen)
+	if EventBus.scale_option_discarded.is_connected(_on_scale_option_discarded):
+		EventBus.scale_option_discarded.disconnect(_on_scale_option_discarded)
+	if EventBus.floor_reward_presented.is_connected(_on_floor_reward_presented):
+		EventBus.floor_reward_presented.disconnect(_on_floor_reward_presented)
+	if EventBus.floor_reward_chosen.is_connected(_on_floor_reward_chosen):
+		EventBus.floor_reward_chosen.disconnect(_on_floor_reward_chosen)
 
 
 func start_run(seed: int = 0) -> void:
@@ -88,7 +121,13 @@ func mark_death(cause: String = "death") -> void:
 func cleanup() -> void:
 	current_run_state.clear()
 	current_floor_map.clear()
+	_pending_offers.clear()
 	disconnect_events()
+
+
+## FR-015：是否有未决 offer（任一 *_presented 未配对 chosen/discarded）
+func has_pending_offer() -> bool:
+	return not _pending_offers.is_empty()
 
 
 func is_running() -> bool:
@@ -227,7 +266,44 @@ func _on_snake_died(data: Dictionary) -> void:
 	mark_death(data.get("cause", "unknown"))
 
 
+func _set_offer_pending(family: String, pending: bool) -> void:
+	if pending:
+		_pending_offers[family] = true
+	else:
+		_pending_offers.erase(family)
+
+
+func _on_reward_presented(_data: Dictionary) -> void:
+	_set_offer_pending("reward", true)
+
+
+func _on_reward_chosen(_data: Dictionary) -> void:
+	_set_offer_pending("reward", false)
+
+
+func _on_scale_reward_presented(_data: Dictionary) -> void:
+	_set_offer_pending("scale_reward", true)
+
+
+func _on_scale_reward_chosen(_data: Dictionary) -> void:
+	_set_offer_pending("scale_reward", false)
+
+
+func _on_scale_option_discarded(_data: Dictionary) -> void:
+	_set_offer_pending("scale_reward", false)
+
+
+func _on_floor_reward_presented(_data: Dictionary) -> void:
+	_set_offer_pending("floor_reward", true)
+
+
+func _on_floor_reward_chosen(_data: Dictionary) -> void:
+	_set_offer_pending("floor_reward", false)
+
+
 func _on_room_advance_requested(data: Dictionary) -> void:
+	if has_pending_offer():
+		return
 	var room_id: String = data.get("room_id", "")
 	if room_id == "":
 		room_id = _get_first_enterable_room_id()

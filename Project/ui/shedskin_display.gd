@@ -1,12 +1,25 @@
-class_name ShedskinDisplay
-extends PanelContainer
+extends "res://ui/kit/chip.gd"
+## 蜕皮 HUD chip（spec 002 T009：ui/kit chip 重建，presentation_design.md §6 右上蜕皮 chip）
+## 渐进披露（概念节奏）：首次蜕皮入账（amount > 0）才出现；归零/重置事件不触发披露。
+## 余额变化时 bounce 组件反馈（§8.5）；局终隐藏。
+## 无 class_name：消费方一律按路径加载（ScriptingLeading 附录 C.8）。
+## 公共契约：get_amount_text（既有测试依赖）+ chip 的 get_glyph_id/get_text。
 
-var _amount_label: Label
 var _amount: int = 0
 
 
 func _ready() -> void:
-	_build_ui()
+	var layout: Dictionary = ConfigManager.get_layout_config()
+	var base_unit: float = float(layout.get("base_unit", 0))
+	var screen_margin: float = float(layout.get("screen_margin", 0))
+	# §6：右上角持久 HUD chip（宽 6 基准单位槽位，内容超宽向左生长）
+	set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	offset_left = -(screen_margin + base_unit * 6.0)
+	offset_right = -screen_margin
+	offset_top = screen_margin
+	offset_bottom = screen_margin
+	_refresh()
 	_connect_events()
 	visible = false
 
@@ -17,42 +30,6 @@ func _exit_tree() -> void:
 
 func get_amount_text() -> String:
 	return str(_amount)
-
-
-func _build_ui() -> void:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.06, 0.05, 0.04, 0.85)
-	style.border_color = Color(0.82, 0.65, 0.25, 0.5)
-	style.set_border_width_all(1)
-	style.set_content_margin_all(6)
-	add_theme_stylebox_override("panel", style)
-
-	set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	offset_left = -220
-	offset_right = -12
-	offset_top = 12
-	offset_bottom = 46
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-	add_child(row)
-
-	var icon := ColorRect.new()
-	icon.custom_minimum_size = Vector2(14, 28)
-	icon.color = Color(0.82, 0.65, 0.25)
-	row.add_child(icon)
-
-	var label := Label.new()
-	label.text = "蜕皮"
-	label.add_theme_font_size_override("font_size", 14)
-	label.add_theme_color_override("font_color", Color(0.82, 0.65, 0.25))
-	row.add_child(label)
-
-	_amount_label = Label.new()
-	_amount_label.text = "0"
-	_amount_label.add_theme_font_size_override("font_size", 16)
-	row.add_child(_amount_label)
 
 
 func _connect_events() -> void:
@@ -69,15 +46,22 @@ func _disconnect_events() -> void:
 		EventBus.game_over.disconnect(_on_game_over)
 
 
+func _refresh() -> void:
+	set_content("shedskin", str(_amount), ConfigManager.get_palette_color("accent_shedskin"))
+
+
 func _on_currency_changed(data: Dictionary) -> void:
-	if data.get("currency", "") != "shedskin":
+	if str(data.get("currency", "")) != "shedskin":
 		return
 	_amount = int(data.get("total", 0))
-	if _amount_label:
-		_amount_label.text = str(_amount)
-	if not visible:
+	_refresh()
+	var delta: int = int(data.get("amount", 0))
+	# 渐进披露：只有真实入账（delta > 0）才首次出现
+	if delta > 0 and not visible:
 		visible = true
+	if visible and delta != 0:
+		bounce()
 
 
-func _on_game_over(data: Dictionary) -> void:
+func _on_game_over(_data: Dictionary) -> void:
 	visible = false

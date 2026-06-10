@@ -23,7 +23,7 @@ func _test_sc001_scale_reward_flow(t) -> void:
 	scale_mgr.init_manager(mock_snake, StatusEffectManager._trigger_manager, StatusEffectManager._chain_resolver)
 
 	var system: Node = load("res://systems/growth/scale_reward_system.gd").new()
-	system.setup(scale_mgr, null)
+	system.setup(scale_mgr)
 	t.add_child(system)
 
 	var offer: Dictionary = system.present_offer({"room_id": "test", "room_type": "combat"})
@@ -46,8 +46,9 @@ func _test_sc002_shedskin_accumulation(t) -> void:
 	system.earn(3, "kill_elite")
 	t.assert_eq(system.get_amount(), 4, "[SC-002] +3 per elite")
 
+	# Amended 2026-06-11（FR-003/Designs §10.2）：蜕皮跨层保留，不清零
 	EventBus.floor_generated.emit({"floor_index": 2})
-	t.assert_eq(system.get_amount(), 0, "[SC-002] reset to 0 on floor transition")
+	t.assert_eq(system.get_amount(), 4, "[SC-002] shedskin carries over across floors (FR-003)")
 
 	system.cleanup()
 	system.queue_free()

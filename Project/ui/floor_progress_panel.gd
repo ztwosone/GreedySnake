@@ -20,6 +20,8 @@ var _status_label: Label
 var _path_row: HBoxContainer
 var _next_button: Button
 var _block_infos: Array = []
+## FR-015（spec 002 T007）：任一 offer 未决时 Next 禁用、request_next_room 拒绝
+var _pending_offer_families: Dictionary = {}
 
 
 func _init() -> void:
@@ -45,11 +47,18 @@ func get_status_text() -> String:
 
 
 func request_next_room() -> bool:
+	if is_advance_blocked():
+		return false
 	var room_id: String = _get_next_available_room_id()
 	if room_id == "":
 		return false
 	EventBus.room_advance_requested.emit({"room_id": room_id})
 	return true
+
+
+## FR-015：是否因未决 offer 而禁止推进
+func is_advance_blocked() -> bool:
+	return not _pending_offer_families.is_empty()
 
 
 ## T011 新增：路径块数量（每房一块）
@@ -114,6 +123,20 @@ func _connect_events() -> void:
 		EventBus.room_entered.connect(_on_room_entered)
 	if not EventBus.room_completed.is_connected(_on_room_completed):
 		EventBus.room_completed.connect(_on_room_completed)
+	if not EventBus.reward_presented.is_connected(_on_reward_presented):
+		EventBus.reward_presented.connect(_on_reward_presented)
+	if not EventBus.reward_chosen.is_connected(_on_reward_chosen):
+		EventBus.reward_chosen.connect(_on_reward_chosen)
+	if not EventBus.scale_reward_presented.is_connected(_on_scale_reward_presented):
+		EventBus.scale_reward_presented.connect(_on_scale_reward_presented)
+	if not EventBus.scale_reward_chosen.is_connected(_on_scale_reward_chosen):
+		EventBus.scale_reward_chosen.connect(_on_scale_reward_chosen)
+	if not EventBus.scale_option_discarded.is_connected(_on_scale_option_discarded):
+		EventBus.scale_option_discarded.connect(_on_scale_option_discarded)
+	if not EventBus.floor_reward_presented.is_connected(_on_floor_reward_presented):
+		EventBus.floor_reward_presented.connect(_on_floor_reward_presented)
+	if not EventBus.floor_reward_chosen.is_connected(_on_floor_reward_chosen):
+		EventBus.floor_reward_chosen.connect(_on_floor_reward_chosen)
 
 
 func _disconnect_events() -> void:
@@ -123,6 +146,56 @@ func _disconnect_events() -> void:
 		EventBus.room_entered.disconnect(_on_room_entered)
 	if EventBus.room_completed.is_connected(_on_room_completed):
 		EventBus.room_completed.disconnect(_on_room_completed)
+	if EventBus.reward_presented.is_connected(_on_reward_presented):
+		EventBus.reward_presented.disconnect(_on_reward_presented)
+	if EventBus.reward_chosen.is_connected(_on_reward_chosen):
+		EventBus.reward_chosen.disconnect(_on_reward_chosen)
+	if EventBus.scale_reward_presented.is_connected(_on_scale_reward_presented):
+		EventBus.scale_reward_presented.disconnect(_on_scale_reward_presented)
+	if EventBus.scale_reward_chosen.is_connected(_on_scale_reward_chosen):
+		EventBus.scale_reward_chosen.disconnect(_on_scale_reward_chosen)
+	if EventBus.scale_option_discarded.is_connected(_on_scale_option_discarded):
+		EventBus.scale_option_discarded.disconnect(_on_scale_option_discarded)
+	if EventBus.floor_reward_presented.is_connected(_on_floor_reward_presented):
+		EventBus.floor_reward_presented.disconnect(_on_floor_reward_presented)
+	if EventBus.floor_reward_chosen.is_connected(_on_floor_reward_chosen):
+		EventBus.floor_reward_chosen.disconnect(_on_floor_reward_chosen)
+
+
+func _set_offer_pending(family: String, pending: bool) -> void:
+	if pending:
+		_pending_offer_families[family] = true
+	else:
+		_pending_offer_families.erase(family)
+	_refresh_next_button()
+
+
+func _on_reward_presented(_data: Dictionary) -> void:
+	_set_offer_pending("reward", true)
+
+
+func _on_reward_chosen(_data: Dictionary) -> void:
+	_set_offer_pending("reward", false)
+
+
+func _on_scale_reward_presented(_data: Dictionary) -> void:
+	_set_offer_pending("scale_reward", true)
+
+
+func _on_scale_reward_chosen(_data: Dictionary) -> void:
+	_set_offer_pending("scale_reward", false)
+
+
+func _on_scale_option_discarded(_data: Dictionary) -> void:
+	_set_offer_pending("scale_reward", false)
+
+
+func _on_floor_reward_presented(_data: Dictionary) -> void:
+	_set_offer_pending("floor_reward", true)
+
+
+func _on_floor_reward_chosen(_data: Dictionary) -> void:
+	_set_offer_pending("floor_reward", false)
 
 
 func _on_floor_generated(data: Dictionary) -> void:
@@ -258,8 +331,8 @@ func _room_color(room_type: String, fallback_hex: String) -> Color:
 func _refresh_next_button() -> void:
 	if _next_button == null:
 		return
-	var room_id: String = _get_next_available_room_id()
-	_next_button.disabled = room_id == ""
+	# FR-015：未决 offer 期间禁用（与 request_next_room 的拒绝一致）
+	_next_button.disabled = is_advance_blocked() or _get_next_available_room_id() == ""
 
 
 func _get_exit_ids(room_id: String) -> Array:

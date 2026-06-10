@@ -12,6 +12,8 @@ extends Node2D
 @onready var run_progression_system: Node = get_node_or_null("RunProgressionSystem")
 @onready var room_flow_system: Node = get_node_or_null("RoomFlowSystem")
 @onready var reward_flow_system: Node = get_node_or_null("RewardFlowSystem")
+@onready var shedskin_system: Node = get_node_or_null("ShedskinSystem")
+@onready var scale_reward_system: Node = get_node_or_null("ScaleRewardSystem")
 @onready var camera: Camera2D = $Camera2D
 
 
@@ -91,6 +93,10 @@ func _ready() -> void:
 
 	if reward_flow_system and reward_flow_system.has_method("setup"):
 		reward_flow_system.setup(snake_parts_mgr, scale_slot_mgr)
+
+	# spec 002 T010: 鳞片奖励链（战斗房 room_completed → offer → 决议，FR-018 无合成 room_completed）
+	if scale_reward_system and scale_reward_system.has_method("setup"):
+		scale_reward_system.setup(scale_slot_mgr)
 
 	# 蛇段增益效果系统
 	var seg_effect_system := SegmentEffectSystem.new()
@@ -177,9 +183,17 @@ func _ready() -> void:
 	if reward_panel and reward_panel.has_method("setup"):
 		reward_panel.setup(reward_flow_system)
 
+	var scale_choice_panel: Node = $UI.get_node_or_null("ScaleChoicePanel")
+	if scale_choice_panel and scale_choice_panel.has_method("setup"):
+		scale_choice_panel.setup(scale_reward_system)
+
 
 ## T33: 生命周期清理（在 queue_free 前调用）
 func cleanup() -> void:
+	if scale_reward_system and scale_reward_system.has_method("cleanup"):
+		scale_reward_system.cleanup()
+	if shedskin_system and shedskin_system.has_method("cleanup"):
+		shedskin_system.cleanup()
 	if reward_flow_system and reward_flow_system.has_method("cleanup"):
 		reward_flow_system.cleanup()
 	if room_flow_system and room_flow_system.has_method("cleanup"):
