@@ -159,6 +159,35 @@ FR-018 显式保留契约：**RewardFlowSystem 为 L3 `reward` 房发射的合�
 - 测试事实：`enemy_killed` 全局总线 payload 的 `enemy_def` 必须是 Node 派生或 null
   （EnemyManager 按 Node 收参；测试 mock 用 Node2D + enemy_type 属性）。
 
+## L4 槽位扩展 + 商店经济事实（S2 T3，T011-T016，2026-06-11）
+
+- `ScaleSlotManager` 槽位上限 JSON 化（T012）：`MAX_SLOTS` 常量删除，`init_manager` 读
+  `growth.slot_expansion.max/initial`；新 accessor `get_max_slots(position)` /
+  `get_open_slots(position)`（消费方不得直读 `_open_slots`；`build_test_panel` 已迁移）。
+- `SlotExpansionSystem` 重写为**薄适配器**（T012）：不再自持槽位计数，唯一事实源 =
+  ScaleSlotManager；`unlock_slot(position, source)` 真调 `open_slot()` 成功才发
+  `slot_unlocked {position, total_slots, source}` + 记解锁史；监听 `shop_purchase`
+  （category=`slot`，按 item_id 解析位置）走同一通路；草稿监听 `floor_reward_chosen`
+  （expansion）属旧奖励模型已拆除——Boss 固定槽位解锁步骤（FR-007）由 T025 经
+  `unlock_slot(position, "boss")` 接入。
+- `ShopSystem` 修复落地（T014）：**种子 RNG 抽货**（`hash(run_seed:room_id)`，同局同店
+  确定性，草稿 :198 pool[0] 伪随机已修）；容量按 `get_open_slots < get_max_slots`
+  判定（草稿 :130 误用已装数已修）；**退店通路 = `room_entered`**（进商店房开店、进任何
+  其他房关店；商店房 `auto_complete_on_enter: true`，**不注册模态门控**——否则门控 +
+  进房退店组合必死锁，spec「allow exit without purchase」）；物价 = `ceil(基准价 ×
+  price_multiplier_per_floor^(楼层-1))`（FR-003，监听 `run_started`/`floor_generated`
+  取 seed 与楼层）；空货架自动决议（FR-014：零可上架项不发 `shop_entered`、不进 active）。
+- 购买语义：scale → 满槽替换装备（与 ScaleRewardSystem 同语义）按 tier 等级；slot →
+  只验容量后发 `shop_purchase`，真开槽由 SlotExpansionSystem 事件链完成（FR-011）；
+  head/tail upgrade → `equip_head/equip_tail(part_id, level+1)`（已装备且下一等级
+  配置存在才上架）。`setup(shedskin, scale_mgr, parts_mgr)`（草稿第 4 个 panel 参数删除，
+  表现层只听不驱动）。
+- JSON schema 增量（`shop` 段）：`scale_pool: "l1_basic"`（货架鳞片抽样池，草稿 :199
+  硬编码池 id 已入配置）、`shelf_plan: {scale: 2, slot: 1, head_upgrade: 1,
+  tail_upgrade: 1}`（货架构成纯数据，合计 ≤ `max_items_per_shop: 5`，SC-003 ≥3 项）、
+  `item_categories.scale_l1|l2|l3` 增 `level`（tier 等级）、`item_categories.slot_*`
+  增 `position`。
+
 ## L1 战斗循环关键事实
 
 - **吃敌人无消耗** — 蛇头碰敌人 = 直接吞噬，不扣长度；若蛇头与敌人携带异类状态则触发反应、双方状态清除
