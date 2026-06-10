@@ -96,5 +96,25 @@ func run(t) -> void:
 	# Clean up
 	EventBus.snake_moved.disconnect(on_move)
 	EventBus.snake_hit_boundary.disconnect(on_boundary)
+
+	# --- Regression: 残留无身躯蛇（alive + body 空）收到 tick 不得越界报错 ---
+	# 体验 harness（test_xp_contracts_l3）手动步进曾命中：
+	# 销毁中的残留 Snake 仍连着 tick_input_collected，空 body 下 move() 读 body[0] 越界
+	var ghost := Snake.new()
+	tree_root.add_child(ghost)
+	ghost.is_alive = true  # 残留态：存活标记未清但身躯为空（未 init_snake）
+	ghost._on_tick(0)      # tick_input_collected 处理链：_on_tick → move()
+	t.assert_eq(ghost.body.size(), 0, "empty-body snake survives tick without moving")
+	t.assert_true(ghost.is_alive, "empty-body snake not killed by tick")
+
+	# --- 仅剩蛇头（无身体倒计时态，body.size() == 1）仍正常移动 ---
+	var solo := Snake.new()
+	tree_root.add_child(solo)
+	solo.init_snake(Vector2i(5, 5), 1, Constants.DIR_VECTORS[Constants.Direction.RIGHT])
+	solo.move()
+	t.assert_eq(solo.body[0], Vector2i(6, 5), "head-only snake still moves (countdown state)")
+
+	ghost.queue_free()
+	solo.queue_free()
 	snake.queue_free()
 	GridWorld.clear_all()
