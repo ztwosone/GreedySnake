@@ -1,16 +1,33 @@
 # 当前状态
 
-**更新时间**：2026-06-11（S2 T6 收口）
-**当前分支**：`002-l4-growth-cycle`（spec 002 重验收进行中，每簇过严格门禁后合 main）
-**当前 feature**：`.specify/specs/002-l4-growth-cycle/`（重验收）
-**当前阶段**：S2 T6 簇完成（T029-T032）；下一簇 T7（T033-T037 验收与封口）
+**更新时间**：2026-06-11（S2 T7 收口 = spec 002 封口）
+**当前分支**：`002-l4-growth-cycle`（S2 已收口合 main；S3 开卡时切 `003-l5-meta-growth`）
+**当前 feature**：`.specify/specs/002-l4-growth-cycle/` ✅ → 下一个 `.specify/specs/003-l5-meta-growth/`
+**当前阶段**：S2 完成（T1-T7 七簇全收口）；下一阶段 S3（L5 元成长，spec 003 重验收）
 
 ## 阶段路线图
 
 ```
-S0 稳定化 ✅ → S1 体验设计文档+表现内核 ✅ → S2 L4 重验收(spec 002) ← 当前
-→ S3 L5 元成长(spec 003) → S4 体验完成层(004 Phase P) → S5 整段验收封板
+S0 稳定化 ✅ → S1 体验设计文档+表现内核 ✅ → S2 L4 重验收(spec 002) ✅
+→ S3 L5 元成长(spec 003) ← 当前 → S4 体验完成层(004 Phase P) → S5 整段验收封板
 ```
+
+## S2 Gate-A 记录（T037，2026-06-11）
+
+- **严格门禁**：`STRICT PASSED`（T7 收口最终跑），普通汇总 `ALL PASSED: 3635/3635`。
+- **套件数核对**：`suites: 71 discovered / 71 ran`（runner 自核对，零静默吞测）。
+- **多层冒烟**：`test_l4_multifloor_run`（种子 9090，3 层 PCG 至胜利、门控、槽位真开、
+  终层无奖励）+ `test_xp_contracts_l4`（VirtualPlayer 真实步进 + 面板驱动全程、防死锁断言）双绿。
+- **PCG 性质测试**：`test_l4_pcg_rooms`（定种子全等/变种子异图/BFS 可达/商店保底/
+  节奏数据反证）+ 验收套件 SC-010 多种子 DFS 互证双绿。
+- **几何探测覆盖**：8 典型状态（title/game_over/l3_run_start/l3_reward_pending/
+  l4_scale_pending/l4_shop_open/l4_floor_reward_slot/l4_floor_reward_choice）随门禁每跑。
+- **截图评审证据**：`AgentOps/acceptance_shots/2026-06-11/`（7 镜头 + findings.md：
+  7 PASS / 2 SUSPECT 不阻塞，§12.2 清单逐张评审）。
+- **Gate-H（人工，不阻塞合入，S3 收口前补录）**：① S1 人工 5 分钟设计语言裁定；
+  ② T017 MDE 10 分钟人工通跑（脚本见下节）；③ 层间压力可感知（静态缩放——
+  截图 07 已留楼层 2 敌数 +1 的画面证据，待人工确认体感）；反应式 DDA 按设计不可见、
+  仅生成参数级测试验证（已闭环，无人工项）。
 
 ## 实现事实（S1 后基线）
 
@@ -28,9 +45,10 @@ S0 稳定化 ✅ → S1 体验设计文档+表现内核 ✅ → S2 L4 重验收(
 
 ## 当前阻塞项
 
-- 无阻塞。**Gate-H 欠账**：① S1 的人工 5 分钟设计语言裁定未做（编辑器 F5 看一眼
-  title→局内→game over 的观感）；② T017 MDE 的 10 分钟人工通跑未做（脚本见下节，
-  全自动链路已由 e2e + 几何探测覆盖）。两项均不阻塞后续簇，须在 S2 收口前补录于本文件。
+- 无阻塞。**Gate-H 欠账**（T037 裁定：不阻塞合入，**S3 收口前**补录于本文件）：
+  ① S1 的人工 5 分钟设计语言裁定未做（编辑器 F5 看一眼 title→局内→game over 的观感）；
+  ② T017 MDE 的 10 分钟人工通跑未做（脚本见下节，全自动链路已由 e2e + 几何探测覆盖）；
+  ③ 层间压力可感知的人工体感确认（静态缩放，截图 07 留有楼层 2 敌数 +1 画面证据）。
 
 ## MDE 存活检查点（T017，tag `mde-checkpoint`，2026-06-11）
 
@@ -56,10 +74,21 @@ S1 统一设计语言。此后任何中断，项目仍是「打开就能感受�
 
 ## 最近验证基线
 
-- 普通测试：`3529/3529` 断言，套件 `70/70`。
-- 严格测试：`STRICT PASSED`（2026-06-11，S2 T6 门禁）。
+- 普通测试：`3635/3635` 断言，套件 `71/71`。
+- 严格测试：`STRICT PASSED`（2026-06-11，S2 T7 收口门禁）。
 
 ## S2 进度
+
+- T7 ✅（T033-T037 验收与封口）：`test_l4_acceptance` 重写为修订版 SC-001..SC-012
+  逐条映射（含 SC-012 四 offer 空选项自动决议 + FR-015 门控、SC-010 多种子商店
+  保底 DFS、SC-011 双档定种子全等）；`test_xp_contracts_l4` 新建（CompositeBrain
+  确定性种子真实步进穿首战斗房 → 面板驱动 3 层 pcg 至胜利 + 防死锁断言 + L4 新
+  模态契约表）；TDD Red 实证修复两处 harness——experience_recorder 同前缀重呈现
+  原地更新（两段结算曾叠悬挂模态）、game_perception Object.get 双参误用（L2.5
+  草稿缺陷，敌人入场即快照中断）；AcceptanceShots Layer C 装置
+  （`Project/AcceptanceShots/` + `Tools/run_acceptance_shots.ps1`，EnvPath.json
+  已登记）S2 Gate 首用 7/7 + findings.md；文档清偿（QuickReference L4 完成态 +
+  T7 事实节 / 本文件 / DailyLogs）。
 
 - T6 ✅（T029-T032 难度缩放 + 房间修饰符）：`DifficultyScaler` 重写为 FR-008 两层——
   静态层 MUST（floor_table − baseline 敌数 delta + enemy_hp_bonus，楼层经
@@ -153,18 +182,27 @@ S1 统一设计语言。此后任何中断，项目仍是「打开就能感受�
   `l4_scale_pending` 状态；JSON 增量 `growth.scale_reward.default_pool`。
   测试事实：全局 `enemy_killed` 的 `enemy_def` 必须是 Node 派生或 null（EnemyManager 按 Node 收参）。
 
-## 下一张建议任务（S2 T7 开卡）
+## 下一张建议任务（S3 开卡：L5 元成长，spec 003 重验收）
 
-T6 簇（T029-T032）已收口合 main。T7（T033-T037 验收与封口）：
-1. T033 重写 `test_l4_acceptance.gd`：SC-001..SC-012 逐条映射（含 SC-012 四 offer 系统
-   空选项自动决议 + 门控用例）。注意 T5a 裁定：多层推进/楼层奖励是 pcg 档行为，
-   fixed_v1 终点即胜利（FR-016 回退语义）；SC-004/SC-006/SC-007 已有 v2 API 适配可扩展。
-2. T034 VirtualPlayer 冒烟：`Test/experience/` harness playbook 覆盖鳞片/商店/楼层奖励
-   三类模态响应；pending 无人响应即 FAIL 防死锁断言；新面板入契约表
-   （`presentation.game_feel.triggers`）与 stager 状态行。
-3. T035 Layer C 截图装置骨架：`Project/AcceptanceShots/` + `Tools/run_acceptance_shots.ps1`，
-   S2 Gate 首用（findings.md 归档 AgentOps/）。
-4. T036 文档清偿（/syncdocs）+ T037 S2 Gate-A（严格门禁 + 套件数核对 + 多层冒烟 +
-   PCG 性质 + 几何探测 + 截图证据 → 合 main；Gate-H 人工通跑欠账 S3 收口前补录）。
-5. 砍单阶梯参考：反应式 DDA 已落地（reactive.enabled 开关可整层关闭）；
-   13 文件判决表见 plan.md「重验收策略」。
+S2 已封口合 main。S3 按 plan.md 判决表（后 5 文件）重验收 L5 草稿，建议簇序：
+
+1. **`run_ended` 链路先行**（S3 一切的地基）：生产代码当前**无人发射 `run_ended`**
+   ——判决为 `RunStatsTracker.finalize_run` 是唯一发射点，调用方 = RunProgressionSystem
+   （victory/death 双出口）。先写 Red：胜利与死亡各恰一次 `run_ended`、payload 带
+   完整 run stats。
+2. **MetaSave/RunStatsTracker**（保留+修）：meta_save_system 注入 save_path（测试用
+   user:// 临时路径）、容错重置、schema 版本；run_stats_tracker 补
+   near_death/low_length/damage_taken 度量源；MetaGrowthRoot 常驻节点挂 game_world
+   外层（跨 run 存续，世界重建不清）。
+3. **传承石选择**：legacy_stone_system 阈值 JSON 化；bias 消费端 =
+   ScaleRewardSystem.set_sampling_bias 既有钩子（T005 预留，零改造接入）；
+   selected payload 带完整 stone；STONE_SELECT 屏（GameManager.GameState 枚举扩展
+   属 S4 Phase P，S3 先以系统级 API + 测试驱动，UI 可后置）。
+4. **解锁门控既有内容**：**先补 Designs §12.3 v1 映射附录**（设计先行红线——
+   哪些鳞片/头/尾/房型初始锁定、解锁条件各是什么），再 gate：RewardFlow/
+   ScaleReward/Shop 按解锁集过滤抽样池。
+5. **pickups（Should，砍单阶梯首位）**：节点判型 bug、elite 查 is_elite、网格实体化
+   （仿 food）、randf 顺序修正；v1 仅 broken_eye。
+6. 纪律不变：TDD 每卡 Red 先行；每簇严格门禁绿合 main；EventBus/JSON 契约变更
+   同提交落 QuickReference；新 UI 必须 ui/kit 基座 + stager/几何探测覆盖。
+   Gate-H 三项人工欠账（见 Gate-A 记录）须在 S3 收口前补录。
