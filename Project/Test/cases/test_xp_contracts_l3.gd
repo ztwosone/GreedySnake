@@ -48,6 +48,7 @@ func _test_l3_first_contracts(t) -> void:
 	var room_flow: Node = world.get_node("RoomFlowSystem")
 	var floor_panel: Control = world.get_node("UI/FloorProgressPanel")
 	var reward_panel: Control = world.get_node("UI/RewardChoicePanel")
+	var scale_panel: Control = world.get_node("UI/ScaleChoicePanel")
 	var combat_required: int = int(room_flow.get_objective_progress().get("required", 1))
 
 	# 录制器后于面板接线（面板先收到事件 → 同一事件即可观测到 ui 差分）
@@ -59,14 +60,20 @@ func _test_l3_first_contracts(t) -> void:
 	actor.root = world
 	actor.playbook = [
 		{"on": "reward_presented", "node": reward_panel, "call": "choose_option_by_index", "args": [0]},
+		{"on": "scale_reward_presented", "node": scale_panel, "call": "discard_offer", "args": []},
 	]
 
 	var driver: RefCounted = load(DRIVER_PATH).new()
 	driver.begin()
 
-	# combat_01: 真实步进若干拍 → 完成目标 → 进奖励房（模态出现）
+	# combat_01: 真实步进若干拍 → 完成目标 → 鳞片模态（spec 002 T010）→ 决议 → 进奖励房
 	await driver.play(2, recorder, actor)
 	room_flow.record_objective_progress(combat_required, {"method": "xp_contracts"})
+	t.assert_true(recorder.pending_modals().size() >= 1,
+		"[XP-L4] combat completion pushes a scale modal")
+	await driver.play(1, recorder, actor)
+	t.assert_true(recorder.pending_modals().is_empty(),
+		"[XP-L4] ui_actor resolved the scale modal via panel public API")
 	t.assert_true(floor_panel.request_next_room(), "[XP-L3] advance to reward room")
 	t.assert_true(recorder.pending_modals().size() >= 1,
 		"[XP-L3] reward_presented pushes a pending modal")
@@ -74,10 +81,11 @@ func _test_l3_first_contracts(t) -> void:
 	t.assert_true(recorder.pending_modals().is_empty(),
 		"[XP-L3] ui_actor resolved the reward modal via panel public API")
 
-	# combat_02 → rest → endpoint（与 smoke 同路径）
+	# combat_02 → rest → endpoint（与 smoke 同路径，鳞片模态由 actor 决议）
 	t.assert_true(floor_panel.request_next_room(), "[XP-L3] advance to second combat room")
 	await driver.play(2, recorder, actor)
 	room_flow.record_objective_progress(combat_required, {"method": "xp_contracts"})
+	await driver.play(1, recorder, actor)
 	t.assert_true(floor_panel.request_next_room(), "[XP-L3] advance to rest room")
 	await driver.play(1, recorder, actor)
 	t.assert_true(floor_panel.request_next_room(), "[XP-L3] advance to endpoint room")

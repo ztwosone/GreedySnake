@@ -1056,6 +1056,7 @@
     "scale_reward": {
       "offer_count": 3,
       "trigger_room_types": ["combat"],
+      "default_pool": "l1_basic",
       "pools": {
         "l1_basic": [
           { "option_id": "scale_flame", "display_name": "火焰鳞", "reward_type": "scale", "target_id": "flame_scale", "target_slot": "middle", "level_delta": 0, "placeholder_color": "#E4572E" },

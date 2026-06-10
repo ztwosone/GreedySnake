@@ -38,6 +38,21 @@ func present_offer(source_room: Dictionary = {}, pool_id: String = "starter_buil
 	var pool: Array = ConfigManager.get_reward_pool(pool_id)
 	var options: Array = _get_visible_options(pool, offer_count)
 
+	if options.is_empty():
+		# FR-014（spec 002 T007 回补）：零可应用选项自动决议——不弹模态，
+		# 仍走合成 room_completed（L3 奖励房唯一完成通路，FR-018 显式保留契约）
+		EventBus.reward_chosen.emit({
+			"offer_id": "reward_%s" % source_room.get("room_id", "manual"),
+			"source_room_id": source_room.get("room_id", ""),
+			"source_room_type": source_room.get("room_type", ""),
+			"chosen_option_id": "",
+			"option": {},
+			"skipped": true,
+		})
+		_emit_synthetic_room_completed(
+			source_room.get("room_id", ""), source_room.get("room_type", ""))
+		return {}
+
 	_current_offer = {
 		"offer_id": "reward_%s" % source_room.get("room_id", "manual"),
 		"source_room_id": source_room.get("room_id", ""),
@@ -61,18 +76,27 @@ func choose_reward(option_id: String) -> bool:
 	if not _apply_option(option):
 		return false
 
-	_current_offer["chosen_option_id"] = option_id
-	_current_offer["complete"] = true
+	# 先取值清状态再发事件（防监听方再触发 offer 时被误清的重入模式，对齐 spec 002 T005 裁定）
+	var offer_id: String = _current_offer.get("offer_id", "")
+	var source_room_id: String = _current_offer.get("source_room_id", "")
+	var source_room_type: String = _current_offer.get("source_room_type", "")
+	_current_offer.clear()
 	EventBus.reward_chosen.emit({
-		"offer_id": _current_offer.get("offer_id", ""),
-		"source_room_id": _current_offer.get("source_room_id", ""),
-		"source_room_type": _current_offer.get("source_room_type", ""),
+		"offer_id": offer_id,
+		"source_room_id": source_room_id,
+		"source_room_type": source_room_type,
 		"chosen_option_id": option_id,
 		"option": option.duplicate(true),
 	})
+	_emit_synthetic_room_completed(source_room_id, source_room_type)
+	return true
+
+
+## 合成 room_completed：L3 奖励房唯一完成通路（FR-018 显式保留，仅限本系统）
+func _emit_synthetic_room_completed(room_id: String, room_type: String) -> void:
 	EventBus.room_completed.emit({
-		"room_id": _current_offer.get("source_room_id", ""),
-		"room_type": _current_offer.get("source_room_type", ""),
+		"room_id": room_id,
+		"room_type": room_type,
 		"intent_label": "选择奖励",
 		"objective": {
 			"objective_type": "claim_reward",
@@ -82,8 +106,6 @@ func choose_reward(option_id: String) -> bool:
 		},
 		"exit_room_ids": [],
 	})
-	_current_offer.clear()
-	return true
 
 
 func has_pending_offer() -> bool:
