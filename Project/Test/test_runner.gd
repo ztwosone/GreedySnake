@@ -10,9 +10,30 @@ var _test_suites: Array[GDScript] = []
 
 func _ready() -> void:
 	_discover_tests()
+	_run_after_scene_ready.call_deferred()
+
+
+func _run_after_scene_ready() -> void:
+	await get_tree().process_frame
 	_run_all()
+	_disconnect_transient_event_bus_callbacks()
 	_print_summary()
+	await _flush_pending_cleanup()
 	get_tree().quit(0 if _fail_count == 0 else 1)
+
+
+func _flush_pending_cleanup() -> void:
+	for _i in range(3):
+		await get_tree().process_frame
+
+
+func _disconnect_transient_event_bus_callbacks() -> void:
+	for signal_info in EventBus.get_signal_list():
+		var signal_name: StringName = signal_info.get("name", "")
+		for connection in EventBus.get_signal_connection_list(signal_name):
+			var callback: Callable = connection.get("callable")
+			if not callback.is_null() and EventBus.is_connected(signal_name, callback):
+				EventBus.disconnect(signal_name, callback)
 
 
 func _discover_tests() -> void:
@@ -59,6 +80,10 @@ func assert_true(condition: bool, description: String) -> void:
 	else:
 		_fail_count += 1
 		printerr("  FAIL: %s" % description)
+
+
+func assert_false(condition: bool, description: String) -> void:
+	assert_true(not condition, description)
 
 
 func assert_eq(actual: Variant, expected: Variant, description: String) -> void:

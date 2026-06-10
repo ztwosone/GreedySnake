@@ -32,8 +32,7 @@ func open_window(window_id: String, config: Dictionary, owner: Object) -> void:
 
 	# cancel_on 动态信号连接
 	if window.cancel_on != "":
-		var cancel_callable := func(_d = null) -> void:
-			cancel_window(window_id, "signal")
+		var cancel_callable := Callable(self, "_on_cancel_signal").bind(window_id)
 		if EventBus.has_signal(window.cancel_on):
 			EventBus.connect(window.cancel_on, cancel_callable)
 			_cancel_connections[window_id] = cancel_callable
@@ -110,6 +109,10 @@ func _on_tick(_tick_index: int) -> void:
 
 	for wid in expired_ids:
 		_expire_window(wid)
+
+
+func _on_cancel_signal(_data: Variant, window_id: String) -> void:
+	cancel_window(window_id, "signal")
 
 
 func _expire_window(window_id: String) -> void:

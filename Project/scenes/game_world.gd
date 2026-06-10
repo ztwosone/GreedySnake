@@ -9,6 +9,9 @@ extends Node2D
 @onready var status_tile_manager: StatusTileManager = $StatusTileManager
 @onready var status_transfer_system: StatusTransferSystem = $StatusTransferSystem
 @onready var reaction_system: ReactionSystem = $ReactionSystem
+@onready var run_progression_system: Node = get_node_or_null("RunProgressionSystem")
+@onready var room_flow_system: Node = get_node_or_null("RoomFlowSystem")
+@onready var reward_flow_system: Node = get_node_or_null("RewardFlowSystem")
 @onready var camera: Camera2D = $Camera2D
 
 
@@ -85,6 +88,9 @@ func _ready() -> void:
 	resonance_mgr.name = "ResonanceManager"
 	resonance_mgr.init_manager(snake, StatusEffectManager._trigger_manager, StatusEffectManager._chain_resolver, scale_slot_mgr)
 	add_child(resonance_mgr)
+
+	if reward_flow_system and reward_flow_system.has_method("setup"):
+		reward_flow_system.setup(snake_parts_mgr, scale_slot_mgr)
 
 	# 蛇段增益效果系统
 	var seg_effect_system := SegmentEffectSystem.new()
@@ -164,9 +170,19 @@ func _ready() -> void:
 	event_log.setup(snake)
 	$UI.add_child(event_log)
 
+	var reward_panel: Node = $UI.get_node_or_null("RewardChoicePanel")
+	if reward_panel and reward_panel.has_method("setup"):
+		reward_panel.setup(reward_flow_system)
+
 
 ## T33: 生命周期清理（在 queue_free 前调用）
 func cleanup() -> void:
+	if reward_flow_system and reward_flow_system.has_method("cleanup"):
+		reward_flow_system.cleanup()
+	if room_flow_system and room_flow_system.has_method("cleanup"):
+		room_flow_system.cleanup()
+	if run_progression_system and run_progression_system.has_method("cleanup"):
+		run_progression_system.cleanup()
 	var res_mgr = get_node_or_null("ResonanceManager")
 	if res_mgr:
 		res_mgr.clear_all()
@@ -180,7 +196,13 @@ func cleanup() -> void:
 	var win_mgr = get_node_or_null("EffectWindowManager")
 	if win_mgr:
 		win_mgr.clear_all()
+	if StatusEffectManager._trigger_manager:
+		StatusEffectManager._trigger_manager.enemy_mgr = null
+		StatusEffectManager._trigger_manager.food_mgr = null
+		StatusEffectManager._trigger_manager.window_mgr = null
 	StatusEffectManager.clear_all()
+	TickManager.stop_ticking()
+	GridWorld.clear_all()
 
 
 func start_game() -> void:
@@ -194,11 +216,24 @@ func start_game() -> void:
 	# 3. Initialize food
 	food_manager.init_foods(3)
 
-	# 4. Initialize enemies
-	enemy_manager.init_enemies(3)
+	# 4. Initialize L3 run and current room
+	var current_room: Dictionary = {}
+	if ConfigManager.get_run_config().get("enabled", false) and run_progression_system and run_progression_system.has_method("start_run"):
+		run_progression_system.start_run()
+		current_room = run_progression_system.get_current_room()
+		if room_flow_system and room_flow_system.has_method("enter_room"):
+			room_flow_system.enter_room(current_room)
 
-	# 5. Start Tick
+	# 5. Initialize enemies
+	var enemy_count: int = 3
+	if ConfigManager.get_run_config().get("enabled", false):
+		var room_type: String = current_room.get("room_type", "combat")
+		var room_cfg: Dictionary = ConfigManager.get_room_type(room_type)
+		enemy_count = int(room_cfg.get("enemy_count", enemy_count))
+	enemy_manager.init_enemies(enemy_count)
+
+	# 6. Start Tick
 	TickManager.start_ticking()
 
-	# 6. Notify game started
+	# 7. Notify game started
 	EventBus.game_started.emit()

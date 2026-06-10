@@ -209,8 +209,12 @@ func _on_window_cancelled(data: Dictionary) -> void:
 # ═══════════════════════════════════════════
 
 func _on_enemy_killed(data: Dictionary) -> void:
-	var enemy_def: Dictionary = data.get("enemy_def", {})
-	var etype: String = enemy_def.get("type", data.get("type", "?"))
+	var enemy_def: Variant = data.get("enemy_def", null)
+	var etype: String = data.get("type", "?")
+	if enemy_def is Dictionary:
+		etype = enemy_def.get("type", etype)
+	elif enemy_def != null and enemy_def.get("enemy_type") != null:
+		etype = enemy_def.get("enemy_type")
 	var pos: Vector2i = data.get("position", Vector2i(-1, -1))
 	var cfg: Dictionary = ConfigManager.get_enemy_type(etype)
 	var ename: String = cfg.get("display_name", etype)

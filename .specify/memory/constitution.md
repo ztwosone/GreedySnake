@@ -48,6 +48,21 @@ Every feature implementation follows Red-Green-Refactor:
 - Signals: past tense (`enemy_killed`, `food_eaten`)
 - Private members prefixed with `_`
 
+### VI. Deep Experience, Light Cognition
+
+- New gameplay must create depth through combinations with existing snake status, enemies, Build parts, resonances, or room flow
+- A single task must not introduce multiple new player-facing concepts at once
+- New rules must be introduced in low-pressure contexts before mixed combat
+- Feedback must be readable through color, position, icon, text label, or simple UI
+- Complex mechanics must be configurable, disableable, or degradable through data for debugging and balance
+
+### VII. Placeholder-First Presentation
+
+- Art and UI polish must not block gameplay validation
+- Functional placeholders are acceptable for L3 v1: color blocks, text labels, simple icons, and debug panels
+- New systems must preserve presentation hooks so final art/UI can replace placeholders later
+- Acceptance criteria check clarity and usability, not final visual quality
+
 ## Technology Stack
 
 - **Engine**: Godot 4.6.1 (GDScript 4)
@@ -61,6 +76,7 @@ Every feature implementation follows Red-Green-Refactor:
 |-------|------|---------|
 | Design docs (source of truth) | `Designs/` | Full system design and tech architecture |
 | Quick reference | `TechDocs/QuickReference.md` | Current implementation state index |
+| Agent control plane | `AgentOps/` | Session-independent orchestration, verification, and handoff state |
 | Daily logs | `DailyLogs/` | Daily development records |
 | Task tracking | `Tasks/` (L0-L2), `.specify/specs/` (L3+) | Milestone task breakdown |
 | Spec-driven features | `.specify/specs/NNN-feature/` | SpecKit workflow artifacts |
@@ -84,4 +100,4 @@ L0-L2 historical artifacts in `Designs/` and `Tasks/` remain as-is.
 - Amendments require user confirmation
 - SpecKit specs live alongside (not replacing) existing design docs
 
-**Version**: 1.0.0 | **Ratified**: 2026-04-10
+**Version**: 1.1.0 | **Ratified**: 2026-04-10 | **Amended**: 2026-05-18

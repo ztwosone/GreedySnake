@@ -3,6 +3,8 @@
 > 描述「分发任务给低 tier agent → 等待完成并 push → Opus review」的端到端操作手册。
 > 所有操作在 main 分支上进行，不拉分支。
 
+> **历史状态（2026-05-18）：** 本文档是 L0 时代的单任务 main 直推流程，仅作历史参考。L3+ 起使用 `AgentOps/` 作为会话无关控制面，由 Orchestrator Agent 在 feature branch 上按 SpecKit `tasks.md` 派发单任务卡。新流程入口见 `AgentOps/README.md`、`AgentOps/Runbook.md`、`AgentOps/Verification.md`。
+
 ---
 
 ## 1. 全流程总览

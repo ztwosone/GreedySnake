@@ -8,16 +8,18 @@
 - **状态反应系统** — 异类状态碰撞触发反应（蒸腾、毒爆、冻疫）
 - **多种敌人 AI** — 游荡者、追踪者、毒沼匍匐者，各有独特行为模式
 - **JSON 驱动配置** — 所有数值、效果、反应均由 JSON 配置，零硬编码
-- **Effect Atom System** — 可组合的效果原子框架（49 原子，17 触发器）
+- **Effect Atom System** — 可组合的效果原子框架（68 原子，24 触发器）
 
 ## 开发进度
 
 | 里程碑 | 内容 | 状态 |
 |--------|------|------|
 | L0 | 基础移动 + 长度 + 食物 | ✅ 完成 |
-| L1 | 战斗循环 + 状态系统 + Atom System | ✅ 完成（1034 测试） |
-| L2 | 蛇头/蛇尾/蛇鳞统一 Atom Chain | 🟡 设计完成，待实现 |
-| L3+ | 地图 PCG / 成长 / 元成长 | 🔮 待设计 |
+| L1 | 战斗循环 + 状态系统 + Atom System | ✅ 完成 |
+| L2 | 蛇头/蛇尾/蛇鳞统一 Atom Chain | ✅ 完成（T27A~T33） |
+| L2.5 | Virtual Player 自动化测试基础设施 | ✅ 完成 |
+| L3 | 完整一局：地图/房间/奖励/终局 | 🟡 US2 T001-T016 完成，进入楼层推进 |
+| L4+ | 成长深度 / 元成长 | 🔮 待设计 |
 
 ## 项目结构
 
@@ -33,6 +35,8 @@ Designs/          # 设计文档（source of truth）
 TechDocs/         # 技术文档 + 速查手册
 Tasks/            # 里程碑任务分解
 DailyLogs/        # 每日开发日志
+AgentOps/         # Agent 会话无关统筹控制面
+.specify/specs/   # L3+ SpecKit 规格与任务
 ```
 
 ## 如何运行
@@ -45,6 +49,9 @@ godot --path Project
 
 # 运行测试（headless）
 godot --headless --path Project Test/test_runner.tscn
+
+# 严格测试（同时扫描 Godot 错误输出）
+$env:GODOT_DISABLE_CRASH_HANDLER="1"; powershell -ExecutionPolicy Bypass -File Tools/run_tests_strict.ps1
 ```
 
 ## 核心玩法（L1）

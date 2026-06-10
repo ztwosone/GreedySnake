@@ -15,11 +15,14 @@
     "root": "F:/GreedySnake",
     "godot_project": "F:/GreedySnake/Project",
     "game_config": "F:/GreedySnake/Project/data/json/game_config.json",
-    "test_scene": "F:/GreedySnake/Project/Test/test_runner.tscn"
+    "test_scene": "F:/GreedySnake/Project/Test/test_runner.tscn",
+    "agent_ops": "F:/GreedySnake/AgentOps",
+    "current_l3_spec": "F:/GreedySnake/.specify/specs/001-l3-run-loop"
   },
 
   "commands": {
-    "run_tests": "\"F:/GodotMCP/Godot_v4.6.1-stable_win64.exe/Godot_v4.6.1-stable_win64_console.exe\" --headless --path \"F:/GreedySnake/Project\" Test/test_runner.tscn"
+    "run_tests": "\"F:/GodotMCP/Godot_v4.6.1-stable_win64.exe/Godot_v4.6.1-stable_win64_console.exe\" --headless --path \"F:/GreedySnake/Project\" Test/test_runner.tscn",
+    "run_tests_strict": "$env:GODOT_DISABLE_CRASH_HANDLER=\"1\"; powershell -ExecutionPolicy Bypass -File \"F:/GreedySnake/Tools/run_tests_strict.ps1\""
   },
 
   "speckit": {

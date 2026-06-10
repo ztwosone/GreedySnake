@@ -23,6 +23,18 @@ var snake_tails: Dictionary = {}
 var snake_scales: Dictionary = {}
 var tag_resonances: Dictionary = {}
 var scale_resonance_overrides: Dictionary = {}
+var run: Dictionary = {}
+var floor: Dictionary = {}
+var room_types: Dictionary = {}
+var rewards: Dictionary = {}
+var endpoint: Dictionary = {}
+var growth: Dictionary = {}
+var shop: Dictionary = {}
+var difficulty: Dictionary = {}
+var room_modifiers: Dictionary = {}
+var floor_themes: Dictionary = {}
+var meta_growth: Dictionary = {}
+var event_pickups: Dictionary = {}
 
 # 反应查找表：("fire", "ice") → reaction_dict
 var _reaction_lookup: Dictionary = {}
@@ -82,6 +94,18 @@ func _populate_sections() -> void:
 	snake_scales = _data.get("snake_scales", {})
 	tag_resonances = _data.get("tag_resonances", {})
 	scale_resonance_overrides = _data.get("scale_resonance_overrides", {})
+	run = _data.get("run", {})
+	floor = _data.get("floor", {})
+	room_types = _data.get("room_types", {})
+	rewards = _data.get("rewards", {})
+	endpoint = _data.get("endpoint", {})
+	growth = _data.get("growth", {})
+	shop = _data.get("shop", {})
+	difficulty = _data.get("difficulty", {})
+	room_modifiers = _data.get("room_modifiers", {})
+	floor_themes = _data.get("floor_themes", {})
+	meta_growth = _data.get("meta_growth", {})
+	event_pickups = _data.get("event_pickups", {})
 
 
 func _build_reaction_lookup() -> void:
@@ -188,6 +212,131 @@ func get_tag_resonance_ids() -> Array:
 		if not ids.has(res_id):
 			ids.append(res_id)
 	return ids
+
+
+func get_run_config() -> Dictionary:
+	return run
+
+
+func get_floor_config() -> Dictionary:
+	return floor
+
+
+func get_room_type(room_type: String) -> Dictionary:
+	return room_types.get(room_type, {})
+
+
+func get_room_type_ids() -> Array:
+	return room_types.keys()
+
+
+func get_reward_config() -> Dictionary:
+	return rewards
+
+
+func get_reward_pool(pool_id: String) -> Array:
+	var pools: Dictionary = rewards.get("pools", {})
+	return pools.get(pool_id, [])
+
+
+func get_reward_pool_ids() -> Array:
+	var pools: Dictionary = rewards.get("pools", {})
+	return pools.keys()
+
+
+func get_endpoint_config() -> Dictionary:
+	return endpoint
+
+
+func get_growth_config() -> Dictionary:
+	return growth
+
+
+func get_shedskin_config() -> Dictionary:
+	return growth.get("shedskin", {})
+
+
+func get_scale_reward_config() -> Dictionary:
+	return growth.get("scale_reward", {})
+
+
+func get_scale_reward_pool(pool_id: String) -> Array:
+	var pools: Dictionary = growth.get("scale_reward", {}).get("pools", {})
+	return pools.get(pool_id, [])
+
+
+func get_scale_reward_pool_ids() -> Array:
+	var pools: Dictionary = growth.get("scale_reward", {}).get("pools", {})
+	return pools.keys()
+
+
+func get_slot_expansion_config() -> Dictionary:
+	return growth.get("slot_expansion", {})
+
+
+func get_floor_reward_config() -> Dictionary:
+	return growth.get("floor_reward", {})
+
+
+func get_shop_config() -> Dictionary:
+	return shop
+
+
+func get_shop_item_price(item_id: String) -> int:
+	var categories: Dictionary = shop.get("item_categories", {})
+	var cat: Dictionary = categories.get(item_id, {})
+	return int(cat.get("price", 0))
+
+
+func get_shop_item_category(item_id: String) -> String:
+	var categories: Dictionary = shop.get("item_categories", {})
+	var cat: Dictionary = categories.get(item_id, {})
+	return cat.get("category", "")
+
+
+func get_difficulty_config() -> Dictionary:
+	return difficulty
+
+
+func get_room_modifier(modifier_id: String) -> Dictionary:
+	return room_modifiers.get(modifier_id, {})
+
+
+func get_room_modifier_ids() -> Array:
+	return room_modifiers.keys()
+
+
+func get_floor_theme(theme_id: String) -> Dictionary:
+	return floor_themes.get(theme_id, {})
+
+
+func get_floor_theme_ids() -> Array:
+	return floor_themes.keys()
+
+
+func get_meta_growth_config() -> Dictionary:
+	return meta_growth
+
+
+func get_unlock_conditions() -> Array:
+	return meta_growth.get("unlock_conditions", [])
+
+
+func get_legacy_stone_templates() -> Dictionary:
+	return meta_growth.get("legacy_stone_templates", {})
+
+
+func get_max_legacy_stones() -> int:
+	return int(meta_growth.get("max_legacy_stones", 5))
+
+
+func get_event_pickups_config() -> Dictionary:
+	return event_pickups
+
+
+func get_pickup(pickup_id: String) -> Dictionary:
+	var pickups: Dictionary = event_pickups.get("pickups", {})
+	return pickups.get(pickup_id, {})
 
 
 func _build_resonance_lookups() -> void:

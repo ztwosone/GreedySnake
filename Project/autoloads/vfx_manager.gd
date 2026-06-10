@@ -7,6 +7,10 @@ var _screen_layer: CanvasLayer  # 屏幕空间效果
 
 
 func _ready() -> void:
+	_create_layers()
+
+
+func _create_layers() -> void:
 	# 世界空间 VFX 层（会随 Camera 移动）
 	_vfx_layer = Node2D.new()
 	_vfx_layer.name = "VFXLayer"
@@ -20,6 +24,9 @@ func _ready() -> void:
 
 func setup(game_world: Node2D) -> void:
 	## 在 GameWorld._ready() 中调用，挂载 VFX 层
+	if not is_instance_valid(_vfx_layer) or not is_instance_valid(_screen_layer):
+		_create_layers()
+
 	if _vfx_layer.get_parent():
 		_vfx_layer.get_parent().remove_child(_vfx_layer)
 	game_world.add_child(_vfx_layer)
@@ -141,7 +148,12 @@ func screen_flash(color: Color = Color(1, 1, 1, 0.3), duration: float = 0.1) -> 
 
 func screen_shake(intensity: float = 3.0, duration: float = 0.1) -> void:
 	## 屏幕震动（委托给已有的 ScreenShake 系统）
-	var shake_node: Node = _vfx_layer.get_parent().get_node_or_null("ScreenShake") if is_instance_valid(_vfx_layer) else null
+	if not is_instance_valid(_vfx_layer):
+		return
+	var vfx_parent: Node = _vfx_layer.get_parent()
+	if vfx_parent == null:
+		return
+	var shake_node: Node = vfx_parent.get_node_or_null("ScreenShake")
 	if shake_node and shake_node.has_method("shake"):
 		shake_node.shake(intensity, duration)
 
