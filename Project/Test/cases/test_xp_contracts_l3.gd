@@ -81,11 +81,16 @@ func _test_l3_first_contracts(t) -> void:
 	t.assert_true(recorder.pending_modals().is_empty(),
 		"[XP-L3] ui_actor resolved the reward modal via panel public API")
 
-	# combat_02 → rest → endpoint（与 smoke 同路径，鳞片模态由 actor 决议）
+	# combat_02 → shop → rest → endpoint（与 smoke 同路径，鳞片模态由 actor 决议；
+	# 商店 shop_entered 非 *_presented，不入 pending modal 栈——spec 002 T016）
 	t.assert_true(floor_panel.request_next_room(), "[XP-L3] advance to second combat room")
 	await driver.play(2, recorder, actor)
 	room_flow.record_objective_progress(combat_required, {"method": "xp_contracts"})
 	await driver.play(1, recorder, actor)
+	t.assert_true(floor_panel.request_next_room(), "[XP-L3] advance to shop room")
+	await driver.play(1, recorder, actor)
+	t.assert_true(recorder.pending_modals().is_empty(),
+		"[XP-L4] shop is not a blocking modal (no pending entry)")
 	t.assert_true(floor_panel.request_next_room(), "[XP-L3] advance to rest room")
 	await driver.play(1, recorder, actor)
 	t.assert_true(floor_panel.request_next_room(), "[XP-L3] advance to endpoint room")

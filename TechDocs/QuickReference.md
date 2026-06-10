@@ -187,6 +187,21 @@ FR-018 显式保留契约：**RewardFlowSystem 为 L3 `reward` 房发射的合�
   tail_upgrade: 1}`（货架构成纯数据，合计 ≤ `max_items_per_shop: 5`，SC-003 ≥3 项）、
   `item_categories.scale_l1|l2|l3` 增 `level`（tier 等级）、`item_categories.slot_*`
   增 `position`。
+- 固定路径增商店房（T016/MDE）：`floor.fixed_v1_path = [combat_01, reward_01, combat_02,
+  shop_01, rest_01, endpoint_01]`（6 房，`rooms_per_floor: 6`）；shop_01 排在 2 个战斗房后
+  （FR-017 商店保底在 fixed_v1 档的体现），F5 即可走到买槽。L3 回归套件
+  （acceptance/smoke/floor_progression/run_end/xp_contracts/T010）已适配 6 房路径。
+- `game_world.tscn/gd` 接线（T016）：`ShopSystem`/`SlotExpansionSystem` 场景节点 +
+  `UI/ShopPanel`；`shop_system.setup(shedskin, scale_slot_mgr, snake_parts_mgr)`、
+  `slot_expansion_system.setup(scale_slot_mgr)`、`shop_panel.setup(shop_system)`；
+  `cleanup()` 扩展。买槽端到端：面板 purchase → `shop_purchase` → 适配器 `open_slot` →
+  新槽可装备可共鸣（e2e 用例 `test_l4_shop._test_game_world_shop_chain`）。
+- 几何探针实证缺陷顺手修（T016）：`RewardChoicePanel` 决议后的「已选择」反馈面板
+  原本悬挂不收，离开奖励房进商店时构成双模态重叠；现监听 `room_entered`——
+  进入非奖励触发房且无待决选项时收起（奖励房本身由 `reward_presented` 接管，
+  RewardFlow 在同一派发中先行，顺序安全）。
+- 几何探测新增状态 `l4_shop_open`（state_stager + test_xp_ui_geometry：两战斗一奖励
+  走到 shop_01，ShopPanel 货架 + 蜕皮 chip 同屏探测）。
 
 ## L1 战斗循环关键事实
 

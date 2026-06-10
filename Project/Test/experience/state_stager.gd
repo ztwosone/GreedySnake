@@ -15,6 +15,7 @@ static func stage(state_name: String, host: Node) -> Dictionary:
 	##   "l3_run_start" / "l3_floor_panel"：run 起始态（FloorProgressPanel 可见，combat_01 进行中）
 	##   "l3_reward_pending"：combat_01 完成 + 鳞片 offer 决议 + 进奖励房（RewardChoicePanel 可见）
 	##   "l4_scale_pending"：combat_01 完成（ScaleChoicePanel 可见 + 蜕皮 chip 已披露，spec 002 T2）
+	##   "l4_shop_open"：走完两战斗一奖励进商店房（ShopPanel 可见 + 蜕皮 chip，spec 002 T3）
 	## ctx["ui_root"]：几何探针扫描根（壳层屏 = UILayer，局内 = game_world 的 UI 层）
 	var ctx: Dictionary = {
 		"state_name": state_name,
@@ -57,6 +58,24 @@ static func stage(state_name: String, host: Node) -> Dictionary:
 			var l4_room_flow: Node = world.get_node("RoomFlowSystem")
 			var l4_required: int = int(l4_room_flow.get_objective_progress().get("required", 1))
 			l4_room_flow.record_objective_progress(l4_required, {"method": "state_stager"})
+		"l4_shop_open":
+			# spec 002 T3：固定路径走到 shop_01（ShopPanel 货架可见，蜕皮余额来自两次放弃）
+			var shop_room_flow: Node = world.get_node("RoomFlowSystem")
+			var shop_floor_panel: Control = world.get_node("UI/FloorProgressPanel")
+			var shop_scale_panel: Node = world.get_node_or_null("UI/ScaleChoicePanel")
+			var shop_reward_panel: Node = world.get_node_or_null("UI/RewardChoicePanel")
+			var shop_required: int = int(shop_room_flow.get_objective_progress().get("required", 1))
+			shop_room_flow.record_objective_progress(shop_required, {"method": "state_stager"})
+			if shop_scale_panel != null and shop_scale_panel.has_method("discard_offer"):
+				shop_scale_panel.discard_offer()
+			shop_floor_panel.request_next_room()  # reward_01
+			if shop_reward_panel != null and shop_reward_panel.has_method("choose_option_by_index"):
+				shop_reward_panel.choose_option_by_index(0)
+			shop_floor_panel.request_next_room()  # combat_02
+			shop_room_flow.record_objective_progress(shop_required, {"method": "state_stager"})
+			if shop_scale_panel != null and shop_scale_panel.has_method("discard_offer"):
+				shop_scale_panel.discard_offer()
+			shop_floor_panel.request_next_room()  # shop_01
 		_:
 			push_warning("state_stager: unknown state '%s', staged bare run" % state_name)
 	return ctx

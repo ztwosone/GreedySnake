@@ -915,10 +915,10 @@
   },
 
   "floor": {
-    "rooms_per_floor": 5,
+    "rooms_per_floor": 6,
     "reward_choices": 3,
     "generator": "fixed_v1",
-    "fixed_v1_path": ["combat_01", "reward_01", "combat_02", "rest_01", "endpoint_01"],
+    "fixed_v1_path": ["combat_01", "reward_01", "combat_02", "shop_01", "rest_01", "endpoint_01"],
     "default_seed": 1001,
     "modifier_weights": {
       "1": { "shield_enemies": 0, "preset_status_tiles": 0 },

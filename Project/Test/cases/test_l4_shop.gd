@@ -26,6 +26,7 @@ func run(t) -> void:
 	_test_empty_shelf_auto_resolves(t)
 	_test_purchase_flow(t)
 	_test_shop_panel_public_api(t)
+	await _test_game_world_shop_chain(t)
 
 
 # ── T013: 配置（FR-010/SC-003） ──────────────────────────────────────
@@ -378,6 +379,126 @@ func _index_by_category(items: Array, category: String) -> int:
 		if items[index] is Dictionary and str(items[index].get("category", "")) == category:
 			return index
 	return -1
+
+
+# ── T016: game_world 集成——买槽端到端（买 → 开槽 → 可装备 → 共鸣） ──
+
+## 各位置一对可共鸣的鳞片（front: recovery+fire / middle: fire+void / back: physical+physical）
+const _RESONANT_PAIRS: Dictionary = {
+	"front": ["greedy_scale", "predator_scale"],
+	"middle": ["flame_scale", "phantom_scale"],
+	"back": ["thorn_scale", "retaliation_scale"],
+}
+
+
+func _test_game_world_shop_chain(t) -> void:
+	var saved_state: int = GameManager.current_state
+	var saved_score: int = GameManager.current_score
+	var saved_best: int = GameManager.best_score
+
+	var scene = load("res://scenes/game_world.tscn") as PackedScene
+	t.assert_true(scene != null, "[L4-T016] game_world scene loads")
+	if scene == null:
+		return
+
+	var world: Node = scene.instantiate()
+	var wired: bool = world.has_node("ShopSystem") and world.has_node("SlotExpansionSystem") \
+		and world.has_node("UI/ShopPanel")
+	t.assert_true(world.has_node("ShopSystem"), "[L4-T016] game_world has ShopSystem node")
+	t.assert_true(world.has_node("SlotExpansionSystem"), "[L4-T016] game_world has SlotExpansionSystem node")
+	t.assert_true(world.has_node("UI/ShopPanel"), "[L4-T016] game_world has ShopPanel UI")
+	var path: Array = ConfigManager.get_floor_config().get("fixed_v1_path", [])
+	t.assert_true(path.has("shop_01"),
+		"[L4-T016] fixed_v1 path guarantees a shop room (MDE: F5 reaches buy-a-slot)")
+	var shop_pos: int = path.find("shop_01")
+	var combat_before: int = 0
+	for index in range(shop_pos):
+		if str(path[index]).begins_with("combat"):
+			combat_before += 1
+	t.assert_true(combat_before >= 2,
+		"[L4-T016] FR-017: shop placed after at least 2 combat rooms")
+	if not wired or not path.has("shop_01"):
+		world.free()
+		return
+	t.add_child(world)
+	world.start_game()
+	GameManager.start_game()
+
+	var run_system: Node = world.get_node("RunProgressionSystem")
+	var room_flow: Node = world.get_node("RoomFlowSystem")
+	var floor_panel: Control = world.get_node("UI/FloorProgressPanel")
+	var reward_panel: Control = world.get_node("UI/RewardChoicePanel")
+	var scale_panel: Control = world.get_node("UI/ScaleChoicePanel")
+	var shop_panel: Control = world.get_node("UI/ShopPanel")
+	var shop_system: Node = world.get_node("ShopSystem")
+	var shedskin: Node = world.get_node("ShedskinSystem")
+	var scale_mgr: Node = world.get_node("ScaleSlotManager")
+	var resonance_mgr: Node = world.get_node("ResonanceManager")
+	var required: int = int(room_flow.get_objective_progress().get("required", 1))
+	var sd: int = int(ConfigManager.get_shedskin_config().get("scale_discard", 0))
+
+	# combat_01 → 放弃鳞片 → reward → 选择 → combat_02 → 放弃鳞片（攒蜕皮 6×sd）
+	room_flow.record_objective_progress(required, {"method": "l4_t016"})
+	t.assert_true(scale_panel.discard_offer(), "[L4-T016] discard first scale offer")
+	t.assert_true(floor_panel.request_next_room(), "[L4-T016] enter reward room")
+	t.assert_true(reward_panel.choose_option_by_index(0), "[L4-T016] resolve L3 reward")
+	t.assert_true(floor_panel.request_next_room(), "[L4-T016] enter second combat room")
+	room_flow.record_objective_progress(required, {"method": "l4_t016"})
+	t.assert_true(scale_panel.discard_offer(), "[L4-T016] discard second scale offer")
+	t.assert_eq(shedskin.get_amount(), 6 * sd, "[L4-T016] discard income banked for shopping")
+
+	# 进商店：面板开、房间自动完成、不注册模态门控（随时可走）
+	t.assert_true(floor_panel.request_next_room(), "[L4-T016] enter shop room")
+	t.assert_eq(run_system.get_state().get("current_room_id", ""), "shop_01", "[L4-T016] run reaches shop_01")
+	t.assert_true(shop_panel.visible, "[L4-T016] shop panel opens on shop room entry")
+	t.assert_true(shop_system.is_active(), "[L4-T016] shop system active")
+	t.assert_true(room_flow.is_current_room_complete(), "[L4-T016] shop room auto-completes on enter")
+	t.assert_false(run_system.has_pending_offer(),
+		"[L4-T016] shop registers NO pending offer (exit without purchase stays possible)")
+
+	# 买槽端到端：买 → 槽位真开 → 新槽可装备 → 共鸣生效
+	var items: Array = shop_system.get_inventory()
+	var slot_index: int = _index_by_category(items, "slot")
+	t.assert_true(slot_index >= 0, "[L4-T016] shelf carries a slot item")
+	if slot_index >= 0:
+		var slot_item: Dictionary = items[slot_index]
+		var position: String = str(slot_item.get("target_slot", ""))
+		var open_before: int = scale_mgr.get_open_slots(position)
+		var balance_before: int = shedskin.get_amount()
+		t.assert_false(shop_panel.is_item_disabled(slot_index), "[L4-T016] slot item affordable")
+		t.assert_true(shop_panel.purchase_by_index(slot_index), "[L4-T016] buy the slot via panel API")
+		t.assert_eq(scale_mgr.get_open_slots(position), open_before + 1,
+			"[L4-T016] purchased slot REALLY opens in the world ScaleSlotManager")
+		t.assert_eq(shedskin.get_amount(), balance_before - int(slot_item.get("price", 0)),
+			"[L4-T016] slot price deducted from the run wallet")
+		# 清出该位置可能已有的鳞片（奖励房选择可能装过），让配对恰好用满 基础槽+新购槽
+		for slot_i in range(scale_mgr.get_max_slots(position)):
+			scale_mgr.unequip_scale(position, slot_i)
+		var pair: Array = _RESONANT_PAIRS.get(position, [])
+		t.assert_true(scale_mgr.equip_scale(position, str(pair[0]), 1), "[L4-T016] fill base slot")
+		t.assert_true(scale_mgr.equip_scale(position, str(pair[1]), 1),
+			"[L4-T016] newly bought slot accepts a scale")
+		t.assert_true(resonance_mgr.get_active_resonances().size() >= 1,
+			"[L4-T016] scales across the bought slot resonate")
+
+	# 退店通路：走向下一房间即收店
+	t.assert_true(floor_panel.request_next_room(), "[L4-T016] leave shop into rest room")
+	t.assert_false(shop_panel.visible, "[L4-T016] shop panel closes on room_entered exit")
+	t.assert_false(shop_system.is_active(), "[L4-T016] shop system exits on room_entered")
+	t.assert_true(floor_panel.request_next_room(), "[L4-T016] enter endpoint room")
+	t.assert_eq(run_system.get_state().get("outcome", ""), "victory", "[L4-T016] full chain reaches victory")
+
+	world.cleanup()
+	world.queue_free()
+	GameManager.current_state = saved_state
+	GameManager.current_score = saved_score
+	GameManager.best_score = saved_best
+	TickManager.stop_ticking()
+	GridWorld.clear_all()
+	# 冲掉本套件 queue_free 的世界：其 EnemyManager 在落地前仍连着 enemy_killed
+	# （严格门禁扫描会把 mock payload 当 Enemy 节点收参报 SCRIPT ERROR）
+	await t.get_tree().process_frame
+	await t.get_tree().process_frame
 
 
 # ── Helpers ──────────────────────────────────────────────────────────

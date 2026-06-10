@@ -471,7 +471,10 @@ func _test_game_world_scale_reward_chain(t) -> void:
 	t.assert_true(scale_mgr.get_all_scales().size() >= 1, "[L4-T010] chosen scale present in Build")
 	t.assert_eq(shedskin.get_amount(), 5 * sd, "[L4-T010] choice discards the other two options (+2 each)")
 
-	# 休整 → 终点：全链胜利（无合成 room_completed 干扰房间流程）
+	# 商店 → 休整 → 终点：全链胜利（无合成 room_completed 干扰房间流程；
+	# 商店不注册模态门控——spec 002 T016）
+	t.assert_true(floor_panel.request_next_room(), "[L4-T010] Next enters shop room")
+	t.assert_false(run_system.has_pending_offer(), "[L4-T010] shop registers no pending offer")
 	t.assert_true(floor_panel.request_next_room(), "[L4-T010] Next enters rest room")
 	t.assert_true(floor_panel.request_next_room(), "[L4-T010] Next enters endpoint room")
 	t.assert_eq(run_system.get_state().get("outcome", ""), "victory",
