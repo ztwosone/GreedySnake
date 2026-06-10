@@ -1,5 +1,12 @@
 class_name EnemyManager
 extends Node
+## spec 002 T020（RoomDirector 前置契约，增量改造——默认行为与 L1/L2 完全一致）：
+## - respawn_policy："maintain"（默认）= 击杀即补怪、永续维持 max_enemy_count；
+##   "room_budget" = 生成既定一批后不自动补怪（RoomDirector 按房型布怪用）。
+## - spawn_budget：room_budget 档剩余可生成数（-1 = 不限）；spawn_enemy 成功生成消耗 1，
+##   归零后拒绝生成。spawn_enemy_at 是脚本定点放置（l1/l2 验收场景、触发原子），不消耗预算。
+## - 注入式权重表：set_spawn_weights() 覆盖 enemy.spawn_weights（空表 = 回退配置）；
+##   RoomDirector 以 floor_themes.<id>.enemy_pool_weights 注入主题敌池。
 
 var max_enemy_count: int = 3
 var current_enemies: Array[Enemy] = []
@@ -7,6 +14,9 @@ var enemy_container: Node2D
 var snake: Snake
 var food_manager: FoodManager = null
 var collision_handler: Node = null  ## CollisionHandler
+var respawn_policy: String = "maintain"
+var spawn_budget: int = -1
+var _spawn_weights_override: Dictionary = {}
 const SPAWN_SAFE_DISTANCE: int = 3
 
 
@@ -21,7 +31,14 @@ func init_enemies(count: int) -> void:
 		spawn_enemy(_pick_random_type())
 
 
+## 覆盖随机生成权重表（T020）：空表 = 回退 enemy.spawn_weights 配置
+func set_spawn_weights(weights: Dictionary) -> void:
+	_spawn_weights_override = weights.duplicate(true)
+
+
 func spawn_enemy(type_id: String = "wanderer") -> void:
+	if respawn_policy == "room_budget" and spawn_budget == 0:
+		return
 	var empty_cells: Array[Vector2i] = GridWorld.get_empty_cells()
 	if empty_cells.is_empty():
 		return
@@ -45,6 +62,8 @@ func spawn_enemy(type_id: String = "wanderer") -> void:
 	if enemy_container:
 		enemy_container.add_child(enemy)
 	current_enemies.append(enemy)
+	if respawn_policy == "room_budget" and spawn_budget > 0:
+		spawn_budget -= 1
 	EventBus.enemy_spawned.emit({"enemy_def": enemy, "position": pos, "type": type_id})
 
 
@@ -111,8 +130,8 @@ func _on_enemy_killed(data: Dictionary) -> void:
 	_drop_food_for_enemy(enemy, pos)
 	if enemy and enemy in current_enemies:
 		current_enemies.erase(enemy)
-	# Respawn to maintain count
-	if current_enemies.size() < max_enemy_count:
+	# Respawn to maintain count（仅 maintain 档——room_budget 档清完即清，T020）
+	if respawn_policy == "maintain" and current_enemies.size() < max_enemy_count:
 		spawn_enemy(_pick_random_type())
 
 
@@ -132,20 +151,22 @@ func _drop_food_for_enemy(enemy: Node, pos: Vector2i) -> void:
 
 
 func _pick_random_type() -> String:
-	var enemy_cfg: Dictionary = ConfigManager.enemy
-	var weights: Dictionary = enemy_cfg.get("spawn_weights", {})
+	var weights: Dictionary = _spawn_weights_override
+	if weights.is_empty():
+		weights = ConfigManager.enemy.get("spawn_weights", {})
 	if weights.is_empty():
 		return "wanderer"
-	var total: int = 0
+	var total: float = 0.0
 	for w in weights.values():
-		total += int(w)
-	var roll: int = randi() % total
-	var accum: int = 0
+		total += maxf(0.0, float(w))
+	if total <= 0.0:
+		return "wanderer"
+	var roll: float = randf() * total
 	for type_id in weights:
-		accum += int(weights[type_id])
-		if roll < accum:
-			return type_id
-	return "wanderer"
+		roll -= maxf(0.0, float(weights[type_id]))
+		if roll < 0.0:
+			return str(type_id)
+	return str(weights.keys().back())
 
 
 func spawn_enemy_at(type_id: String, pos: Vector2i) -> Enemy:

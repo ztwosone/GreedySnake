@@ -1,9 +1,9 @@
 # 当前状态
 
-**更新时间**：2026-06-11（S2 T4 簇收口）
+**更新时间**：2026-06-11（S2 T5a 收口）
 **当前分支**：`002-l4-growth-cycle`（spec 002 重验收进行中，每簇过严格门禁后合 main）
 **当前 feature**：`.specify/specs/002-l4-growth-cycle/`（重验收）
-**当前阶段**：S2 T4 簇完成（T018-T019 Seeded PCG）；下一簇 T5（多层推进 + 楼层奖励 + RoomDirector，T020-T028）
+**当前阶段**：S2 T5 簇前半完成（T020-T023 多层基建）；后半 T5b（T024-T028 楼层奖励 + 多层冒烟）
 
 ## 阶段路线图
 
@@ -56,11 +56,24 @@ S1 统一设计语言。此后任何中断，项目仍是「打开就能感受�
 
 ## 最近验证基线
 
-- 普通测试：`3155/3155` 断言，套件 `68/68`（T4 簇重写 `test_l4_pcg_rooms` 为性质测试后的
-  断言基数——草稿逐房逐字段断言改为聚合性质断言，总数回落属预期）。
-- 严格测试：`STRICT PASSED`（2026-06-11，S2 T4 簇门禁）。
+- 普通测试：`3246/3246` 断言，套件 `69/69`（新增 `test_l4_room_director`）。
+- 严格测试：`STRICT PASSED`（2026-06-11，S2 T5a 门禁）。
 
 ## S2 进度
+
+- T5a ✅（T020-T023 多层基建）：`EnemyManager` 增量改造——`respawn_policy`
+  （默认 `maintain` 保 L1/L2 行为，`room_budget` 档不补怪）+ `spawn_budget`
+  （`spawn_enemy_at` 定点放置不消耗）+ `set_spawn_weights` 注入权重表；
+  `RoomDirector` 新建（game_world 常驻节点）——`room_entered` 清场布怪布食
+  （仅 clear_enemies 房有敌、预算钳 >= required_count、主题敌池注入、elite/boss 房
+  elite_* 变体、食物走 difficulty.floor_table）、`floor_theme_set` 发射、难度 scaler
+  duck-typed 钩子（T6 零桩）+ 修饰符注入点（T031）；`RunProgressionSystem.advance_floor()`
+  ——同 run seed 重生成下层、按层重置房间状态、**pcg 档**非终层 boss 完成
+  `call_deferred` 切层（击杀级联重入防护）、floor_reward 未决挂起（T027 groundwork）、
+  终层胜利路径；**fixed_v1 档保持单层 MDE 闭环（终点即胜利）**；
+  `game_world.reset_for_floor()`——组合既有清场原语 + 蛇重建保长度（按 target 注销
+  状态，不可 StatusEffectManager.clear_all——会杀 Build 触发器）；Build/蜕皮/共鸣
+  跨层存续专项测试（test_l4_slots T023 用例组）。新套件 `test_l4_room_director.gd`。
 
 - T4 簇 ✅（T018-T019）：`floor_map_generator` 重写为双档——`floor.generator` 开关全权决定
   （草稿楼层 1 短路固定路径、2 层起无视开关已修）；PCG 档 seeded（每层 RNG 种子 =
@@ -103,24 +116,27 @@ S1 统一设计语言。此后任何中断，项目仍是「打开就能感受�
   `l4_scale_pending` 状态；JSON 增量 `growth.scale_reward.default_pool`。
   测试事实：全局 `enemy_killed` 的 `enemy_def` 必须是 Node 派生或 null（EnemyManager 按 Node 收参）。
 
-## 下一张建议任务（S2 T5 簇开卡）
+## 下一张建议任务（S2 T5b 开卡）
 
-T4 簇已收口合 main。下一簇 T5（T020-T028 多层推进 + 楼层奖励 + RoomDirector）：
-1. T020 前置契约变更：`enemy_manager.gd` 增量改造——`respawn_policy`（默认 `maintain`
-   保 L1/L2 行为与既有测试绿）+ 注入式权重表 + spawn_budget；新建 `test_l4_room_director.gd`。
-2. T021 `room_director.gd` 新建：监听 `room_entered`/`floor_generated` → 清场 → 按房型 +
-   主题权重 + 难度修正布怪布食；PCG 房 dict 已带 `modifiers: Array` 与 `theme_id`，
-   elite 房型/boss 房型（enemy_count/required_count）从 `room_types` 读。
-3. T022 多层切换：`game_world.reset_for_floor()` + `run_progression_system` 消费
-   `run.max_floors`；楼层奖励决议先于 `advance_floor()`（T027）；终层 → 胜利路径。
-   PCG 档 `generate_floor(floor_index, run_seed)` 已支持任意层（种子推导含 floor_index），
-   多层 run 直接传同一 run_seed 即可获得确定性楼层序列。
-4. T024-T026 楼层奖励：固定槽位解锁步骤先于 3 选 1；`floor_reward_panel` 两段式；
-   终层不弹（`floor_index < run.max_floors`）。注意 boss 房不自动完成、objective =
-   clear_enemies；PCG 图终点即 boss 房（`endpoint_room_id`）。
-5. 回归重点：fixed_v1 档仍是默认（`floor.generator: "fixed_v1"`），多层测试需在测试内
-   切 `ConfigManager.floor["generator"] = "pcg"` 并还原（test_l4_pcg_rooms 有现成
-   `_force_generator`/`_restore_floor_section` 模式可抄）。
-6. 后续：T6 难度+修饰符（DifficultyScaler 唯一消费者 = RoomDirector）→ T7 验收封口
+T5a（T020-T023）已收口合 main。后半 T5b（T024-T028 楼层奖励 + 多层冒烟）：
+1. T024-T026 楼层奖励：固定槽位解锁步骤（选前/中/后，经 SlotExpansionSystem
+   `unlock_slot(position, "boss")`）先于 3 选 1（高级鳞/升级最低级件/同 tag 换鳞）；
+   `floor_reward_panel` 基于 ui/kit 两段式；终层不弹（`floor_index < run.max_floors`）。
+   FloorRewardSystem 监听 `floor_completed` 同步呈现即可——RunProgression 在
+   `_emit_floor_completed` 之后才查 `floor_reward` pending 家族，同派发内呈现的 offer
+   会被看见并挂起切层（T5a groundwork：`_advance_after_floor_reward` +
+   `floor_reward_chosen` 后 `call_deferred("advance_floor")`）。
+2. T027 集成：把 groundwork 接到真 FloorRewardSystem（game_world.tscn 加节点 + setup），
+   验证决议先于 `floor_generated`；终层 `floor_completed` → 胜利已在 T5a 落地。
+3. T028 多层冒烟：`test_l4_multifloor_run.gd` 3 层 PCG 至胜利，面板公共 API 驱动；
+   现成驱动器模式可抄 `test_l4_room_director._drive_world_to_next_floor` /
+   `test_l4_slots._drive_world_until_endpoint`（战斗房 record progress → 鳞片 offer
+   放弃/选择 → Next；boss 完成后 `await process_frame` 冲延迟切层）。
+4. 回归重点：fixed_v1 仍是默认且**保持单层 MDE 闭环（终点即胜利）**——多层推进
+   是 pcg 档行为（T5a 裁定，FR-016 回退档语义）；多层测试需测试内切
+   `ConfigManager.floor["generator"] = "pcg"` 并还原。
+5. 后续：T6 难度+修饰符（DifficultyScaler 唯一消费者 = RoomDirector，duck-typed
+   钩子缝已留：`set_difficulty_scaler` + `get_enemy_count_delta`/`get_food_count_delta`；
+   修饰符注入点 `set_modifier_system(obj).apply_modifiers(room)` 已留）→ T7 验收封口
    （T029/T031/T033 重写时删除 `room_modifiers` 中 darkness/speed_strips/mine_tiles
    草稿残留）。每簇合 main。13 文件判决表见 plan.md「重验收策略」。
