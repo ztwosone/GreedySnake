@@ -27,14 +27,16 @@ static func take_snapshot(snake: Node) -> Dictionary:
 	snapshot["current_tick"] = TickManager.current_tick
 
 	# 敌人（屏幕可见：位置、类型、形状）
+	# 注意：Object.get 只收 1 参（双参是 Dictionary API）——草稿的 get(prop, default)
+	# 在任何敌人/状态格进入 cell_map 时即运行时报错、整个快照中断（spec 002 T034 实证修复）
 	var enemies: Array[Dictionary] = []
 	for cell_pos: Vector2i in GridWorld.cell_map:
 		for entity in GridWorld.cell_map[cell_pos]:
 			if entity is Node and entity.get("entity_type") == Constants.EntityType.ENEMY:
 				enemies.append({
 					"pos": cell_pos,
-					"type": entity.get("enemy_type", ""),
-					"shape": entity.get("enemy_shape", ""),
+					"type": _get_node_prop(entity, "enemy_type", ""),
+					"shape": _get_node_prop(entity, "enemy_shape", ""),
 				})
 	snapshot["enemies"] = enemies
 
@@ -53,8 +55,16 @@ static func take_snapshot(snake: Node) -> Dictionary:
 			if entity is Node and entity.get("entity_type") == Constants.EntityType.STATUS_TILE:
 				tiles.append({
 					"pos": cell_pos,
-					"type": entity.get("tile_type", ""),
+					"type": _get_node_prop(entity, "tile_type", ""),
 				})
 	snapshot["status_tiles"] = tiles
 
 	return snapshot
+
+
+## Node 属性带缺省读取（Object.get 无双参形式；属性缺失/为 null 时回退 default）
+static func _get_node_prop(entity: Node, prop: String, default: Variant) -> Variant:
+	if not (prop in entity):
+		return default
+	var value: Variant = entity.get(prop)
+	return value if value != null else default
