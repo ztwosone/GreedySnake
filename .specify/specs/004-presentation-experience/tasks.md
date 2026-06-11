@@ -75,10 +75,12 @@ kit 零编排红线的解除处 = CeremonyLayer 从外部驱动（S1 铁律的�
 
 ### P-B 仪式与局内体验（US3 余下 + US4）
 
-- [ ] T103 [P-B] 死亡仪式（hitstop 0.1 → 蛇尾到头逐段消散 0.05s/段 → 世界去饱和 →
-  dim → 死因中文一行，cause→中文映射 `presentation.death_causes`；tick 脉搏线随消散
-  渐灭）+ 胜利仪式（终点格金色扩散环 → dim）+ 局后总结编排（统计行 stagger 滚入 →
-  解锁卡 → 石碑卡 → 按钮；与 `run_ended.stats` 一致性 Layer A 断言）
+- [x] T103 [P-B] 死亡仪式（hitstop 0.1 → 蛇尾到头逐段消散 0.05s/段 → 世界去饱和
+  灰罩近似 → dim → 死因中文一行 `presentation.death_causes` 映射；tick 脉搏线随
+  game_over 渐灭）+ 胜利仪式（蛇头金色扩散环 ring_at → dim）+ 局后总结 stagger 滚入
+  （统计/死因 → 结算行 → 按钮，Tween 经 kit 面板登记保 settle）+ 仪式打断契约
+  reset()（restart/回标题/test-mode/game_started 四入口）+ game_feel=false 整体旁路 +
+  新套件 test_xp_ceremony（映射/门控/打断/旁路）
 - [ ] T104 [P-B] 房间意图横幅→chip 两段式（0.9s 横幅收缩为顶中 chip + 完成章）+
   楼层小地图（左上，意图色方块 + 路径线 + 当前脉动/完成暗化）+ 选择仪式
   `choice_ceremony`（`pause(&"ceremony")` → dim → 三卡 stagger → 选中卡飞向蛇头 →

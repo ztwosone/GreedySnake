@@ -98,6 +98,8 @@ func _test_full_loop(t) -> void:
 	t.assert_eq(str(summary.get("outcome", "")), "death", "[L5-LOOP] summary cached at run end")
 	t.assert_eq(summary.get("unlocks", []).size(), 1, "[L5-LOOP] summary carries the unlock")
 	t.assert_false(summary.get("stone", {}).is_empty(), "[L5-LOOP] summary carries the stone")
+	# 004 T103：死亡仪式门控总结屏——settle 快进仪式链到 show_results
+	app.get_node("UILayer/CeremonyLayer").settle()
 	await t.get_tree().process_frame
 	t.assert_true(app.get_node("UILayer/GameOverScreen").get_summary_lines().size() > 0,
 		"[L5-LOOP] game over screen renders settlement lines (M2 contract)")

@@ -28,6 +28,8 @@ func _ready() -> void:
 	EventBus.snake_length_increased.connect(_update_length)
 	EventBus.snake_length_decreased.connect(_update_length)
 	EventBus.game_started.connect(_on_game_started)
+	# §7/§9 #6（T103）：tick 脉搏线随死亡仪式渐灭（game_started 复位）
+	EventBus.game_over.connect(_on_game_over_fade_pulse)
 	EventBus.status_applied.connect(_on_status_changed)
 	EventBus.status_removed.connect(_on_status_changed)
 	EventBus.status_layer_changed.connect(_on_status_changed)
@@ -121,7 +123,21 @@ func _update_length(data: Dictionary) -> void:
 
 func _on_game_started() -> void:
 	length_label.text = "长度 %d" % Constants.INITIAL_SNAKE_LENGTH
+	if _tick_pulse != null:
+		_tick_pulse.modulate.a = 1.0
 	_update_status_display()
+
+
+## §7：tick 脉搏线渐灭（时长 = 仪式去饱和段；Tween 经 kit 面板登记保 settle）
+func _on_game_over_fade_pulse(_data: Dictionary) -> void:
+	if _tick_pulse == null or _stats_panel == null:
+		return
+	if not bool(ConfigManager.get_game_feel().get("enabled", true)):
+		_tick_pulse.modulate.a = 0.0
+		return
+	var sec: float = float(ConfigManager.get_ceremony_config().get("desaturate_sec", 0.0))
+	var tw: Tween = _stats_panel.track_tween(create_tween())
+	tw.tween_property(_tick_pulse, "modulate:a", 0.0, sec)
 
 
 func _on_status_changed(_data: Dictionary) -> void:

@@ -85,6 +85,9 @@ func _on_start_pressed() -> void:
 
 
 func _on_restart_pressed() -> void:
+	# T103：打断可能仍在进行的终局仪式（防迟到回调/防 tween 引用已释放世界节点）
+	if _ceremony_layer:
+		_ceremony_layer.reset()
 	game_over_screen.hide()
 	_cleanup_game_world()
 	if _is_acceptance_mode:
@@ -109,20 +112,32 @@ func _on_stone_select_finished(stone: Dictionary) -> void:
 
 
 func _on_test_mode_pressed() -> void:
+	if _ceremony_layer:
+		_ceremony_layer.reset()
 	game_over_screen.hide()
 	_cleanup_game_world()
 	_start_acceptance_test(_acceptance_level)
 
 
 func _on_game_over(data: Dictionary) -> void:
-	# T102：总结屏可见即 SUMMARY（§7；T103 死亡仪式落地后在 GAME_OVER 与
-	# SUMMARY 之间插入仪式时长，本卡为零仪式直达）
+	# T103：终局仪式（死亡/胜利）先行，仪式收场回调进总结屏（§7；
+	# game_feel 关闭或无仪式层时直达）；GAME_OVER 态即仪式时距
+	if _ceremony_layer and _ceremony_layer.has_method("play_end_ceremony"):
+		_ceremony_layer.play_end_ceremony(data, _show_summary.bind(data))
+	else:
+		_show_summary(data)
+
+
+## §7 局后总结屏：可见即 SUMMARY
+func _show_summary(data: Dictionary) -> void:
 	game_over_screen.show_results(data)
 	GameManager.enter_summary()
 
 
 ## T102：§7「SUMMARY ──回标题──> TITLE」——收屏、清世界、回到标题
 func _on_title_pressed() -> void:
+	if _ceremony_layer:
+		_ceremony_layer.reset()
 	game_over_screen.hide()
 	_cleanup_game_world()
 	title_screen.show()

@@ -3,13 +3,22 @@
 **更新时间**：2026-06-12（S4 开工）
 **当前分支**：`004-presentation-experience`
 **当前 feature**：`.specify/specs/004-presentation-experience/` Phase P（T101-T107，tasks.md 已开工细化为 P-A/P-B/P-C/P-Gate 四簇）
-**当前阶段**：S4 体验完成层进行中——T101 ✅（TickManager reason-token 暂停 + hud &"manual" 迁移）、T102 ✅（GameState.SUMMARY + 总结屏回标题 + 标题菜单重建 + CeremonyLayer 骨架 + presentation.ceremony JSON 段 + test_xp_appflow 新套件）；下一卡 T103（死亡/胜利仪式 + 局后总结编排）
+**当前阶段**：S4 体验完成层进行中——T101 ✅ / T102 ✅ / T103 ✅（终局仪式 + 总结 stagger）；下一卡 T104（局内体验，按 a/b/c 子切片推进：a = 房间横幅→chip + 楼层小地图，b = 选择仪式 + 蜕皮飞行，c = Build 状态条 + 拾取闪烁标记）
 
 ## S4 进度
 
 - T101 ✅（2026-06-12）：`pause(reason)/resume(reason)` 集合语义（缺省 &"default" 保既有
   裸调用），集合空才真恢复；start_ticking 清残留；get_pause_reasons() 观察点；
   hud 手动暂停迁移 &"manual"（文本级契约钉住）；test_t03 扩展（4110→4127 断言）。
+- T103 ✅（2026-06-12）：CeremonyLayer.play_end_ceremony——死亡 = hitstop → 逐段消散
+  （尾→头，snake 组不在场跳过）→ 去饱和灰罩（§13 无 shader 近似）→ dim → 死因中文
+  一行（death_causes JSON 填充 + get_death_cause_text，缺键回退原文）→ 总结屏；
+  胜利 = 蛇头 ring_at 金环 → dim → 总结。单链 Tween settle() 可快进（机器验收）；
+  reset() 打断契约（main restart/回标题/test-mode + game_started 四入口——防迟到回调
+  与 freed 节点 tween）；game_feel=false 旁路。总结屏死因走映射（victory 不带前缀）+
+  stagger 滚入（frame_panel.track_tween 保 settle）；hud tick 脉搏线随 game_over 渐灭。
+  ceremony JSON 扩展 6 键 + 设计 §14 同步。新套件 test_xp_ceremony；full_loop 适配
+  仪式门控（settle 后断言结算行）。74 套件 4192 断言。
 - T102 ✅（2026-06-12）：GameState 尾部追加 SUMMARY（int 4）+ enter_summary()；
   game_over → 总结屏可见即 SUMMARY（T103 仪式将插入时距）；game_over_screen 增
   TitleButton/title_pressed（§7 回标题分支，main 收屏清世界回 TITLE）；title_screen

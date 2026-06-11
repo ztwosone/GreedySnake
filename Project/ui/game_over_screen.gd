@@ -78,14 +78,43 @@ func show_results(data: Dictionary) -> void:
 	var best: int = data.get("best_score", 0)
 	var cause: String = data.get("cause", "unknown")
 	score_label.text = "得分 %d ／ 最佳 %d" % [score, best]
-	# 死因 cause→中文映射（presentation.death_causes）随 Phase P 死亡仪式落地（§7）
-	cause_label.text = "死因：%s" % cause
+	# §7（T103）：死因走 JSON 中文映射（缺键回退原文）；胜利不带「死因」前缀
+	if cause == "victory":
+		cause_label.text = ConfigManager.get_death_cause_text("victory")
+	else:
+		cause_label.text = "死因：%s" % ConfigManager.get_death_cause_text(cause)
 	# spec 003 M2 结算行：同步刷一次（测试/布景直驱）；再延迟刷一次——生产时序里
 	# game_over（GameManager autoload 先连 snake_died）先于 run_ended 抵达，
 	# 结算缓存在同一派发稍后才写入（M1 事实：finalize 在 RunProgression 的 snake_died handler）
+	# T103：延迟刷为权威版，刷完做 §7 stagger 滚入编排
 	_refresh_summary()
-	call_deferred("_refresh_summary")
+	call_deferred("_refresh_and_stagger")
 	show()
+
+
+## §7 局后总结编排（T103）：统计/死因 → 结算行 → 按钮逐项滚入；
+## game_feel 关闭跳过；Tween 经 kit 面板登记（ui_settle/几何探测沉降契约）
+func _refresh_and_stagger() -> void:
+	_refresh_summary()
+	if not visible or _frame_panel == null:
+		return
+	if not bool(ConfigManager.get_game_feel().get("enabled", true)):
+		return
+	var per_item: float = float(ConfigManager.get_motion().get("stagger_per_item", 0.0))
+	var items: Array = [score_label, cause_label]
+	for child in _summary_box.get_children():
+		items.append(child)
+	items.append(restart_button)
+	items.append(_title_button)
+	if _test_button != null:
+		items.append(_test_button)
+	for item in items:
+		if item != null:
+			item.modulate.a = 0.0
+	var tw: Tween = _frame_panel.track_tween(create_tween())
+	for item in items:
+		if item != null:
+			tw.tween_property(item, "modulate:a", 1.0, per_item)
 
 
 ## spec 003 M2：结算数据源注入（main.gd 接 MetaGrowthRoot；未注入零行为）

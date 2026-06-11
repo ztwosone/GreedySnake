@@ -284,12 +284,17 @@ Layer A 从 JSON 比较断言。
     "easing": { "enter": "quint_out", "exit": "cubic_in", "feedback": "cubic_out", "acquire": "back_out" }
   },
   "layout": { "base_unit": 16, "screen_margin": 16, "panel_padding": 16, "min_hit_target": 32 },
-  "ceremony": { "dim_alpha": 0.6, "dim_sec": 0.3 },          // §7/§8 仪式编排参数（Phase P 增量；§8.3 "dim 0.6" 的 JSON 落点，后续死亡/选择仪式参数逐卡补入）
+  "ceremony": {                                               // §7/§8 仪式编排参数（Phase P 增量）
+    "dim_alpha": 0.6, "dim_sec": 0.3,                         // §8.3 "dim 0.6" 的 JSON 落点
+    "death_hitstop_sec": 0.1, "dissolve_per_segment_sec": 0.05, // §7 死亡仪式（hitstop 0.1 / 0.05s/段）
+    "desaturate_alpha": 0.55, "desaturate_sec": 0.4,          // §7 世界去饱和（§13 无 shader——灰罩近似）
+    "cause_hold_sec": 0.8, "victory_ring_token": "accent_shedskin" // 死因停留 / §7 胜利金色扩散环色
+  },
   "glyphs": { "combat": [ {"rect": [x,y,w,h], "rotation": 45}, ... ], ... },  // §3
   "game_feel": { "enabled": true, "triggers": { ... } },      // §9
   "audio": { "enabled": true, "master_volume_db": -6, "dedup_ms": 50, "sfx": { ... } },  // §10
   "hints": { "first_food": "...", ... },                      // §8.8
-  "death_causes": { "self_collision": "撞到了自己", ... },     // §7 死亡仪式
+  "death_causes": { "hit_self": "吞到了自己", ... },           // §7 死亡仪式（键 = snake.die(cause) 实际死因 + victory/unknown；缺键回退原文）
   "acceptance": {                                             // §12.1 阈值
     "feedback_window_ticks": 1, "max_pending_modals": 1,
     "time_to_first_choice_max_ticks": 120, "dead_air_max_ticks": 12,

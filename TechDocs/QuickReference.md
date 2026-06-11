@@ -88,6 +88,25 @@ Project/Test/cases/test_l3_smoke_run.gd      # L3 v1 固定路径占位 UI smoke
   game_over→SUMMARY→回标题；main.tscn 入树即 boot 临时档红线照守）。
 - 测试警示：MetaGrowthRoot 子节点 `_ready` 先于 main `_ready` 自动 boot 生产档（只读）；
   断言标题屏石碑项前必须先 `boot(临时档)` 并重注入 `set_stone_source`，否则环境依赖。
+- T103 终局仪式：`CeremonyLayer.play_end_ceremony(data, on_finished)`——死亡 =
+  hitstop（`VFXManager.hit_stop`）→ 蛇尾到头逐段消散（snake 组 `segments`，不在场跳过）→
+  世界去饱和灰罩（§13 无 shader 近似）→ dim → 死因中文一行（display 级，
+  `get_death_cause_text(cause)` 缺键回退原文）停留 → 残留全清 → on_finished；
+  胜利 = 蛇头处金色扩散环（`ring_at` + `victory_ring_token`）→ dim → on_finished。
+  `game_feel.enabled=false` 整体旁路直达。单链 Tween 可 `settle()` 快进（机器验收）。
+- 仪式打断契约：`reset()` 杀链清残留——main 在 restart/回标题/test-mode 入口调用
+  （防迟到回调污染下一局 + 防 tween 引用已释放世界节点）；`game_started` 自动 reset。
+- main `_on_game_over` 委派仪式，收场回调 `_show_summary`（show_results + enter_summary）
+  ——GAME_OVER 态即仪式时距，总结屏可见才进 SUMMARY。
+- 总结屏（game_over_screen）：死因走 JSON 映射（victory 不带「死因」前缀）；
+  `_refresh_and_stagger` 延迟权威刷 + §7 stagger 滚入（统计/死因 → 结算行 → 按钮，
+  Tween 经 `_frame_panel.track_tween` 登记保 settle）。hud tick 脉搏线随 `game_over`
+  渐灭（时长 = ceremony.desaturate_sec），`game_started` 复位。
+- JSON 增量：`presentation.ceremony` 扩展（death_hitstop_sec 0.1 / dissolve_per_segment_sec
+  0.05 / desaturate_alpha 0.55 / desaturate_sec 0.4 / cause_hold_sec 0.8 /
+  victory_ring_token）+ `death_causes` 填充（hit_boundary/hit_self/no_body_timeout/
+  victory/unknown，键 = `snake.die(cause)` 实际死因）+ `get_death_cause_text()`；
+  设计 §14 同步。新套件 `test_xp_ceremony.gd`（映射/门控/打断/game_feel 旁路）。
 
 ## AgentOps 统筹事实
 

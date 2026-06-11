@@ -479,6 +479,12 @@ func get_ceremony_config() -> Dictionary:
 	return presentation.get("ceremony", {})
 
 
+func get_death_cause_text(cause: String) -> String:
+	## §7 死亡仪式：cause→中文映射（presentation.death_causes；缺键回退原文）
+	var causes: Dictionary = presentation.get("death_causes", {})
+	return str(causes.get(cause, cause))
+
+
 func get_game_feel() -> Dictionary:
 	## §9 game-feel 强度/数量调参（VFXManager 默认参数来源）
 	return presentation.get("game_feel", {})

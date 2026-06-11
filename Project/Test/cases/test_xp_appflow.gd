@@ -112,6 +112,8 @@ func _test_shell_flow(t) -> void:
 	GameManager.current_state = GameManager.GameState.PLAYING
 	EventBus.game_over.emit({
 		"cause": "p102_probe", "final_length": 0, "score": 0, "best_score": 0})
+	if ceremony != null and ceremony.has_method("settle"):
+		ceremony.settle()  # T103 起死亡仪式门控总结屏；settle 快进到总结
 	t.assert_true(summary_screen.visible, "[P102] game_over shows summary screen")
 	if "SUMMARY" in GameManager.GameState:
 		t.assert_eq(GameManager.current_state, GameManager.GameState.SUMMARY,
