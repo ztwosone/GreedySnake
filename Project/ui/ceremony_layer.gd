@@ -60,6 +60,8 @@ func _ready() -> void:
 
 	# 新局开始即清残留（重开局/T-Y 验收捷径都经 game_started）
 	EventBus.game_started.connect(reset)
+	# §8.1（T104a）：房间意图两段式——进房横幅展开，room_banner_sec 后收缩为 chip
+	EventBus.room_entered.connect(_on_room_entered)
 
 
 ## §7 终局仪式入口（main._on_game_over 委派；on_finished = 显示总结屏）。
@@ -124,6 +126,25 @@ func _play_victory(on_finished: Callable) -> void:
 	tw.tween_interval(float(cfg.get("cause_hold_sec", 0.0)))
 	tw.tween_callback(_clear_visuals)
 	tw.tween_callback(on_finished)
+
+
+## §8.1 房间意图两段式（T104a）：经 room_intent_panel 组驱动面板公共 API（§11.3
+## 编排归本层）；game_feel 关闭直接 chip 态（无停留编排）
+func _on_room_entered(_data: Dictionary) -> void:
+	var panel: Node = get_tree().get_first_node_in_group("room_intent_panel")
+	if panel == null:
+		return
+	if not bool(ConfigManager.get_game_feel().get("enabled", true)):
+		if panel.has_method("collapse_banner"):
+			panel.collapse_banner()
+		return
+	if panel.has_method("show_banner_stage"):
+		panel.show_banner_stage()
+	var tw: Tween = _track(create_tween())
+	tw.tween_interval(float(ConfigManager.get_ceremony_config().get("room_banner_sec", 0.0)))
+	tw.tween_callback(func() -> void:
+		if is_instance_valid(panel) and panel.has_method("collapse_banner"):
+			panel.collapse_banner())
 
 
 ## 打断/清场：杀掉进行中编排并清全部视觉残留（重开局/回标题/新局路径调用，

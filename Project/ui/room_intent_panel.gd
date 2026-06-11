@@ -26,6 +26,8 @@ var _intent_color: Color = Color()
 
 func _init() -> void:
 	super._init("hud")
+	# T104a：两段式编排寻址组（CeremonyLayer 经组驱动公共 API，§11.3）
+	add_to_group("room_intent_panel")
 
 
 func _ready() -> void:
@@ -96,6 +98,23 @@ func _disconnect_events() -> void:
 		EventBus.room_objective_progressed.disconnect(_on_room_objective_progressed)
 	if EventBus.room_completed.is_connected(_on_room_completed):
 		EventBus.room_completed.disconnect(_on_room_completed)
+
+
+## §8.1 两段式（T104a）：横幅展开态（进房瞬间）。组件零编排——状态切换由
+## CeremonyLayer 外部驱动；未被驱动时横幅常驻（Phase F 静态版兼容，世界级测试零破坏）
+func show_banner_stage() -> void:
+	if _banner != null:
+		_banner.visible = true
+
+
+## §8.1 两段式：收缩为顶中 chip（glyph + 进度行保留，横幅隐藏）
+func collapse_banner() -> void:
+	if _banner != null:
+		_banner.visible = false
+
+
+func is_banner_expanded() -> bool:
+	return _banner != null and _banner.visible
 
 
 func get_intent_text() -> String:

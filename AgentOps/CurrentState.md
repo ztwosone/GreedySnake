@@ -3,13 +3,22 @@
 **更新时间**：2026-06-12（S4 开工）
 **当前分支**：`004-presentation-experience`
 **当前 feature**：`.specify/specs/004-presentation-experience/` Phase P（T101-T107，tasks.md 已开工细化为 P-A/P-B/P-C/P-Gate 四簇）
-**当前阶段**：S4 体验完成层进行中——T101 ✅ / T102 ✅ / T103 ✅（终局仪式 + 总结 stagger）；下一卡 T104（局内体验，按 a/b/c 子切片推进：a = 房间横幅→chip + 楼层小地图，b = 选择仪式 + 蜕皮飞行，c = Build 状态条 + 拾取闪烁标记）
+**当前阶段**：S4 体验完成层进行中——T101 ✅ / T102 ✅ / T103 ✅ / T104a ✅（房间横幅两段式 + 楼层小地图）；下一片 T104b（选择仪式 choice_ceremony + 蜕皮 chip 飞行粒子），再 T104c（Build 状态条 + 拾取闪烁标记）
 
 ## S4 进度
 
 - T101 ✅（2026-06-12）：`pause(reason)/resume(reason)` 集合语义（缺省 &"default" 保既有
   裸调用），集合空才真恢复；start_ticking 清残留；get_pause_reasons() 观察点；
   hud 手动暂停迁移 &"manual"（文本级契约钉住）；test_t03 扩展（4110→4127 断言）。
+- T104a ✅（2026-06-12）：房间意图两段式——room_intent_panel 增 show_banner_stage/
+  collapse_banner（零编排状态切换）+ room_intent_panel 组；CeremonyLayer 监听
+  room_entered 展开 → room_banner_sec(0.9) 后收缩 chip；game_feel 关闭直达；未驱动
+  横幅常驻（Phase F 兼容）。楼层小地图 ui/floor_minimap.gd（game_world 运行时挂
+  UI/FloorMinimap）：主路径横排 + 支线下行、房色 room_* token、当前 accent_resonance
+  外框正弦脉动（_process 无 Tween）、完成暗化+中心点、未达深灰、floor_generated 重建。
+  新套件 test_xp_minimap + test_xp_ceremony 扩展（75 套件 4210 断言）。
+  测试警示：多壳层套件子测试间 await process_frame 冲 queue_free（旧壳 CeremonyLayer
+  连 EventBus 一发多收）。
 - T103 ✅（2026-06-12）：CeremonyLayer.play_end_ceremony——死亡 = hitstop → 逐段消散
   （尾→头，snake 组不在场跳过）→ 去饱和灰罩（§13 无 shader 近似）→ dim → 死因中文
   一行（death_causes JSON 填充 + get_death_cause_text，缺键回退原文）→ 总结屏；

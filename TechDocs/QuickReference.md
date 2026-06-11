@@ -107,6 +107,19 @@ Project/Test/cases/test_l3_smoke_run.gd      # L3 v1 固定路径占位 UI smoke
   victory_ring_token）+ `death_causes` 填充（hit_boundary/hit_self/no_body_timeout/
   victory/unknown，键 = `snake.die(cause)` 实际死因）+ `get_death_cause_text()`；
   设计 §14 同步。新套件 `test_xp_ceremony.gd`（映射/门控/打断/game_feel 旁路）。
+- T104a 房间意图两段式（§8.1）：room_intent_panel 增 `show_banner_stage()/
+  collapse_banner()/is_banner_expanded()`（组件零编排状态切换）+ 出生入
+  `room_intent_panel` 组（编排寻址）；CeremonyLayer 监听 `room_entered` → 展开横幅 →
+  `ceremony.room_banner_sec`（0.9）后收缩为 chip；game_feel 关闭直达 chip 态；
+  未被驱动（world-only 测试/几何布景）横幅常驻 = Phase F 静态版兼容。
+- T104a 楼层小地图（§8.2，`ui/floor_minimap.gd`，game_world 运行时挂 `UI/FloorMinimap`）：
+  左上 kit 面板，数据驱动 _draw 零子节点——主路径横排（exits[0] 链）+ 支线挂父房下行；
+  房色 = room_* token（回退 placeholder_color）；当前 = accent_resonance 外框
+  （game_feel 开启正弦脉动，_process 驱动无 Tween——不进 settle 语义）；完成 = 暗化 +
+  中心点；未达 = frame_line 深灰；`floor_generated` 重建（floor 前隐藏，跨层状态清空）。
+  查询契约 `get_room_count/get_current_room_id/is_room_completed`（test_xp_minimap）。
+- 测试警示：多壳层套件子测试间必须 `await process_frame` 冲 queue_free——旧壳
+  CeremonyLayer 仍连 EventBus 时 `room_entered` 一发多收（test_xp_ceremony _teardown）。
 
 ## AgentOps 统筹事实
 

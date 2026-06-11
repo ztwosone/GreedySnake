@@ -9,11 +9,59 @@ const MAIN_SCENE_PATH: String = "res://scenes/main.tscn"
 const TEMP_SAVE_PATH: String = "user://test_xp_ceremony_tmp.json"
 
 
+## T104a banner 替身：room_intent_panel 公共 API 的 duck-typed 最小面
+class StubIntentPanel:
+	extends Node
+	var expanded_calls: int = 0
+	var collapsed_calls: int = 0
+	func show_banner_stage() -> void:
+		expanded_calls += 1
+	func collapse_banner() -> void:
+		collapsed_calls += 1
+
+
 func run(t) -> void:
 	_test_death_cause_mapping(t)
 	await _test_ceremony_gates_summary(t)
 	await _test_game_feel_disabled_bypass(t)
+	await _test_room_banner_two_stage(t)
 	_remove_temp_save()
+
+
+# === §8.1 房间意图两段式：进房横幅展开 0.9s 后收缩为 chip（T104a） ===
+func _test_room_banner_two_stage(t) -> void:
+	var cfg: Dictionary = ConfigManager.get_ceremony_config()
+	t.assert_true(float(cfg.get("room_banner_sec", 0.0)) > 0.0,
+		"[P104a] ceremony.room_banner_sec > 0 (JSON)")
+
+	var saved_gm: Dictionary = _save_game_manager()
+	var app: Node = (load(MAIN_SCENE_PATH) as PackedScene).instantiate()
+	t.add_child(app)
+	app.get_node("MetaGrowthRoot").boot(TEMP_SAVE_PATH)
+	var ceremony: Node = app.get_node("UILayer/CeremonyLayer")
+
+	var panel := StubIntentPanel.new()
+	panel.add_to_group("room_intent_panel")
+	t.add_child(panel)
+
+	EventBus.room_entered.emit({"room_id": "combat_01", "room_type": "combat",
+		"intent_label": "战斗"})
+	t.assert_eq(panel.expanded_calls, 1, "[P104a] room_entered expands the banner stage")
+	t.assert_eq(panel.collapsed_calls, 0, "[P104a] collapse deferred by room_banner_sec")
+	ceremony.settle()
+	t.assert_eq(panel.collapsed_calls, 1, "[P104a] settle -> banner collapsed to chip")
+
+	# game_feel 关闭：直接收缩态（无停留编排）
+	var game_feel: Dictionary = ConfigManager.presentation.get("game_feel", {})
+	var saved_enabled: bool = bool(game_feel.get("enabled", true))
+	game_feel["enabled"] = false
+	EventBus.room_entered.emit({"room_id": "reward_01", "room_type": "reward",
+		"intent_label": "奖励"})
+	t.assert_eq(panel.collapsed_calls, 2, "[P104a] game_feel off: straight to chip stage")
+	game_feel["enabled"] = saved_enabled
+
+	panel.queue_free()
+	await _teardown(t, app, saved_gm)
 
 
 # === §7 死因 cause→中文映射（presentation.death_causes，缺键回退原文） ===
@@ -44,7 +92,7 @@ func _test_ceremony_gates_summary(t) -> void:
 		"[P103] ceremony has play_end_ceremony()")
 	t.assert_true(ceremony.has_method("reset"), "[P103] ceremony has reset()")
 	if not ceremony.has_method("play_end_ceremony"):
-		_teardown(t, app, saved_gm)
+		await _teardown(t, app, saved_gm)
 		return
 
 	# --- 死亡路径：仪式期间总结屏不可见，settle 后可见 + SUMMARY ---
@@ -105,7 +153,7 @@ func _test_ceremony_gates_summary(t) -> void:
 	t.assert_false(summary_screen.visible,
 		"[P103] settle after reset is a no-op (chain killed)")
 
-	_teardown(t, app, saved_gm)
+	await _teardown(t, app, saved_gm)
 
 
 # === game_feel.enabled=false：仪式旁路，game_over 直达总结（重特效可禁用） ===
@@ -129,7 +177,7 @@ func _test_game_feel_disabled_bypass(t) -> void:
 		"[P103] game_feel off: straight to SUMMARY")
 
 	game_feel["enabled"] = saved_enabled
-	_teardown(t, app, saved_gm)
+	await _teardown(t, app, saved_gm)
 
 
 func _teardown(t, app: Node, saved_gm: Dictionary) -> void:
@@ -139,6 +187,9 @@ func _teardown(t, app: Node, saved_gm: Dictionary) -> void:
 			if child.has_method("cleanup"):
 				child.cleanup()
 	app.queue_free()
+	# 冲一帧让 queue_free 真释放——否则下个子测试里旧壳 CeremonyLayer 仍连着
+	# EventBus（room_entered 一发多收，计数断言翻车）
+	await t.get_tree().process_frame
 	TickManager.stop_ticking()
 	GridWorld.clear_all()
 	GameManager.current_state = int(saved_gm.get("state", GameManager.GameState.TITLE))

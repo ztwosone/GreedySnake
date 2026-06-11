@@ -1327,7 +1327,8 @@
       "desaturate_alpha": 0.55,
       "desaturate_sec": 0.4,
       "cause_hold_sec": 0.8,
-      "victory_ring_token": "accent_shedskin"
+      "victory_ring_token": "accent_shedskin",
+      "room_banner_sec": 0.9
     },
     "glyphs": {
       "_canvas_units": 16,

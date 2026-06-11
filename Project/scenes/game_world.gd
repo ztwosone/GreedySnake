@@ -245,6 +245,13 @@ func _ready() -> void:
 	if pickup_display and pickup_display.has_method("setup"):
 		pickup_display.setup(pickup_system)
 
+	# T104a（§8.2）：楼层小地图——纯监听 UI，运行时挂载（floor_generated 前隐藏）
+	if $UI.get_node_or_null("FloorMinimap") == null:
+		var MinimapScript: GDScript = preload("res://ui/floor_minimap.gd")
+		var minimap: Control = MinimapScript.new()
+		minimap.name = "FloorMinimap"
+		$UI.add_child(minimap)
+
 
 func _exit_tree() -> void:
 	if EventBus.floor_generated.is_connected(_on_world_floor_generated):
