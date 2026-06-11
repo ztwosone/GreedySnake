@@ -18,7 +18,7 @@ Godot 4.6 + GDScript 贪吃蛇 Roguelite。Grid-based、Tick-driven、Event-driv
 | L2.5 | Virtual Player 自动化测试基础设施 | ✅ 完成 |
 | L3 | 完整一局：地图 / 房间 / 奖励 / 终局 | ✅ v1 完成并已提交（RunState、FloorMap、房间流程、奖励选择、楼层推进、终局、占位 UI smoke） |
 | L4 | 成长循环（蜕皮/鳞片奖励/槽位/商店/PCG/难度） | ✅ 完成（S2 重验收，spec 002 修订版 SC-001..SC-012 全量自动验收 + 多层冒烟 + VirtualPlayer 体验冒烟 + Layer C 截图证据） |
-| L5 | 元成长（解锁/传承石/拾取/user:// 存档） | 🟡 S3 重验收进行中：M1 ✅ `run_ended` 链路 + 存档硬化；M2 解锁门控 / M3 传承石 / M4 拾取+验收 待办 |
+| L5 | 元成长（解锁/传承石/拾取/user:// 存档） | ✅ 完成（S3 重验收 M1-M4：`run_ended` 链路 + 存档硬化 / MetaGrowthRoot + 解锁门控 / 传承石 bias + StoneSelect / broken_eye 网格拾取 + 全环冒烟 `test_l5_full_loop` + SC-001..SC-008 验收）——roguelite 循环机制闭合（第二存活检查点） |
 | 体验层 | 程序化美学 + 游戏手感（SpecKit 004） | 📋 已规划：设计文档 `Designs/Interactive/presentation_design.md` 先行 |
 
 ## 核心配置
@@ -52,7 +52,7 @@ Project/Test/cases/test_l3_smoke_run.gd      # L3 v1 固定路径占位 UI smoke
 - Tick = 0.25s
 - 测试入口：`res://Test/test_runner.tscn`
 - 严格测试入口：`$env:GODOT_DISABLE_CRASH_HANDLER="1"; powershell -ExecutionPolicy Bypass -File Tools/run_tests_strict.ps1`
-- 当前验证事实（2026-06-11，S2 T7 收口 = spec 002 封口）：普通测试 `3635/3635` 断言通过，套件 `71/71`（runner 现核对"发现/运行"数）；严格门禁 `STRICT PASSED`。严格脚本先跑 `--headless --import` 重建 class cache/.uid（导入器输出不进扫描），再跑测试并扫描 stderr，豁免 AtomRegistry 负向测试、lambda capture 清理日志和 headless 退出期资源日志。
+- 当前验证事实（2026-06-11，S3 M4 收口 = spec 003 封口）：普通测试 `4110/4110` 断言通过，套件 `72/72`（runner 现核对"发现/运行"数）；严格门禁 `STRICT PASSED`。严格脚本先跑 `--headless --import` 重建 class cache/.uid（导入器输出不进扫描），再跑测试并扫描 stderr，豁免 AtomRegistry 负向测试、lambda capture 清理日志和 headless 退出期资源日志。
 - Layer C 截图装置（spec 002 T035）：`Project/AcceptanceShots/acceptance_shots.tscn`（自承载主场景，与 Layer A/B 共用 state_stager）经 `Tools/run_acceptance_shots.ps1` **带窗**运行（headless 截图全黑），输出 `AgentOps/acceptance_shots/<date>/`（PNG + manifest.json + AI 读图 findings.md）；Stage Gate 时点使用。
 - 测试约定：禁止裸引用全局 class_name，一律 `const XxxScript := preload(...)`（见 ScriptingLeading 附录 C.8）；坏套件计 FAIL 不再静默吞测（2026-06-05 的"ALL PASSED 758/758"假绿根因已修复）。
 
@@ -535,6 +535,58 @@ FR-018 显式保留契约：**RewardFlowSystem 为 L3 `reward` 房发射的合�
 | 信号 | payload | 发射方 | 监听方 |
 |------|---------|--------|--------|
 | `legacy_stone_selected` | {stone_index, stone}（完整 stone dict，M3 修订） | LegacyStoneSystem.select_legacy_stone（StoneSelectScreen/AppFlow 驱动，M3 ✅） | 表现层（S4 仪式）/测试观测 |
+
+## L5 元成长 M4 事实（S3 M4，T017-T021，2026-06-11，spec 003 封口）
+
+- **PickupSystem 重写落地（`systems/events/pickup_system.gd`，game_world.tscn 常驻节点；
+  US3 SHOULD，v1 = broken_eye ONLY——serpent_scale 配置 `enabled: false` 入 backlog.md）**。
+  草稿三缺陷修复（plan.md 判决表）：
+  - `_on_enemy_killed` 节点判型：enemy_def 是 **Enemy 节点**（duck-typed `enemy_type`，
+    同 ShedskinSystem 口径，兼容 String/Dictionary 测试形态）——草稿当 Dictionary 判型 =
+    生产零掉落死代码；
+  - elite 判定走 `ConfigManager.get_enemy_type(...).is_elite`（草稿 `enemy_type != "elite"`
+    字符串比对，该字面量不存在于配置——RoomDirector 精英房实际生成 `elite_*` 变体）；
+  - **randf 顺序契约**：enabled → elite 判定 → 掷骰——非精英零 RNG 消耗（定种子可证）。
+- **网格实体化（仿 food）**：`entities/pickups/pickup_entity.gd`（EntityType.PICKUP、
+  cell_layer 0、不阻挡移动、颜色出自 `placeholder_color`）；掉落占用格 → **BFS 偏移
+  最近空格**（spec Edge Case）；`enemy_killed` 派发时刚死的敌人仍占格——`try_drop_pickup`
+  的 `exclude` 参数排除尸格，碎片落在击杀位；蛇头进入拾取（监听 `snake_moved.head_pos` +
+  `collect_pickup_at(pos)` 直驱缝）。
+- **携带/激活模型（Designs §9.4，激活路线 A/B 入 backlog）**：拾取 = 携带（active=false），
+  携带效果即时生效——broken_eye `carry_effect: "enemy_intent"` → **DangerIndicator**
+  监听 `pickup_collected/expired` 开关敌人意图显示（`enemy_action_decided` 最近一次移动
+  决策方向 → 目标格标记；`is_intent_display_enabled()`/`get_intent_cells()` 测试契约）；
+  携带倒数 `duration_rooms`（`room_completed` 递减，归零 `pickup_expired`
+  reason=rooms_exhausted）；`activate_pickup` 幂等（active 字段 + `pickup_activated` =
+  模型缝），**激活者免倒数、免层末清除**；FR-008：`floor_completed` 清未激活携带
+  （reason=floor_transition）+ 地面残留；`room_entered` 清地面残留（房间重布景同口径）；
+  `run_started` 全量重置。
+- **PickupDisplay（`ui/pickup_display.gd`，kit chip 行）**：右上蜕皮 chip 下方 hud 层，
+  每枚携带碎片一枚 chip（新 glyph `pickup` + 名称 + 剩余房数，激活者只显名称）；
+  渐进披露（无携带整行隐藏）；`setup(pickup_system)` + EventBus 驱动刷新。
+- 事件对照表增量（M4 全部 ✅）：
+
+| 信号 | payload | 发射方 | 监听方 |
+|------|---------|--------|--------|
+| `pickup_dropped` | {pickup_id, instance_id, position（偏移后实际落点）, display_name} | PickupSystem | 表现层（S4）/测试观测 |
+| `pickup_collected` | {pickup_id, instance_id, display_name, carry_effect, rooms_remaining} | PickupSystem | DangerIndicator（enemy_intent）、PickupDisplay |
+| `pickup_activated` | {pickup_id, instance_id} | PickupSystem.activate_pickup | PickupDisplay；激活路线内容在 backlog |
+| `pickup_expired` | {pickup_id, instance_id, reason: "rooms_exhausted"\|"floor_transition"} | PickupSystem | DangerIndicator、PickupDisplay |
+
+- **JSON schema 增量**：`event_pickups.pickups.broken_eye.carry_effect: "enemy_intent"`、
+  `serpent_scale.enabled: false`（v1 砍单，backlog.md）；`presentation.glyphs.pickup`
+  （眼形 3 矩形）。数值零新增段（duration_rooms/drop_chance 沿用既有键）。
+- **全环冒烟 `test_l5_full_loop.gd`（T019，SC-008）**：真实 main.tscn AppFlow + 临时
+  save_path——run 1 新档（StoneSelect 整屏跳过）→ 真实事件喂入 30 反应击杀 →
+  `snake.die()` 真实死亡出口 → `run_ended` 恰一次 + bai_she 解锁 + high_kills 石入档 +
+  存档落盘 + 同路径新 MetaSaveSystem 实例重载（SC-002 跨进程代理）→ game_over 屏结算行
+  → 「再来一局」→ StoneSelect 首登场 → 选石 → run 2 bias 双系统生效 + 选中即消耗 +
+  解锁内容进 offer 并真实装备。
+- `test_l5_acceptance.gd` 重写为修订版 spec SC-001..SC-008 逐条映射（全程临时 save_path）；
+  `test_l5_pickups.gd` 重写为 T017 全量契约（含 game_world 接线 e2e：spawn_enemy_at
+  精英 → take_damage 击杀 → 掉落 → 拾取 → 指示器/chip 行）。
+- S3 验证基线：套件 `72/72`，断言 `4110/4110`，`STRICT PASSED`；user:// 零残留
+  （生产存档未被任何套件触碰）。
 
 ## L1 战斗循环关键事实
 

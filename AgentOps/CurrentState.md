@@ -1,16 +1,52 @@
 # 当前状态
 
-**更新时间**：2026-06-11（S3 M3 收口）
-**当前分支**：`003-l5-meta-growth`
-**当前 feature**：`.specify/specs/003-l5-meta-growth/`（spec/plan/tasks 已 2026-06-11 治理修订）
-**当前阶段**：S3 进行中——M1 ✅（run_ended 链路 + 存档硬化）；M2 ✅（MetaGrowthRoot + 解锁门控 + 结算数据通路）；M3 ✅（传承石：阈值 JSON + bias 抽样 + StoneSelect 屏）；M4 拾取+验收 待办
+**更新时间**：2026-06-11（S3 收口封板）
+**当前分支**：`003-l5-meta-growth`（已合 main）
+**当前 feature**：`.specify/specs/003-l5-meta-growth/` ✅ 封口（M1-M4 全勾）；下一 feature = `.specify/specs/004-presentation-experience/` Phase P
+**当前阶段**：S3 ✅ 完成——M1（run_ended 链路 + 存档硬化）/ M2（MetaGrowthRoot + 解锁门控 + 结算数据通路）/ M3（传承石：阈值 JSON + bias 抽样 + StoneSelect 屏）/ M4（broken_eye 网格拾取 + 全环冒烟 + 验收 + 文档清偿）四簇全绿合 main
+
+> **第二存活检查点（S3 Gate 过 = 循环机制闭合）**：完整 roguelite 循环已机械闭合——
+> F5 → 标题 → 局内（战斗/奖励/鳞片/商店/多层）→ 死亡/胜利 → `run_ended` → 解锁评估 +
+> 铸石入档（user:// 持久化）→ 再来一局 → 石碑选择 → 下一局 bias 可感知差异。
+> 此后任何中断，项目都是「带元成长的完整 roguelite」，仅缺 S4 体验完成层打磨。
 
 ## 阶段路线图
 
 ```
 S0 稳定化 ✅ → S1 体验设计文档+表现内核 ✅ → S2 L4 重验收(spec 002) ✅
-→ S3 L5 元成长(spec 003) ← 当前 → S4 体验完成层(004 Phase P) → S5 整段验收封板
+→ S3 L5 元成长(spec 003) ✅ → S4 体验完成层(004 Phase P) ← 当前 → S5 整段验收封板
 ```
+
+## S3 Gate-A 记录（T021，2026-06-11）
+
+- **严格门禁**：`STRICT PASSED`（M4 收口最终跑），普通汇总 `ALL PASSED: 4110/4110`。
+- **套件数核对**：`suites: 72 discovered / 72 ran`（T019 新增第 72 套件，runner 自核对）。
+- **全环冒烟（SC-008 核心证据）**：`test_l5_full_loop`——真实 main.tscn AppFlow +
+  临时 save_path：run 1 新档（StoneSelect 整屏跳过）→ 真实事件喂入高光统计 →
+  `snake.die()` 真实死亡出口 → `run_ended` 恰一次 + bai_she 解锁恰一次 + high_kills
+  石入档 + 存档文件落盘 + 同路径新 MetaSaveSystem 实例重载还原（SC-002 跨进程代理）→
+  「再来一局」→ STONE_SELECT 首登场（裁定 #12）→ 选石 → run 2 bias 双系统生效 +
+  石选中即消耗 + 解锁的 bai_she 进 offer 并真实装备。全程 `run_ended` 总数恒 1。
+- **验收映射**：`test_l5_acceptance` 重写为修订版 spec SC-001..SC-008 逐条映射；
+  `test_l5_pickups` 重写为 T017 全量契约（elite 配置判定/randf 顺序定种子证明/
+  节点判型回归/网格实体/占用偏移/携带-激活模型/房间倒数/FR-008/game_world e2e）。
+- **几何探测**：9 典型状态随门禁每跑（l5_stone_select 含）；PickupDisplay chip
+  进组自动覆盖（携带期可见，布景态隐藏）。
+- **存档卫生复核**：全部 L5 套件临时 save_path，跑后 user:// 目录零 json 残留
+  （生产存档 `user://meta_save.json` 不存在 = 从未被测试触碰）。
+
+## Gate-H 欠账（人工，S3 收口裁定：随 S4 进行补录，S4 Gate 阻塞前必须清偿）
+
+1. **S2 遗留三项**（见 S2 Gate-A 记录）：① S1 人工 5 分钟设计语言裁定；
+   ② T017 MDE 10 分钟人工通跑（脚本见下节）；③ 层间压力可感知体感确认。
+2. **S3 新增：跨进程持久化人工重验（T021/SC-002 的真重启半边）**，脚本：
+   - 编辑器 F5 → 开始 → 故意死亡（撞墙/被耗死）→ 结算屏确认统计/解锁/铸石文本行；
+   - **完全关闭游戏进程** → 重新 F5 → 开始 → 确认石碑选择屏出现且石碑为上局所铸
+     （描述/名称对得上）；若上局达成解锁（单局反应击杀 ≥10 → 白蛇 / 单局完成 ≥2 层 →
+     时滞尾），确认解锁内容此后出现在奖励 offer 中；
+   - **删除 `%APPDATA%/Godot/app_userdata/GreedySnake Roguelite/meta_save.json`** →
+     重新 F5 → 确认全新开局：直进局内（无石碑屏闪现）、默认解锁集恰 hydra/salamander、
+     游戏不崩不警告（容错重置路径）。
 
 ## S2 Gate-A 记录（T037，2026-06-11）
 
@@ -45,10 +81,8 @@ S0 稳定化 ✅ → S1 体验设计文档+表现内核 ✅ → S2 L4 重验收(
 
 ## 当前阻塞项
 
-- 无阻塞。**Gate-H 欠账**（T037 裁定：不阻塞合入，**S3 收口前**补录于本文件）：
-  ① S1 的人工 5 分钟设计语言裁定未做（编辑器 F5 看一眼 title→局内→game over 的观感）；
-  ② T017 MDE 的 10 分钟人工通跑未做（脚本见下节，全自动链路已由 e2e + 几何探测覆盖）；
-  ③ 层间压力可感知的人工体感确认（静态缩放，截图 07 留有楼层 2 敌数 +1 画面证据）。
+- 无阻塞。Gate-H 人工欠账见上节（S2 三项 + S3 跨进程持久化重验，编排裁定：
+  S3 各 Gate-A 全绿不被人工项阻塞合入，但 S4 Gate-H 本身阻塞封板——届时一并清偿）。
 
 ## MDE 存活检查点（T017，tag `mde-checkpoint`，2026-06-11）
 
@@ -74,10 +108,28 @@ S1 统一设计语言。此后任何中断，项目仍是「打开就能感受�
 
 ## 最近验证基线
 
-- 普通测试：`3954/3954` 断言，套件 `71/71`。
-- 严格测试：`STRICT PASSED`（2026-06-11，S3 M3 收口门禁）。
+- 普通测试：`4110/4110` 断言，套件 `72/72`。
+- 严格测试：`STRICT PASSED`（2026-06-11，S3 M4 收口门禁 = spec 003 封口）。
 
 ## S3 进度
+
+- M4 ✅（T017-T021 拾取 + 全环冒烟 + 验收 + 封口）：`pickup_system.gd` 重写
+  （判决：修+补实体层）——节点判型（同 ShedskinSystem 口径）、elite 走
+  `enemy_types.is_elite`（草稿 `!= "elite"` 字面量比对已修）、randf 顺序契约
+  （先判 elite 再掷骰，非精英零 RNG 消耗定种子可证）、v1 池恰 broken_eye
+  （serpent_scale `enabled: false` 入 backlog）；网格实体化仿 food
+  （`entities/pickups/pickup_entity.gd`，PICKUP 层 0，BFS 占用偏移 + exclude 尸格，
+  蛇头进入拾取 = snake_moved 路径 + collect_pickup_at 直驱缝）；携带/激活模型
+  per Designs §9.4（携带即效果生效：broken_eye `carry_effect: enemy_intent` →
+  DangerIndicator 意图显示——enemy_action_decided 最近移动方向 → 目标格标记；
+  房间倒数 duration_rooms / floor 离场未激活清除 FR-008 / 激活幂等且激活者免倒数
+  免清除 / room_entered 清地面 / run_started 重置）；`ui/pickup_display.gd`
+  kit chip 行（hud，渐进披露）+ game_world.tscn/gd 接线；EventBus 增
+  `pickup_collected`/`pickup_expired` + `pickup_dropped/activated` payload 修订
+  （instance_id），QuickReference 同提交；`test_l5_pickups` 全量重写、
+  `test_l5_full_loop` 新建（S3 验收核心，见 Gate-A 记录）、`test_l5_acceptance`
+  重写 SC-001..SC-008；文档清偿（QuickReference「L5 元成长 M4 事实」+ 本文件 +
+  DailyLogs + tasks.md 全勾）。
 
 - M3 ✅（T012-T016 传承石）：高光阈值 JSON 化
   （`meta_growth.legacy_stone_thresholds`，缺键 = 该高光禁用落 default 石 +
@@ -242,27 +294,32 @@ S1 统一设计语言。此后任何中断，项目仍是「打开就能感受�
   `l4_scale_pending` 状态；JSON 增量 `growth.scale_reward.default_pool`。
   测试事实：全局 `enemy_killed` 的 `enemy_def` 必须是 Node 派生或 null（EnemyManager 按 Node 收参）。
 
-## 下一张建议任务（S3 开卡：L5 元成长，spec 003 重验收）
+## 下一张建议任务（S4 开卡：体验完成层，SpecKit 004 Phase P）
 
-S2 已封口合 main。S3 按 plan.md 判决表（后 5 文件）重验收 L5 草稿，建议簇序：
+S3 已封口合 main。S4 = `.specify/specs/004-presentation-experience/` Phase P
+（T101-T107，开工时按 /speckit-tasks 细化重切；总体计划 Stage 4 节为蓝本）。
+**S2/S4 按 US 合 main**；**S4 Gate-H 阻塞封板**（它就是交付物本身）。
 
-1. **`run_ended` 链路先行**（S3 一切的地基）：生产代码当前**无人发射 `run_ended`**
-   ——判决为 `RunStatsTracker.finalize_run` 是唯一发射点，调用方 = RunProgressionSystem
-   （victory/death 双出口）。先写 Red：胜利与死亡各恰一次 `run_ended`、payload 带
-   完整 run stats。
-2. **MetaSave/RunStatsTracker**（保留+修）：meta_save_system 注入 save_path（测试用
-   user:// 临时路径）、容错重置、schema 版本；run_stats_tracker 补
-   near_death/low_length/damage_taken 度量源；MetaGrowthRoot 常驻节点挂 game_world
-   外层（跨 run 存续，世界重建不清）。
-3. **传承石选择**：legacy_stone_system 阈值 JSON 化；bias 消费端 =
-   ScaleRewardSystem.set_sampling_bias 既有钩子（T005 预留，零改造接入）；
-   selected payload 带完整 stone；STONE_SELECT 屏（GameManager.GameState 枚举扩展
-   属 S4 Phase P，S3 先以系统级 API + 测试驱动，UI 可后置）。
-4. **解锁门控既有内容**：**先补 Designs §12.3 v1 映射附录**（设计先行红线——
-   哪些鳞片/头/尾/房型初始锁定、解锁条件各是什么），再 gate：RewardFlow/
-   ScaleReward/Shop 按解锁集过滤抽样池。
-5. **pickups（Should，砍单阶梯首位）**：节点判型 bug、elite 查 is_elite、网格实体化
-   （仿 food）、randf 顺序修正；v1 仅 broken_eye。
-6. 纪律不变：TDD 每卡 Red 先行；每簇严格门禁绿合 main；EventBus/JSON 契约变更
-   同提交落 QuickReference；新 UI 必须 ui/kit 基座 + stager/几何探测覆盖。
-   Gate-H 三项人工欠账（见 Gate-A 记录）须在 S3 收口前补录。
+1. **T101** TickManager reason-token 暂停（`pause(reason)`/`resume(reason)`，
+   原因集合空才真恢复）+ hud.gd 手动暂停迁移（裁定 #1：hud:124 已自带手动暂停，
+   仪式 resume 不得吞掉玩家暂停）+ test_t03 扩展。
+2. **T102** AppFlow 四态收口：`GameManager.GameState` 增 SUMMARY（STONE_SELECT 已于
+   S3 M3 提前落地，int 值保持尾部追加）+ 标题屏重建 + RunSummaryScreen
+   （数据通路已就绪：`MetaGrowthRoot.get_last_run_summary()` + game_over_screen
+   `get_summary_lines()`）+ T/Y 验收捷径保持 debug 开关后。
+3. **T103** 死亡/胜利仪式 + 局后总结（hitstop→逐段消散→去饱和→dim→死因；
+   tick 脉搏线渐灭）。
+4. **T104** 房间横幅→chip 两段式 + 楼层小地图 + 选择仪式（pause→dim→stagger→
+   飞向蛇头→resume）+ 蜕皮 chip 飞行粒子 + Build 状态条；**拾取物世界内闪烁标记**
+   （presentation §8.7 前半，chip 行数据通路 S3 已落）。
+5. **T105** SFXForge + AudioManager + Game-Feel 触发表 MUST #1-8 全量 +
+   强度排序断言（segment_loss > hit）+ `audio.enabled=false` 契约全量重跑。
+6. **T106** hint_system 认知轻度引导（首次事件 caption，已见列表入 meta save——
+   MetaSaveSystem 注入缝可直接挂新字段，注意 schema_version 兼容）。
+7. **T107** AcceptanceShots 全状态截图 + Layer C findings + S4 Gate
+   （**Gate-H 阻塞**：含上节全部人工欠账清偿）。
+8. 纪律不变：TDD Red 先行；每 US 严格门禁绿合 main；EventBus/JSON 契约变更同提交落
+   QuickReference；kit 零编排红线解除处 = CeremonyLayer 从外部驱动（S1 铁律的对偶）。
+   注意事项：appflow 套件入树即 `root.boot(临时路径)`（存档卫生红线）；
+   仪式期间 VirtualPlayer 天然静默（暂停不发 tick）；experience_recorder 的
+   pending 语义按家族原地更新（S2 T034 修订）。

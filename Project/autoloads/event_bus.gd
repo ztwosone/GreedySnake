@@ -111,6 +111,8 @@ signal floor_theme_set(data: Dictionary)            # 楼层主题设定 { theme
 signal content_unlocked(data: Dictionary)           # 内容解锁 { content_type, content_id, display_name }
 signal legacy_stone_created(data: Dictionary)       # 传承石创建 { description, highlight_type, bias_config }
 signal legacy_stone_selected(data: Dictionary)      # 传承石选择 { stone_index, stone }（完整 stone dict，spec 003 M3 修订）；发射方 = LegacyStoneSystem.select_legacy_stone（StoneSelectScreen 驱动），选中即消耗（移除+落盘）
-signal pickup_dropped(data: Dictionary)             # 拾取物掉落 { pickup_id, position, display_name }
-signal pickup_activated(data: Dictionary)           # 拾取物激活 { pickup_id }
+signal pickup_dropped(data: Dictionary)             # 拾取物掉落（网格实体已落格）{ pickup_id, instance_id, position（占用偏移后的实际落点）, display_name }；发射方 = PickupSystem（精英击杀掉落，spec 003 M4）
+signal pickup_collected(data: Dictionary)           # 拾取物被蛇头拾起（携带效果即时生效）{ pickup_id, instance_id, display_name, carry_effect, rooms_remaining }；监听方 = DangerIndicator（enemy_intent 携带效果）、PickupDisplay
+signal pickup_activated(data: Dictionary)           # 拾取物激活（模型缝保留，激活路线 A/B 入 backlog）{ pickup_id, instance_id }
+signal pickup_expired(data: Dictionary)             # 拾取物过期/清除 { pickup_id, instance_id, reason: "rooms_exhausted"|"floor_transition" }；监听方 = DangerIndicator、PickupDisplay
 signal run_ended(data: Dictionary)                  # Run 结束（spec 003 FR-016 冻结契约）{ outcome: "victory"|"death", run_id, floor_index, stats: {total_turns, total_kills, reaction_kills, near_death_count, survival_low_length_ticks, floors_completed, max_reaction_chain, damage_taken, max_length, duration_ticks} }；唯一发射点 = RunStatsTracker.finalize_run（once-guard），调用方 = RunProgressionSystem victory/death 双出口

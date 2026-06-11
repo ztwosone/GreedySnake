@@ -22,6 +22,7 @@ const _StoneBiasScript := preload("res://systems/meta_growth/stone_bias.gd")
 @onready var difficulty_scaler: Node = get_node_or_null("DifficultyScaler")
 @onready var room_modifier_system: Node = get_node_or_null("RoomModifierSystem")
 @onready var room_director: Node = get_node_or_null("RoomDirector")
+@onready var pickup_system: Node = get_node_or_null("PickupSystem")
 @onready var camera: Camera2D = $Camera2D
 
 ## spec 002 T022：多层切换跟踪——floor_generated 的楼层号大于当前值且 run 在跑 = 切层，
@@ -125,6 +126,11 @@ func _ready() -> void:
 	# （L1/L2 验收场景无 RoomDirector/RunProgressionSystem 节点，保持原行为）
 	if room_director and room_director.has_method("setup"):
 		room_director.setup(enemy_manager, food_manager)
+
+	# spec 003 M4 (T018): 事件拾取——精英掉落网格实体挂 EntityContainer；
+	# 携带效果经 EventBus 数据通路（DangerIndicator/PickupDisplay 各自监听）
+	if pickup_system and pickup_system.has_method("setup"):
+		pickup_system.setup($EntityContainer)
 
 	# spec 002 T030/T031: 难度缩放唯一消费者 = RoomDirector；修饰符经注入点
 	# 在布场后应用（先布怪后修饰——护盾需要已生成的敌人，FR-008/FR-009）
@@ -235,6 +241,10 @@ func _ready() -> void:
 	if floor_reward_panel and floor_reward_panel.has_method("setup"):
 		floor_reward_panel.setup(floor_reward_system)
 
+	var pickup_display: Node = $UI.get_node_or_null("PickupDisplay")
+	if pickup_display and pickup_display.has_method("setup"):
+		pickup_display.setup(pickup_system)
+
 
 func _exit_tree() -> void:
 	if EventBus.floor_generated.is_connected(_on_world_floor_generated):
@@ -285,6 +295,8 @@ func reset_for_floor() -> void:
 ## T33: 生命周期清理（在 queue_free 前调用）
 func cleanup() -> void:
 	_active_floor_index = 0
+	if pickup_system and pickup_system.has_method("cleanup"):
+		pickup_system.cleanup()
 	if room_director and room_director.has_method("cleanup"):
 		room_director.cleanup()
 	if room_modifier_system and room_modifier_system.has_method("cleanup"):

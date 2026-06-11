@@ -1272,7 +1272,8 @@
     "pickups": {
       "broken_eye": {
         "display_name": "破碎之眼",
-        "description": "短暂显示敌人下一步移动方向",
+        "description": "携带时显示敌人下一步移动方向",
+        "carry_effect": "enemy_intent",
         "duration_rooms": 3,
         "enabled": true,
         "placeholder_color": "#CE93D8"
@@ -1281,7 +1282,7 @@
         "display_name": "蛇鳞碎片",
         "description": "携带后下次鳞片奖励多一个选项",
         "duration_rooms": 2,
-        "enabled": true,
+        "enabled": false,
         "placeholder_color": "#FFD54F"
       }
     }
@@ -1372,6 +1373,11 @@
         { "rect": [6, 3, 4, 8], "rotation": 0 },
         { "rect": [5, 11, 6, 2], "rotation": 0 },
         { "rect": [7, 5, 2, 2], "rotation": 0, "cut": true }
+      ],
+      "pickup": [
+        { "rect": [3, 6, 10, 4], "rotation": 0 },
+        { "rect": [6, 6, 4, 4], "rotation": 45 },
+        { "rect": [7, 7, 2, 2], "rotation": 45, "cut": true }
       ]
     },
     "game_feel": {
