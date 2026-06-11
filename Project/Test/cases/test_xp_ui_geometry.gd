@@ -102,13 +102,16 @@ func _assert_game_over_extras(t, ctx: Dictionary) -> void:
 		"[XP-GEO:game_over] restart button registered as ui_hit target")
 	t.assert_true(_has_kit_frame(screen),
 		"[XP-GEO:game_over] game-over menu sits on a kit corner-bracket panel")
-	# §11.7：测试模式按钮属 debug UI，开关关闭时不创建（信号契约保留）
+	# §11.7：测试模式按钮属 debug UI，开关关闭时不创建（信号契约保留）。
+	# Phase P T102 起常驻按钮 = 再来一局 + 回标题（§7 SUMMARY 双出口），恰 2 个
 	var buttons: int = 0
 	for child in screen.get_node("VBoxContainer").get_children():
 		if child is Button:
 			buttons += 1
-	t.assert_eq(buttons, 1,
-		"[XP-GEO:game_over] test-mode button gated behind presentation.debug_ui")
+	t.assert_eq(buttons, 2,
+		"[XP-GEO:game_over] only restart+title buttons (test-mode gated behind debug_ui)")
+	t.assert_true(screen.get_node_or_null("VBoxContainer/TitleButton") != null,
+		"[XP-GEO:game_over] 回标题 button present (T102)")
 	var score_label: Label = screen.get_node("VBoxContainer/ScoreLabel")
 	t.assert_true(score_label.text.contains("3"),
 		"[XP-GEO:game_over] show_results renders staged score")

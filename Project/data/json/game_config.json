@@ -1319,6 +1319,7 @@
       "easing": { "enter": "quint_out", "exit": "cubic_in", "feedback": "cubic_out", "acquire": "back_out" }
     },
     "layout": { "base_unit": 16, "screen_margin": 16, "panel_padding": 16, "min_hit_target": 32 },
+    "ceremony": { "dim_alpha": 0.6, "dim_sec": 0.3 },
     "glyphs": {
       "_canvas_units": 16,
       "combat": [

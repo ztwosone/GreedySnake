@@ -93,6 +93,17 @@ func run(t) -> void:
 	t.assert_eq(layout.get("panel_padding"), 16, "layout.panel_padding == 16")
 	t.assert_eq(layout.get("min_hit_target"), 32, "layout.min_hit_target == 32")
 
+	# --- ceremony: §7/§8 仪式编排参数（Phase P T102 增量） ---
+	var ceremony: Dictionary = cfg.get_ceremony_config()
+	var dim_alpha: float = float(ceremony.get("dim_alpha", 0.0))
+	t.assert_true(dim_alpha > 0.0 and dim_alpha <= 1.0,
+		"ceremony.dim_alpha in (0,1] (got %s)" % str(dim_alpha))
+	var dim_sec: float = float(ceremony.get("dim_sec", 0.0))
+	t.assert_true(dim_sec > 0.0, "ceremony.dim_sec > 0")
+	t.assert_true(ceremony_range.size() == 2 \
+		and dim_sec >= float(ceremony_range[0]) and dim_sec <= float(ceremony_range[1]),
+		"ceremony.dim_sec within motion.ceremony_range_sec bounds")
+
 	# --- glyphs: §3 基础集，每个 id 1..4 个矩形定义 ---
 	for glyph_id in GLYPH_IDS:
 		var def: Array = cfg.get_glyph_def(glyph_id)

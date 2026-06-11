@@ -1,9 +1,26 @@
 # 当前状态
 
-**更新时间**：2026-06-11（S3 收口封板）
-**当前分支**：`003-l5-meta-growth`（已合 main）
-**当前 feature**：`.specify/specs/003-l5-meta-growth/` ✅ 封口（M1-M4 全勾）；下一 feature = `.specify/specs/004-presentation-experience/` Phase P
-**当前阶段**：S3 ✅ 完成——M1（run_ended 链路 + 存档硬化）/ M2（MetaGrowthRoot + 解锁门控 + 结算数据通路）/ M3（传承石：阈值 JSON + bias 抽样 + StoneSelect 屏）/ M4（broken_eye 网格拾取 + 全环冒烟 + 验收 + 文档清偿）四簇全绿合 main
+**更新时间**：2026-06-12（S4 开工）
+**当前分支**：`004-presentation-experience`
+**当前 feature**：`.specify/specs/004-presentation-experience/` Phase P（T101-T107，tasks.md 已开工细化为 P-A/P-B/P-C/P-Gate 四簇）
+**当前阶段**：S4 体验完成层进行中——T101 ✅（TickManager reason-token 暂停 + hud &"manual" 迁移）、T102 ✅（GameState.SUMMARY + 总结屏回标题 + 标题菜单重建 + CeremonyLayer 骨架 + presentation.ceremony JSON 段 + test_xp_appflow 新套件）；下一卡 T103（死亡/胜利仪式 + 局后总结编排）
+
+## S4 进度
+
+- T101 ✅（2026-06-12）：`pause(reason)/resume(reason)` 集合语义（缺省 &"default" 保既有
+  裸调用），集合空才真恢复；start_ticking 清残留；get_pause_reasons() 观察点；
+  hud 手动暂停迁移 &"manual"（文本级契约钉住）；test_t03 扩展（4110→4127 断言）。
+- T102 ✅（2026-06-12）：GameState 尾部追加 SUMMARY（int 4）+ enter_summary()；
+  game_over → 总结屏可见即 SUMMARY（T103 仪式将插入时距）；game_over_screen 增
+  TitleButton/title_pressed（§7 回标题分支，main 收屏清世界回 TITLE）；title_screen
+  菜单重建（QuitButton + StoneEntryButton 条件项 + set_stone_source/stones_pressed/
+  quit_pressed）；CeremonyLayer 骨架挂 UILayer index 0（dim_in/dim_out/is_dimmed/settle，
+  ui_dim 组）；JSON `presentation.ceremony`（dim_alpha 0.6/dim_sec 0.3，设计 §14 同步）+
+  get_ceremony_config()；新套件 test_xp_appflow（73 套件 4167 断言）。
+  测试警示：MetaGrowthRoot 先于 main._ready 自动 boot 生产档（只读）——断言标题石碑项
+  前先 boot(临时档) 并重注入 set_stone_source。
+
+**S3 历史头注**（封板记录）：S3 ✅ 完成——M1（run_ended 链路 + 存档硬化）/ M2（MetaGrowthRoot + 解锁门控 + 结算数据通路）/ M3（传承石：阈值 JSON + bias 抽样 + StoneSelect 屏）/ M4（broken_eye 网格拾取 + 全环冒烟 + 验收 + 文档清偿）四簇全绿合 main
 
 > **第二存活检查点（S3 Gate 过 = 循环机制闭合）**：完整 roguelite 循环已机械闭合——
 > F5 → 标题 → 局内（战斗/奖励/鳞片/商店/多层）→ 死亡/胜利 → `run_ended` → 解锁评估 +

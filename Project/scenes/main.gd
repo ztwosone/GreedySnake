@@ -1,6 +1,7 @@
 extends Node
 
 const _UnlockToastScript := preload("res://ui/unlock_toast.gd")
+const _CeremonyLayerScript := preload("res://ui/ceremony_layer.gd")
 
 @onready var title_screen: Control = $UILayer/TitleScreen
 @onready var game_over_screen: Control = $UILayer/GameOverScreen
@@ -13,6 +14,7 @@ var _acceptance_scene: PackedScene = preload("res://scenes/l1_acceptance.tscn")
 var _l2_acceptance_scene: PackedScene = preload("res://scenes/l2_acceptance.tscn")
 var _current_game_world: Node2D
 var _unlock_toast: Control
+var _ceremony_layer: Control
 var _is_acceptance_mode: bool = false
 var _acceptance_level: int = 1  # 1 = L1, 2 = L2
 
@@ -21,9 +23,19 @@ func _ready() -> void:
 	# §2.1：bg_deep 即屏幕底色（palette 单一事实源，标题屏等无战场屏幕的窗口底色）
 	RenderingServer.set_default_clear_color(ConfigManager.get_palette_color("bg_deep"))
 	title_screen.start_pressed.connect(_on_start_pressed)
+	# Phase P T102：§7 标题菜单——退出 + 传承石入口（有石碑才显示，路由同开始分流）
+	title_screen.quit_pressed.connect(func() -> void: get_tree().quit())
+	title_screen.stones_pressed.connect(_on_start_pressed)
 	game_over_screen.restart_pressed.connect(_on_restart_pressed)
 	game_over_screen.test_mode_pressed.connect(_on_test_mode_pressed)
+	# Phase P T102：§7 流程图「SUMMARY ──回标题──> TITLE」分支
+	game_over_screen.title_pressed.connect(_on_title_pressed)
 	EventBus.game_over.connect(_on_game_over)
+
+	# Phase P T102：仪式编排宿主，置 UILayer 最底（dim 罩在屏幕面板之下）
+	_ceremony_layer = _CeremonyLayerScript.new()
+	$UILayer.add_child(_ceremony_layer)
+	$UILayer.move_child(_ceremony_layer, 0)
 
 	# spec 003 M2（T011）：解锁 toast 挂壳层 UILayer（跨 run UI，toast 层 ≤1）
 	_unlock_toast = _UnlockToastScript.new()
@@ -40,6 +52,11 @@ func _ready() -> void:
 		stone_select_screen.stone_select_finished.connect(_on_stone_select_finished)
 		if meta_growth_root and meta_growth_root.has_method("get_legacy_stone_system"):
 			stone_select_screen.setup(meta_growth_root.get_legacy_stone_system())
+
+	# Phase P T102：标题屏石碑源（有石碑时菜单多一项「传承石」）
+	if meta_growth_root and meta_growth_root.has_method("get_legacy_stone_system") \
+			and title_screen.has_method("set_stone_source"):
+		title_screen.set_stone_source(meta_growth_root.get_legacy_stone_system())
 
 	# Initial state: show title only
 	title_screen.show()
@@ -98,7 +115,18 @@ func _on_test_mode_pressed() -> void:
 
 
 func _on_game_over(data: Dictionary) -> void:
+	# T102：总结屏可见即 SUMMARY（§7；T103 死亡仪式落地后在 GAME_OVER 与
+	# SUMMARY 之间插入仪式时长，本卡为零仪式直达）
 	game_over_screen.show_results(data)
+	GameManager.enter_summary()
+
+
+## T102：§7「SUMMARY ──回标题──> TITLE」——收屏、清世界、回到标题
+func _on_title_pressed() -> void:
+	game_over_screen.hide()
+	_cleanup_game_world()
+	title_screen.show()
+	GameManager.go_to_title()
 
 
 ## legacy_stone（spec 003 M3）：StoneSelectScreen 选中的完整 stone dict（空 = 无石开局），

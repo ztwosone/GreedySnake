@@ -1,8 +1,9 @@
 extends Node
 
-# STONE_SELECT 追加在尾部：既有状态 int 值不变（测试 save/restore 以 int 存取）。
-# spec 003 M3 提前落地 §7 屏幕流的 STONE_SELECT；SUMMARY 仍归 S4（004 Phase P）。
-enum GameState { TITLE, PLAYING, GAME_OVER, STONE_SELECT }
+# 新状态一律尾部追加：既有状态 int 值不变（测试 save/restore 以 int 存取）。
+# STONE_SELECT = spec 003 M3；SUMMARY = 004 Phase P T102（§7 局后总结屏可见态；
+# GAME_OVER 保留为死亡/胜利仪式期间的过渡态——T103 仪式落地后两态在时间上分离）。
+enum GameState { TITLE, PLAYING, GAME_OVER, STONE_SELECT, SUMMARY }
 
 var current_state: int = GameState.TITLE
 var current_score: int = 0
@@ -49,6 +50,11 @@ func go_to_title() -> void:
 ## spec 003 M3：传承石选择屏状态（presentation §7 屏幕流；可见性切换在 main.gd）
 func enter_stone_select() -> void:
 	current_state = GameState.STONE_SELECT
+
+
+## 004 Phase P T102：局后总结屏状态（presentation §7；可见性切换在 main.gd）
+func enter_summary() -> void:
+	current_state = GameState.SUMMARY
 
 
 func _on_snake_died(data: Dictionary) -> void:

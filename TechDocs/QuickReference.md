@@ -67,6 +67,28 @@ Project/Test/cases/test_l3_smoke_run.gd      # L3 v1 固定路径占位 UI smoke
 - L3 三面板 + title/game_over/hud 已迁移 kit 设计语言；debug UI（kill_feed/debug_panel/build_test_panel/event_log_panel + T/Y 捷径）收进 `presentation.debug_ui` 开关（默认关）。
 - banner 文字色按对比度自动选深/浅（金色底配深字）；banner 副标题用 HeadingLabel（body 字号在 room_combat 上对比 4.48 < 4.5，banner 按 large 阈值设计）。
 
+## 体验完成层事实（SpecKit 004 Phase P，S4，2026-06-12）
+
+- T102 AppFlow 四态收口：`GameManager.GameState` 尾部追加 `SUMMARY`（int 4，既有值不变）+
+  `enter_summary()`；`game_over` 事件 → main 显示总结屏并进 SUMMARY（T103 死亡/胜利仪式
+  落地后将在 GAME_OVER 与 SUMMARY 之间插入仪式时距，当前零仪式直达）。
+- game_over_screen 即 §7 局后总结屏：新增运行时 `TitleButton`「回标题」+ `title_pressed`
+  信号 → main 收屏、清世界、回 TITLE（§7 流程图右下分支）；常驻按钮恰 2（再来一局/回标题），
+  测试模式按钮仍门控于 debug_ui。
+- title_screen §7 菜单重建：运行时 `QuitButton`「退出」（quit_pressed → main quit）+
+  `StoneEntryButton`「传承石」（有石碑才显示；`set_stone_source(obj)` duck-typed 注入
+  `get_available_stones`，main 注入 LegacyStoneSystem；`stones_pressed` 路由 = 开始分流）。
+- `CeremonyLayer`（`ui/ceremony_layer.gd`，main 运行时挂 UILayer index 0，屏幕面板之下）：
+  仪式编排宿主骨架——kit 零编排红线的解除处（FR-003 对偶）；本卡含 dim 原语
+  `dim_in()/dim_out()/is_dimmed()` + `settle()`；`ui_dim` 组 + `ui_layer="dim"` 元数据。
+- JSON 增量：`presentation.ceremony`（`dim_alpha: 0.6`/`dim_sec: 0.3`，§8.3「dim 0.6」的
+  JSON 落点，T103/T104 仪式参数逐卡补入；设计 §14 schema 同步）+
+  `ConfigManager.get_ceremony_config()`。
+- 新套件 `test_xp_appflow.gd`（SUMMARY 状态/壳层 e2e：ceremony 骨架、标题菜单、
+  game_over→SUMMARY→回标题；main.tscn 入树即 boot 临时档红线照守）。
+- 测试警示：MetaGrowthRoot 子节点 `_ready` 先于 main `_ready` 自动 boot 生产档（只读）；
+  断言标题屏石碑项前必须先 `boot(临时档)` 并重注入 `set_stone_source`，否则环境依赖。
+
 ## AgentOps 统筹事实
 
 - 仓库长期记忆放在 `AgentOps/`，新会话必须从 `AgentOps/README.md` 启动。

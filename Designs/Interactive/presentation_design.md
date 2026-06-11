@@ -284,6 +284,7 @@ Layer A 从 JSON 比较断言。
     "easing": { "enter": "quint_out", "exit": "cubic_in", "feedback": "cubic_out", "acquire": "back_out" }
   },
   "layout": { "base_unit": 16, "screen_margin": 16, "panel_padding": 16, "min_hit_target": 32 },
+  "ceremony": { "dim_alpha": 0.6, "dim_sec": 0.3 },          // §7/§8 仪式编排参数（Phase P 增量；§8.3 "dim 0.6" 的 JSON 落点，后续死亡/选择仪式参数逐卡补入）
   "glyphs": { "combat": [ {"rect": [x,y,w,h], "rotation": 45}, ... ], ... },  // §3
   "game_feel": { "enabled": true, "triggers": { ... } },      // §9
   "audio": { "enabled": true, "master_volume_db": -6, "dedup_ms": 50, "sfx": { ... } },  // §10

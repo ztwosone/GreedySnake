@@ -65,12 +65,13 @@ kit 零编排红线的解除处 = CeremonyLayer 从外部驱动（S1 铁律的�
   原因集合空才真恢复，`start_ticking` 清集合，`get_pause_reasons()` 观察点）+
   hud 手动暂停迁移 `&"manual"`（裁定 #1：仪式 resume 不得吞掉玩家暂停）+
   test_t03 扩展（叠加/幂等/未持有 reason 不解他锁）
-- [ ] T102 [P-A] AppFlow 四态收口：`GameManager.GameState` 增 SUMMARY（尾部追加保
-  int 值；STONE_SELECT 已于 S3 M3 落地）+ RunSummaryScreen（kit 屏，数据通路 =
-  `MetaGrowthRoot.get_last_run_summary()` / game_over_screen `get_summary_lines()`）+
-  标题屏菜单重建（开始/退出，有石碑多一项）+ `CeremonyLayer`（ui/ceremony_layer.gd，
-  编排宿主：dim/stagger/飞行/hitstop 调度，监听 EventBus 驱动 kit 公共 API）+
-  T/Y 验收捷径保持 debug 开关后；test_xp_contracts 扩展 AppFlow 状态序列断言
+- [x] T102 [P-A] AppFlow 四态收口：`GameManager.GameState` 增 SUMMARY（尾部追加保
+  int 值；STONE_SELECT 已于 S3 M3 落地）+ 总结屏 = game_over_screen 演进（TitleButton
+  回标题 + title_pressed；数据通路 `get_last_run_summary()`/`get_summary_lines()` 既有）+
+  标题屏菜单重建（开始/退出/传承石条件项，set_stone_source duck-typed）+
+  `CeremonyLayer` 骨架（ui/ceremony_layer.gd，编排宿主：dim 原语 + settle，
+  挂 UILayer index 0）+ T/Y 验收捷径保持 debug 开关后 + 新套件 test_xp_appflow
+  （SUMMARY 状态/壳层 e2e/JSON ceremony 段契约）
 
 ### P-B 仪式与局内体验（US3 余下 + US4）
 

@@ -10,6 +10,7 @@ extends Control
 
 signal restart_pressed
 signal test_mode_pressed
+signal title_pressed
 
 const _KitPanelScript := preload("res://ui/kit/kit_panel.gd")
 
@@ -18,6 +19,7 @@ const _KitPanelScript := preload("res://ui/kit/kit_panel.gd")
 @onready var restart_button: Button = $VBoxContainer/RestartButton
 @onready var menu_box: VBoxContainer = $VBoxContainer
 
+var _title_button: Button
 var _test_button: Button
 var _frame_panel: PanelContainer
 ## spec 003 M2：结算数据源（duck-typed get_last_run_summary；未注入零行为）
@@ -32,6 +34,12 @@ func _ready() -> void:
 		"font_color", ConfigManager.get_palette_color("text_dim"))
 	restart_button.pressed.connect(_on_restart_pressed)
 	_build_summary_box()
+	# Phase P T102：§7 流程图「SUMMARY ──回标题──> TITLE」分支入口（运行时构建）
+	_title_button = Button.new()
+	_title_button.name = "TitleButton"
+	_title_button.text = "回标题"
+	_title_button.pressed.connect(func() -> void: title_pressed.emit())
+	menu_box.add_child(_title_button)
 	_build_frame()
 
 	# §11.7：测试模式按钮属 debug UI，开关关闭时不创建（信号契约保留）
@@ -52,6 +60,7 @@ func _build_frame() -> void:
 	move_child(_frame_panel, 0)
 	# §6/§12.1：交互件入 ui_hit 组并保证最小命中目标
 	_frame_panel.register_hit_target(restart_button)
+	_frame_panel.register_hit_target(_title_button)
 	menu_box.item_rect_changed.connect(_sync_frame)
 	_sync_frame()
 

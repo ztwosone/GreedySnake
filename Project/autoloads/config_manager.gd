@@ -474,6 +474,11 @@ func get_acceptance_config() -> Dictionary:
 	return presentation.get("acceptance", {})
 
 
+func get_ceremony_config() -> Dictionary:
+	## §7/§8 仪式编排参数（Phase P；CeremonyLayer 唯一数值来源）
+	return presentation.get("ceremony", {})
+
+
 func get_game_feel() -> Dictionary:
 	## §9 game-feel 强度/数量调参（VFXManager 默认参数来源）
 	return presentation.get("game_feel", {})
