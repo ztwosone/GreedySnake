@@ -126,6 +126,11 @@
 （新增 `STONE_SELECT`、`SUMMARY` 入 `GameManager.GameState`），main.gd 只做可见性切换。
 T/Y 验收捷径保留，收进 `presentation.debug_ui` 开关。
 
+> 落地进度（2026-06-11，spec 003 M3）：`STONE_SELECT` 枚举（尾部追加保既有 int 值）、
+> 传承石选择屏（`ui/stone_select_screen.gd`，kit modal：横排石碑卡 + 轻装上阵 +
+> ←/→/数字/回车/鼠标）与「开始/再来一局 → 有石选石 / 空石直进」分流已提前落地；
+> `SUMMARY`、入局横幅、死亡/胜利仪式等编排仍属 Phase P。
+
 ```
 TITLE ──开始──> (有传承石? STONE_SELECT : RUN) ──run_ended──> SUMMARY ──再来──> STONE_SELECT/RUN
   ^                                                                  └──回标题──> TITLE

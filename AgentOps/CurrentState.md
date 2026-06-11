@@ -1,9 +1,9 @@
 # 当前状态
 
-**更新时间**：2026-06-11（S3 M2 收口）
+**更新时间**：2026-06-11（S3 M3 收口）
 **当前分支**：`003-l5-meta-growth`
 **当前 feature**：`.specify/specs/003-l5-meta-growth/`（spec/plan/tasks 已 2026-06-11 治理修订）
-**当前阶段**：S3 进行中——M1 ✅（run_ended 链路 + 存档硬化）；M2 ✅（MetaGrowthRoot + 解锁门控 + 结算数据通路）；M3 传承石 / M4 拾取+验收 待办
+**当前阶段**：S3 进行中——M1 ✅（run_ended 链路 + 存档硬化）；M2 ✅（MetaGrowthRoot + 解锁门控 + 结算数据通路）；M3 ✅（传承石：阈值 JSON + bias 抽样 + StoneSelect 屏）；M4 拾取+验收 待办
 
 ## 阶段路线图
 
@@ -74,10 +74,32 @@ S1 统一设计语言。此后任何中断，项目仍是「打开就能感受�
 
 ## 最近验证基线
 
-- 普通测试：`3815/3815` 断言，套件 `71/71`。
-- 严格测试：`STRICT PASSED`（2026-06-11，S3 M2 收口门禁）。
+- 普通测试：`3954/3954` 断言，套件 `71/71`。
+- 严格测试：`STRICT PASSED`（2026-06-11，S3 M3 收口门禁）。
 
 ## S3 进度
+
+- M3 ✅（T012-T016 传承石）：高光阈值 JSON 化
+  （`meta_growth.legacy_stone_thresholds`，缺键 = 该高光禁用落 default 石 +
+  `get_legacy_stone_thresholds()` accessor + 改写段反证用例）；`legacy_stone_selected`
+  payload 修订为 {stone_index, stone 完整 dict}（选中即消耗：移除 + 落盘）；bias 消费链
+  全通——选中石经 main → `game_world.start_game(run_options)`（新缺省参数，既有调用方
+  零改动；l1/l2 验收场景 override 同签名）→ `stone_bias.gd` 加权重排 Callable
+  （tag 乘数连乘 / 不放回抽样置换 / hash(run_seed:stone_bias) 定种子）注入
+  ScaleRewardSystem（S2 T005 钩子零改造）+ RewardFlowSystem（同口径新钩子，未注入
+  保持 L3 first-N），两系统增 `has_sampling_bias()`，**bias 恰一局**（每局 start_game
+  set-or-clear，FR-015）；StoneSelectScreen（kit modal，横排石碑卡 + 轻装上阵 +
+  ←/→/数字/回车/Esc/鼠标；**空列表 open() 返回 false 整屏跳过**，FR-012/裁定 #12）挂
+  main.tscn UILayer；**屏幕流提前落地**（编排裁定，spec Assumptions/presentation §7/
+  tasks T015 已同步注记）：GameState 尾部追加 STONE_SELECT（int 值不变）+
+  `enter_stone_select()`，main `_begin_run_flow()` 开始/再来一局双入口分流，验收捷径
+  与既有信号零破坏；结算数据通路 T016 数据可达性收口（summary.stone 完整 dict，
+  run_started 清缓存）；几何探测增 `l5_stone_select`（共 9 状态，假档 2 石临时路径，
+  teardown 删档）；`legacy_stone_system.gd` 去 class_name；新 glyph `stone`；
+  `test_l5_legacy` 全量重写（135 断言：JSON 反证/容量轮换/完整 payload/定种子分布
+  偏移/生命周期/屏幕 API/AppFlow 双路径/summary）。
+  注意：appflow 类测试把 main.tscn 入树后必须立刻 `root.boot(临时路径)` 再触发开始
+  （M2 警示照旧）；本簇验证后 user:// 零残留（生产档未被任何套件触碰）。
 
 - M2 ✅（T006-T011 MetaGrowthRoot + 解锁门控 + 结算数据通路）：
   `unlock_conditions` 重写为 Designs §12.3 附录 v1 双条件（reaction_kills_10 → bai_she /

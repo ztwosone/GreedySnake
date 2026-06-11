@@ -24,7 +24,8 @@ func _ready() -> void:
 	# start_game() 由 main.gd 调用，不在 _ready 中重复调用
 
 
-func start_game() -> void:
+# 签名跟随父类 game_world.start_game(run_options)（spec 003 M3）；验收场景不消费传承石
+func start_game(_run_options: Dictionary = {}) -> void:
 	# 1. Initialize Grid
 	GridWorld.init_grid(Constants.GRID_WIDTH, Constants.GRID_HEIGHT)
 
