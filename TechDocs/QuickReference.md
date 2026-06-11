@@ -133,6 +133,18 @@ Project/Test/cases/test_l3_smoke_run.gd      # L3 v1 固定路径占位 UI smoke
   带坐标入账 → `VFXManager.fly_to_hud`（格→世界像素 ×CELL_SIZE+半格）金色粒子飞向
   chip，无坐标只 bounce。spec 004 backlog.md 新建（整卡飞行/列扫 wipe/墙体偏色/
   商店全屏卡阵四项收容）。
+- T104c Build 状态条（§8.6，`ui/build_status_bar.gd`，game_world 运行时挂
+  `UI/BuildStatusBar` + `setup(parts_mgr, slot_mgr, resonance_mgr)` 只读查询面）：
+  底中数据驱动 _draw——[头][front…][middle…][back…][尾] 格序、空槽四角虚框、装备
+  实心 + 等级点（≤3 accent_shedskin）、共鸣 = 活跃对 part_id 定位格间
+  accent_resonance 连线（`ResonanceManager.get_active_pairs()` 新只读访问器，
+  key "res:partA+partB" 反解）；首次发现 caption「共鸣发现：X」内嵌条上方（hud 层
+  避免与 toast 互踩），`ceremony.discovery_hold_sec`（2.0）后收起（track_tween 入
+  settle）。查询契约 get_cell_count/get_occupied_count/get_link_count/
+  is_caption_visible/get_caption_text（test_xp_build_bar）。
+- T104c 拾取闪烁（§8.7 前半）：pickup_entity `_process` 正弦 alpha 脉动
+  （`blink_alpha(phase)` 纯函数钳 [0.55,1.0]，`game_feel.pickup_blink_hz`（1.2）驱动；
+  game_feel 关闭恒亮）。
 
 ## AgentOps 统筹事实
 

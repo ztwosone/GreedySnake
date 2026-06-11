@@ -150,6 +150,21 @@ func is_resonance_discovered(res_id: String) -> bool:
 	return _discovered_resonances.has(res_id)
 
 
+## 活跃共鸣对（T104c Build 状态条连线用，只读）：[{resonance_id, part_a, part_b}]
+## key 结构 = "res_id:partA+partB"（_make_pair_key 升序），此处反解
+func get_active_pairs() -> Array:
+	var pairs: Array = []
+	for key in _active_resonances:
+		var halves: PackedStringArray = str(key).split(":")
+		if halves.size() != 2:
+			continue
+		var ids: PackedStringArray = halves[1].split("+")
+		if ids.size() == 2:
+			pairs.append({
+				"resonance_id": halves[0], "part_a": ids[0], "part_b": ids[1]})
+	return pairs
+
+
 ## 清除所有活跃共鸣
 func clear_all() -> void:
 	for key in _active_resonances.keys():

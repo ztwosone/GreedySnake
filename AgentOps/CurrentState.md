@@ -3,13 +3,21 @@
 **更新时间**：2026-06-12（S4 开工）
 **当前分支**：`004-presentation-experience`
 **当前 feature**：`.specify/specs/004-presentation-experience/` Phase P（T101-T107，tasks.md 已开工细化为 P-A/P-B/P-C/P-Gate 四簇）
-**当前阶段**：S4 体验完成层进行中——T101 ✅ / T102 ✅ / T103 ✅ / T104a ✅ / T104b ✅（选择仪式 + 蜕皮飞行）；下一片 T104c（Build 状态条 + 拾取物世界内闪烁标记），随后 T105 音频 / T106 hint / T107 Gate
+**当前阶段**：S4 体验完成层进行中——T101 ✅ / T102 ✅ / T103 ✅ / T104（a/b/c 全片 ✅：横幅两段式+小地图 / 选择仪式+蜕皮飞行 / Build 状态条+拾取闪烁）；下一卡 T105（SFXForge + AudioManager + 触发表 MUST #1-8）/ T106 hint / T107 Gate
 
 ## S4 进度
 
 - T101 ✅（2026-06-12）：`pause(reason)/resume(reason)` 集合语义（缺省 &"default" 保既有
   裸调用），集合空才真恢复；start_ticking 清残留；get_pause_reasons() 观察点；
   hud 手动暂停迁移 &"manual"（文本级契约钉住）；test_t03 扩展（4110→4127 断言）。
+- T104c ✅（2026-06-12）：Build 状态条 ui/build_status_bar.gd（game_world 挂
+  UI/BuildStatusBar + setup 三管理器只读面）：底中 _draw 格序 [头][front…][middle…]
+  [back…][尾]、空槽虚框、装备实心+等级点、共鸣连线（ResonanceManager.get_active_pairs
+  新只读访问器）、首次发现 caption（discovery_hold_sec 2.0 JSON）。拾取闪烁：
+  pickup_entity blink_alpha 纯函数（[0.55,1.0]，game_feel.pickup_blink_hz 1.2）+
+  _process 脉动，game_feel 关闭恒亮。新套件 test_xp_build_bar。
+  几何教训：锚点预设 + 直接改 size 会让 CENTER_BOTTOM 面板落到左上（与小地图重叠
+  探针实证）——动态尺寸面板一律按锚点回写 offsets。
 - T104b ✅（2026-06-12）：选择仪式——CeremonyLayer 监听三模态 presented →
   pause(&"ceremony")+dim，决议 → resume+dim_out+蛇头 acquire 环（整卡飞行收 backlog）；
   _choice_paused 只解自己的锁（FR-014 自动决议零幻影 resume）、floor_reward 两段单

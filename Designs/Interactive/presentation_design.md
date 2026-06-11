@@ -289,7 +289,8 @@ Layer A 从 JSON 比较断言。
     "death_hitstop_sec": 0.1, "dissolve_per_segment_sec": 0.05, // §7 死亡仪式（hitstop 0.1 / 0.05s/段）
     "desaturate_alpha": 0.55, "desaturate_sec": 0.4,          // §7 世界去饱和（§13 无 shader——灰罩近似）
     "cause_hold_sec": 0.8, "victory_ring_token": "accent_shedskin", // 死因停留 / §7 胜利金色扩散环色
-    "room_banner_sec": 0.9                                    // §8.1 房间意图横幅停留后收缩为 chip
+    "room_banner_sec": 0.9,                                   // §8.1 房间意图横幅停留后收缩为 chip
+    "discovery_hold_sec": 2.0                                 // §8.6 共鸣首次发现 caption 停留
   },
   "glyphs": { "combat": [ {"rect": [x,y,w,h], "rotation": 45}, ... ], ... },  // §3
   "game_feel": { "enabled": true, "triggers": { ... } },      // §9

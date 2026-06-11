@@ -1328,7 +1328,8 @@
       "desaturate_sec": 0.4,
       "cause_hold_sec": 0.8,
       "victory_ring_token": "accent_shedskin",
-      "room_banner_sec": 0.9
+      "room_banner_sec": 0.9,
+      "discovery_hold_sec": 2.0
     },
     "glyphs": {
       "_canvas_units": 16,
@@ -1406,6 +1407,7 @@
       "ring_width": 2,
       "ring_start_scale": 0.25,
       "fly_size": 8,
+      "pickup_blink_hz": 1.2,
       "triggers": {}
     },
     "audio": { "enabled": true, "master_volume_db": -6, "dedup_ms": 50, "sfx": {} },

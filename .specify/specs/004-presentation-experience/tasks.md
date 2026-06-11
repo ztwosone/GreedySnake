@@ -81,12 +81,12 @@ kit 零编排红线的解除处 = CeremonyLayer 从外部驱动（S1 铁律的�
   （统计/死因 → 结算行 → 按钮，Tween 经 kit 面板登记保 settle）+ 仪式打断契约
   reset()（restart/回标题/test-mode/game_started 四入口）+ game_feel=false 整体旁路 +
   新套件 test_xp_ceremony（映射/门控/打断/旁路）
-- [ ] T104 [P-B] 房间意图横幅→chip 两段式（0.9s 横幅收缩为顶中 chip + 完成章）+
-  楼层小地图（左上，意图色方块 + 路径线 + 当前脉动/完成暗化）+ 选择仪式
-  `choice_ceremony`（`pause(&"ceremony")` → dim → 三卡 stagger → 选中卡飞向蛇头 →
-  `resume(&"ceremony")`，奖励/鳞片/楼层奖励三模态共用）+ 蜕皮 chip 飞行粒子
-  （`currency_changed` 世界坐标 → chip + bounce）+ Build 状态条（底中槽位 glyph +
-  等级点 + 共鸣青色连线 + 首次发现横幅）+ 拾取物世界内闪烁标记（§8.7 前半）
+- [x] T104 [P-B] 三子片交付：a = 房间意图横幅→chip 两段式（room_banner_sec 0.9 收缩，
+  CeremonyLayer 编排）+ 楼层小地图（floor_minimap，当前脉动/完成暗化/未达深灰）；
+  b = 选择仪式（三模态 presented → pause(&"ceremony")+dim → 决议 resume + 蛇头
+  acquire 环，整卡飞行收 backlog）+ 蜕皮 chip 飞行粒子（currency_changed.position
+  透传 + fly_to_hud）；c = Build 状态条（build_status_bar：格序/虚框/等级点/共鸣连线
+  get_active_pairs/首次发现 caption）+ 拾取物闪烁（blink_alpha 纯函数 + _process）
 
 ### P-C 音频与引导（US5 + US6）
 

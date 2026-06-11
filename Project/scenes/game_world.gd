@@ -252,6 +252,14 @@ func _ready() -> void:
 		minimap.name = "FloorMinimap"
 		$UI.add_child(minimap)
 
+	# T104c（§8.6）：Build 状态条——注入三管理器只读查询面
+	if $UI.get_node_or_null("BuildStatusBar") == null:
+		var BarScript: GDScript = preload("res://ui/build_status_bar.gd")
+		var build_bar: Control = BarScript.new()
+		build_bar.name = "BuildStatusBar"
+		$UI.add_child(build_bar)
+		build_bar.setup(snake_parts_mgr, scale_slot_mgr, resonance_mgr)
+
 
 func _exit_tree() -> void:
 	if EventBus.floor_generated.is_connected(_on_world_floor_generated):
