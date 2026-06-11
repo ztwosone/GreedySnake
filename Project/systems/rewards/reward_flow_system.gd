@@ -5,6 +5,13 @@ var _snake_parts_mgr: Node = null
 var _scale_slot_mgr: Node = null
 var _current_offer: Dictionary = {}
 
+## spec 003 M2（T010）：解锁过滤注入缝（口径同 ScaleRewardSystem.set_sampling_bias）——
+## Callable(content_type: String, content_id: String) -> bool；MetaGrowthRoot.attach_world
+## 在开局接线（is_content_unlocked）。未注入全量回退（L3 既有测试零破坏）。
+## v1 仅过滤 head/tail（Designs §12.3 附录：鳞片不门控）；过滤后零选项走既有
+## FR-014 自动决议（合成 room_completed 保留，不死锁）。
+var _unlock_query: Callable = Callable()
+
 
 func _ready() -> void:
 	connect_events()
@@ -17,6 +24,10 @@ func _exit_tree() -> void:
 func setup(parts_mgr: Node, scale_mgr: Node) -> void:
 	_snake_parts_mgr = parts_mgr
 	_scale_slot_mgr = scale_mgr
+
+
+func set_unlock_query(query: Callable) -> void:
+	_unlock_query = query
 
 
 func connect_events() -> void:
@@ -127,12 +138,24 @@ func _get_visible_options(pool: Array, offer_count: int) -> Array:
 		if not (option is Dictionary):
 			continue
 		var option_copy: Dictionary = option.duplicate(true)
+		if not _is_option_unlocked(option_copy):
+			continue
 		if not _can_apply_option(option_copy):
 			continue
 		result.append(option_copy)
 		if result.size() >= offer_count:
 			break
 	return result
+
+
+## 解锁门控（spec 003 FR-003：锁定内容绝不进 offer）；未注入查询 = 全量回退
+func _is_option_unlocked(option: Dictionary) -> bool:
+	var reward_type: String = option.get("reward_type", "")
+	if reward_type != "head" and reward_type != "tail":
+		return true
+	if not _unlock_query.is_valid():
+		return true
+	return bool(_unlock_query.call(reward_type, option.get("target_id", "")))
 
 
 func _find_option(option_id: String) -> Dictionary:

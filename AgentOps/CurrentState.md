@@ -1,9 +1,9 @@
 # 当前状态
 
-**更新时间**：2026-06-11（S3 M1 收口）
+**更新时间**：2026-06-11（S3 M2 收口）
 **当前分支**：`003-l5-meta-growth`
 **当前 feature**：`.specify/specs/003-l5-meta-growth/`（spec/plan/tasks 已 2026-06-11 治理修订）
-**当前阶段**：S3 进行中——M1 ✅（run_ended 链路 + 存档硬化）；M2 解锁门控 / M3 传承石 / M4 拾取+验收 待办
+**当前阶段**：S3 进行中——M1 ✅（run_ended 链路 + 存档硬化）；M2 ✅（MetaGrowthRoot + 解锁门控 + 结算数据通路）；M3 传承石 / M4 拾取+验收 待办
 
 ## 阶段路线图
 
@@ -74,10 +74,30 @@ S1 统一设计语言。此后任何中断，项目仍是「打开就能感受�
 
 ## 最近验证基线
 
-- 普通测试：`3708/3708` 断言，套件 `71/71`。
-- 严格测试：`STRICT PASSED`（2026-06-11，S3 M1 收口门禁）。
+- 普通测试：`3815/3815` 断言，套件 `71/71`。
+- 严格测试：`STRICT PASSED`（2026-06-11，S3 M2 收口门禁）。
 
 ## S3 进度
+
+- M2 ✅（T006-T011 MetaGrowthRoot + 解锁门控 + 结算数据通路）：
+  `unlock_conditions` 重写为 Designs §12.3 附录 v1 双条件（reaction_kills_10 → bai_she /
+  floors_2 → lag_tail，display_name 对齐内容池；草稿五条件入 backlog，UnlockSystem
+  condition_type 直接对齐 FR-016 stats 键、去 class_name）；`rewards.pools.starter_build`
+  增 bai_she/lag_tail 选项（追加池尾，新档首 3 项不变——解锁的生产 offer 通路）；
+  `MetaGrowthRoot` 新建并挂 main.tscn 常驻（GameWorldContainer 外）：boot(save_path)
+  显式装载 MetaSaveSystem（可重复 boot 换档——测试缝），子节点
+  RunStatsTracker/UnlockSystem/LegacyStoneSystem setup(meta_save)，attach_world 在
+  main._start_new_game 接线 tracker 注入 + RewardFlow.set_unlock_query（口径同
+  set_sampling_bias，未注入全量回退；v1 仅 head/tail，鳞片不门控；滤空走 FR-014
+  自动决议不死锁）；Shop 核查结论 = 只上架已装备头/尾升级，无需过滤；解锁 toast
+  （ui/unlock_toast.gd，kit chip，toast 层 ≤1，content_unlocked 显示 / run_started 收起）
+  挂壳层 UILayer；game_over 结算数据通路（root 缓存本局解锁/铸石 + run_ended 冻结 stats →
+  get_last_run_summary()；game_over_screen set_summary_source + 文本行渲染，
+  同步+延迟双刷应对 game_over 先于 run_ended 的派发时序）；`test_l5_unlocks` 全量重写
+  （临时 save_path 卫生 + v1 映射数据互证 + 池过滤 + toast/结算数据断言），
+  `test_l5_acceptance` 草稿补 v1 映射最小适配（重写归 M4 T020）。
+  注意：凡把 main.tscn 入树并驱动 run_ended 的套件必须先 root.boot(临时路径)——
+  否则解锁/铸石落盘污染生产存档（stager title/game_over 布景只读不写，安全）。
 
 - M1 ✅（T001-T005 run_ended 链路 + 存档硬化）：`run_ended` 唯一发射点落定——
   `RunStatsTracker.finalize_run(outcome)` once-guard（`run_started` 解除），调用方 =

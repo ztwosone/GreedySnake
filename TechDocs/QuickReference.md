@@ -436,6 +436,59 @@ FR-018 显式保留契约：**RewardFlowSystem 为 L3 `reward` 房发射的合�
 - `meta_save_system.gd` / `run_stats_tracker.gd` 已去 class_name（preload/duck-typing，
   ScriptingLeading C.8）；unlock/legacy/pickup 的 class_name 随各自重验收卡移除。
 
+## L5 元成长 M2 事实（S3 M2，T006-T011，2026-06-11）
+
+- **unlock_conditions v1 重写（T007，Designs §12.3 附录「v1 内容映射」）**：恰双条件——
+  `reaction_kills_10`（reaction_kills ≥ 10 → head `bai_she` 白蛇）+ `floors_2`
+  （floors_completed ≥ 2 → tail `lag_tail` 时滞尾）；`condition_type` 即 FR-016 冻结 stats
+  字段名（UnlockSystem 直接以其为键查 stats，草稿手写映射表与 `survival_low_length` 别名
+  已删）。草稿五条件（turns_200/reaction_kills_15/survive_60s_low_length/floors_3/
+  enemies_50，指向 ungud/medusa/taotie/styx_tail/salamander）已移除——backlog.md 收容
+  （salamander 改默认解锁）。display_name 与 snake_heads/snake_tails 内容池对齐，
+  target_id 必须存在于内容池（test_l5_unlocks 数据互证断言钉住红线）。
+- **JSON schema 增量（rewards 段）**：`rewards.pools.starter_build` 增 `head_bai_she` /
+  `tail_lag` 两选项（追加在池尾，新档首 3 项不变——L3 既有 offer 行为零破坏）。
+  这是解锁的生产数据通路：锁定时被过滤，解锁后可进 offer（无 offer 渠道的解锁 = 死内容）。
+- **MetaGrowthRoot（T009，`systems/meta_growth/meta_growth_root.gd`）**：main.tscn 常驻节点
+  （**GameWorldContainer 外**，跨 run 存续、世界重建不清）。`boot(save_path)` 显式装载
+  MetaSaveSystem + `load_from_disk()`（生产缺省 `meta_growth.save_path`；可重复 boot 换档
+  ——测试缝）；子节点 RunStatsTracker（run_ended 唯一发射点）+ UnlockSystem /
+  LegacyStoneSystem `setup(meta_save)`。`attach_world(world)`（main._start_new_game 在
+  `start_game()` 前调用）：duck-typed 接线 RunProgression.set_stats_tracker（M1 注入缝）+
+  RewardFlow.set_unlock_query；L1/L2 验收场景无对应节点全部 no-op。
+  **测试警示**：凡把 main.tscn 入树并驱动 `run_ended` 的套件必须先 `boot(临时路径)`，
+  否则解锁/铸石落盘污染生产存档（state_stager 的 title/game_over 布景只读不写——
+  这些状态不发 run_ended）。
+- **解锁过滤（T010）**：`RewardFlowSystem.set_unlock_query(Callable)` 注入缝（口径同
+  `ScaleRewardSystem.set_sampling_bias`）——`Callable(content_type, content_id) -> bool`；
+  未注入全量回退（L3 既有测试零破坏）；v1 仅过滤 head/tail（鳞片不门控，Designs §12.3）；
+  过滤后零选项走既有 FR-014 自动决议（合成 room_completed 保留，不死锁）。
+  **Shop 核查结论（T010 check）**：ShopSystem 只上架**已装备**头/尾的下一等级升级
+  （`_make_part_upgrade_items` 取 `get_active_head/tail`），从不 offer 新部件——
+  能装备即已解锁，商店无需解锁过滤。
+- **解锁 toast（T011，`ui/unlock_toast.gd`）**：kit chip 基座，`ui_layer = "toast"`
+  （层矩阵 toast 可压 hud、同层 ≤1）；监听 `content_unlocked` 顶中显示「解锁 X」+ 组件级
+  bounce，重复解锁原地更新（恒 ≤1 件），`run_started` 收起；main.gd `_ready` 创建挂壳层
+  UILayer。停留/飞行编排归 S4。
+- **game_over 结算数据通路（M2 卡，M3 T016 扩展）**：MetaGrowthRoot 缓存本局
+  `content_unlocked` / `legacy_stone_created`，`run_ended` 时与冻结 stats 合并为
+  `get_last_run_summary()`（`run_started` 清缓存）；game_over_screen
+  `set_summary_source(root)`（main 接线）→ `show_results` 渲染统计/解锁/铸石 kit 文本行
+  （`get_summary_lines()` 测试契约）。**时序事实**：GameManager（autoload）比
+  RunProgression 先连 `snake_died`，`game_over` 先于 `run_ended` 抵达——show_results
+  同步刷一次 + `call_deferred` 再刷一次拿到本局数据。
+- 事件对照表增量：
+
+| 信号 | payload | 发射方 | 监听方 |
+|------|---------|--------|--------|
+| `content_unlocked` | {content_type, content_id, display_name} | UnlockSystem（M2 ✅） | unlock_toast、MetaGrowthRoot（结算缓存） |
+| `legacy_stone_created` | {description, highlight_type, display_name, bias_config, created_at} | LegacyStoneSystem（草稿保留，M3 重验收） | MetaGrowthRoot（结算缓存） |
+| `run_ended` | FR-016 冻结契约 | RunStatsTracker.finalize_run（唯一） | UnlockSystem、LegacyStoneSystem、MetaGrowthRoot（M2 接线 ✅，root 汇总 handler 末位执行） |
+
+- `unlock_system.gd` 已去 class_name；`legacy_stone_system.gd` / `pickup_system.gd` 的
+  class_name 随 M3/M4 卡移除。`test_l5_acceptance` 草稿已补 v1 映射最小适配
+  （turns_200→ungud 断言改 reaction_kills_10→bai_she，全量重写归 M4 T020）。
+
 ## L1 战斗循环关键事实
 
 - **吃敌人无消耗** — 蛇头碰敌人 = 直接吞噬，不扣长度；若蛇头与敌人携带异类状态则触发反应、双方状态清除
