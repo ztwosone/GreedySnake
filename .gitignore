@@ -4,8 +4,8 @@ Project/.godot/
 # Godot editor user data (self_contained mode side effect)
 Project/Godot/
 
-# Test runner temp output
-.tmp_godot_test_*.log
+# Test runner / acceptance tooling temp output
+.tmp_*.log
 
 # Claude Code local plan scratch files
 .claude/plans/
