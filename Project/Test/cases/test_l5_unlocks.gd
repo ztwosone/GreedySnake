@@ -1,11 +1,16 @@
 extends RefCounted
+## 草稿套件（M2 T006 对照 v1 映射重写）。
+## M1 已补存档卫生：注入临时 save_path，绝不触碰生产存档 user://meta_save.json。
 
 const UNLOCK_PATH: String = "res://systems/meta_growth/unlock_system.gd"
 const MetaSaveSystemScript := preload("res://systems/meta_growth/meta_save_system.gd")
 
+const TEMP_SAVE_PATH: String = "user://test_l5_unlocks_tmp.json"
+
 
 func run(t) -> void:
 	_test_unlock_conditions(t)
+	_remove_temp_save()
 
 
 func _test_unlock_conditions(t) -> void:
@@ -16,7 +21,8 @@ func _test_unlock_conditions(t) -> void:
 	var conditions: Array = ConfigManager.get_unlock_conditions()
 	t.assert_true(conditions.size() >= 2, "[L5-US1] at least 2 unlock conditions")
 
-	var meta = MetaSaveSystemScript.new()
+	_remove_temp_save()
+	var meta = MetaSaveSystemScript.new(TEMP_SAVE_PATH)
 	meta.reset()
 
 	var unlock: Node = load(UNLOCK_PATH).new()
@@ -37,3 +43,8 @@ func _test_unlock_conditions(t) -> void:
 
 	unlock.cleanup()
 	unlock.queue_free()
+
+
+func _remove_temp_save() -> void:
+	if FileAccess.file_exists(TEMP_SAVE_PATH):
+		DirAccess.remove_absolute(TEMP_SAVE_PATH)

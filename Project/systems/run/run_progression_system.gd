@@ -7,6 +7,12 @@ extends Node
 ## 多层推进是 pcg 档行为（FR-016：fixed_v1 = 回退/MDE 路径）。
 ## advance_floor 经 call_deferred 调度：boss 击杀级联（enemy_killed → room_completed）
 ## 发生在 tick 处理中，不能在派发内重建世界（蛇重建/清场重入防护）。
+##
+## spec 003 M1（T004）run_ended 链路：victory（mark_victory）与 death（_on_snake_died →
+## mark_death）双出口各调一次注入 tracker 的 finalize_run(outcome)（FR-013，唯一发射点在
+## tracker 侧）；once-guard 双保险（本系统 _run_stats_finalized + tracker 侧 _finalized）。
+## 未注入 tracker 零行为（L3 既有测试零破坏）；注入经 set_stats_tracker(obj) duck-typed，
+## 引用跨 start_run 存续（start_run 内部 cleanup 不清注入）。
 
 const FloorMapGeneratorScript = preload("res://systems/rooms/floor_map_generator.gd")
 
@@ -22,6 +28,11 @@ var _pending_offers: Dictionary = {}
 
 ## T022/T027 groundwork：楼层奖励未决时挂起切层，floor_reward_chosen 后再推进
 var _advance_after_floor_reward: bool = false
+
+## spec 003 M1（T004）：注入的 RunStatsTracker（duck-typed，未注入零行为）
+var _stats_tracker = null
+## RunProgression 侧 once-guard（与 tracker 侧 once-guard 构成双保险，FR-013）
+var _run_stats_finalized: bool = false
 
 
 func _ready() -> void:
@@ -78,9 +89,16 @@ func disconnect_events() -> void:
 		EventBus.floor_reward_chosen.disconnect(_on_floor_reward_chosen)
 
 
+## spec 003 M1（T004）：注入 run stats tracker（duck-typed，MetaGrowthRoot 在 M2 接线；
+## 测试可直接注入）。注入引用跨 run 存续，不随 cleanup 清除。
+func set_stats_tracker(tracker) -> void:
+	_stats_tracker = tracker
+
+
 func start_run(seed: int = 0) -> void:
 	cleanup()
 	connect_events()
+	_run_stats_finalized = false
 
 	var run_cfg: Dictionary = ConfigManager.get_run_config()
 	var floor_cfg: Dictionary = ConfigManager.get_floor_config()
@@ -120,6 +138,7 @@ func mark_victory(endpoint_room_id: String = "") -> void:
 		"endpoint_room_id": endpoint_room_id,
 		"completed_room_ids": current_run_state.get("completed_room_ids", []).duplicate(),
 	})
+	_finalize_run_stats("victory")
 
 
 func mark_death(cause: String = "death") -> void:
@@ -127,6 +146,7 @@ func mark_death(cause: String = "death") -> void:
 		return
 	current_run_state["outcome"] = "death"
 	current_run_state["death_cause"] = cause
+	_finalize_run_stats("death")
 
 
 func cleanup() -> void:
@@ -317,6 +337,17 @@ func _emit_floor_completed(endpoint_room_id: String) -> void:
 
 func _on_snake_died(data: Dictionary) -> void:
 	mark_death(data.get("cause", "unknown"))
+
+
+## spec 003 M1（T004）：双出口共用的 finalize 入口。未注入零行为；
+## _run_stats_finalized 防同一 run 双出口重复调用（tracker 侧 once-guard 双保险）。
+func _finalize_run_stats(outcome: String) -> void:
+	if _run_stats_finalized:
+		return
+	if _stats_tracker == null or not _stats_tracker.has_method("finalize_run"):
+		return
+	_run_stats_finalized = true
+	_stats_tracker.finalize_run(outcome)
 
 
 func _set_offer_pending(family: String, pending: bool) -> void:

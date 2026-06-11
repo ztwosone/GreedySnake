@@ -408,6 +408,25 @@ func get_max_legacy_stones() -> int:
 	return int(meta_growth.get("max_legacy_stones", 5))
 
 
+## spec 003 M1：meta 存档 schema 版本（写入恒带；读档不符 → 容错重置，FR-014）
+func get_meta_schema_version() -> int:
+	return int(meta_growth.get("schema_version", 1))
+
+
+## spec 003 M1：run 统计度量参数（low_length_threshold 等，FR-010）
+func get_meta_stats_config() -> Dictionary:
+	return meta_growth.get("stats", {})
+
+
+## spec 003 M1：默认解锁集（新档/容错重置即含，Designs §12.3 附录 v1 映射）
+func get_default_unlocked_heads() -> Array:
+	return meta_growth.get("default_unlocked_heads", [])
+
+
+func get_default_unlocked_tails() -> Array:
+	return meta_growth.get("default_unlocked_tails", [])
+
+
 func get_event_pickups_config() -> Dictionary:
 	return event_pickups
 

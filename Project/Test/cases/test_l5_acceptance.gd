@@ -1,14 +1,20 @@
 extends RefCounted
+## 草稿验收套件（M4 T020 重写为 SC-001..SC-008 逐条映射）。
+## M1 已补存档卫生：注入临时 save_path，绝不触碰生产存档 user://meta_save.json。
 
 const MetaSaveSystemScript := preload("res://systems/meta_growth/meta_save_system.gd")
+
+const TEMP_SAVE_PATH: String = "user://test_l5_acceptance_tmp.json"
 
 
 func run(t) -> void:
 	_test_l5_acceptance_full(t)
+	_remove_temp_save()
 
 
 func _test_l5_acceptance_full(t) -> void:
-	var meta = MetaSaveSystemScript.new()
+	_remove_temp_save()
+	var meta = MetaSaveSystemScript.new(TEMP_SAVE_PATH)
 	meta.reset()
 
 	t.assert_false(meta.is_head_unlocked("ungud"), "[L5-ACC] no unlocks initially")
@@ -46,5 +52,10 @@ func _test_l5_acceptance_full(t) -> void:
 	legacy.queue_free()
 	unlock.cleanup()
 	unlock.queue_free()
+	tracker.cleanup()
 	tracker.queue_free()
-	meta.reset()
+
+
+func _remove_temp_save() -> void:
+	if FileAccess.file_exists(TEMP_SAVE_PATH):
+		DirAccess.remove_absolute(TEMP_SAVE_PATH)
