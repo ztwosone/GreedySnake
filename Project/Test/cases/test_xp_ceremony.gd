@@ -25,7 +25,106 @@ func run(t) -> void:
 	await _test_ceremony_gates_summary(t)
 	await _test_game_feel_disabled_bypass(t)
 	await _test_room_banner_two_stage(t)
+	await _test_choice_ceremony(t)
+	await _test_shedskin_fly(t)
 	_remove_temp_save()
+
+
+# === §8.3 选择仪式（T104b）：presented → pause(&"ceremony")+dim；决议 → resume+收 dim ===
+func _test_choice_ceremony(t) -> void:
+	var saved_gm: Dictionary = _save_game_manager()
+	var app: Node = (load(MAIN_SCENE_PATH) as PackedScene).instantiate()
+	t.add_child(app)
+	app.get_node("MetaGrowthRoot").boot(TEMP_SAVE_PATH)
+	var ceremony: Node = app.get_node("UILayer/CeremonyLayer")
+
+	TickManager.manual_mode = true
+	TickManager.start_ticking()
+
+	# 鳞片 offer：presented 即停拍 + dim
+	EventBus.scale_reward_presented.emit({
+		"room_id": "combat_01", "options": [], "offer_id": "o1", "pool_id": "l1_basic"})
+	t.assert_eq(TickManager.is_ticking, false, "[P104b] presented pauses the tick")
+	t.assert_eq(TickManager.get_pause_reasons(), [&"ceremony"],
+		"[P104b] pause held by ceremony token")
+	ceremony.settle()
+	t.assert_true(ceremony.is_dimmed(), "[P104b] presented dims the world")
+
+	# 决议：chosen 恢复；随后的 discarded（余卡入账）不二次扰动
+	EventBus.scale_reward_chosen.emit({"offer_id": "o1", "option_id": "x",
+		"scale_id": "s", "position": "front", "level": 1, "skipped": false})
+	t.assert_eq(TickManager.is_ticking, true, "[P104b] chosen resumes the tick")
+	t.assert_eq(TickManager.get_pause_reasons(), [], "[P104b] ceremony token released")
+	EventBus.scale_option_discarded.emit({"offer_id": "o1", "discarded_ids": ["y"],
+		"shedskin_gained": 2})
+	t.assert_eq(TickManager.is_ticking, true, "[P104b] follow-up discard is a no-op")
+	ceremony.settle()
+	t.assert_false(ceremony.is_dimmed(), "[P104b] dim cleared after resolution")
+
+	# 楼层奖励两段式：两次 presented 单 token 保持，chosen 才恢复
+	EventBus.floor_reward_presented.emit({"reward_id": "fr", "floor_index": 1,
+		"source_room_id": "boss", "step": "slot_unlock", "slot_options": [], "options": []})
+	t.assert_eq(TickManager.is_ticking, false, "[P104b] floor reward stage 1 pauses")
+	EventBus.floor_reward_presented.emit({"reward_id": "fr", "floor_index": 1,
+		"source_room_id": "boss", "step": "choice", "slot_options": [], "options": []})
+	t.assert_eq(TickManager.get_pause_reasons(), [&"ceremony"],
+		"[P104b] stage 2 keeps the single token (no stacking)")
+	EventBus.floor_reward_chosen.emit({"floor_index": 1, "category": "expansion",
+		"option_id": "x", "skipped": false})
+	t.assert_eq(TickManager.is_ticking, true, "[P104b] floor reward chosen resumes")
+
+	# FR-014 自动决议（无 presented 的 chosen）不得幻影恢复停拍外的状态
+	TickManager.stop_ticking()
+	EventBus.reward_chosen.emit({"room_id": "r", "option_id": "", "skipped": true})
+	t.assert_eq(TickManager.is_ticking, false,
+		"[P104b] auto-resolve without presented never resumes a stopped tick")
+
+	# 商店非模态：不触发仪式（FR-015 商店不门控的对偶）
+	TickManager.start_ticking()
+	EventBus.shop_entered.emit({"room_id": "shop_01", "items": []})
+	t.assert_eq(TickManager.is_ticking, true, "[P104b] shop entry is not a ceremony")
+
+	TickManager.stop_ticking()
+	TickManager.manual_mode = false
+	await _teardown(t, app, saved_gm)
+
+
+# === §8.5 蜕皮 chip 飞行粒子（T104b）：有世界坐标才飞，无坐标只 bounce ===
+func _test_shedskin_fly(t) -> void:
+	# ShedskinSystem 击杀入账带格坐标透传（payload 增量 position）
+	var system: Node = (load("res://systems/growth/shedskin_system.gd") as GDScript).new()
+	t.add_child(system)
+	var currency_events: Array = []
+	var on_currency := func(data: Dictionary) -> void:
+		currency_events.append(data)
+	EventBus.currency_changed.connect(on_currency)
+	EventBus.enemy_killed.emit({"enemy_def": null, "position": Vector2i(3, 4),
+		"method": "test"})
+	t.assert_true(currency_events.size() >= 1, "[P104b] kill income emitted")
+	if currency_events.size() >= 1:
+		t.assert_eq(currency_events[0].get("position"), Vector2i(3, 4),
+			"[P104b] kill income carries the grid position through")
+	EventBus.currency_changed.disconnect(on_currency)
+
+	# 显示组件：带坐标入账 → fly_to_hud；无坐标入账 → 不飞
+	var display: Control = (load("res://ui/shedskin_display.gd") as GDScript).new()
+	t.add_child(display)
+	var fly_count: Array = [0]
+	var on_vfx := func(fx_name: String, _args: Dictionary) -> void:
+		if fx_name == "fly_to_hud":
+			fly_count[0] += 1
+	VFXManager.vfx_invoked.connect(on_vfx)
+	EventBus.currency_changed.emit({"currency": "shedskin", "amount": 2, "total": 2,
+		"source": "kill_wanderer", "position": Vector2i(5, 5)})
+	t.assert_eq(fly_count[0], 1, "[P104b] positioned income flies to the chip")
+	EventBus.currency_changed.emit({"currency": "shedskin", "amount": 3, "total": 5,
+		"source": "scale_discard"})
+	t.assert_eq(fly_count[0], 1, "[P104b] positionless income does not fly (bounce only)")
+	VFXManager.vfx_invoked.disconnect(on_vfx)
+
+	system.queue_free()
+	display.queue_free()
+	await t.get_tree().process_frame
 
 
 # === §8.1 房间意图两段式：进房横幅展开 0.9s 后收缩为 chip（T104a） ===

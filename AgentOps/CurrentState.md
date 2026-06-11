@@ -3,13 +3,20 @@
 **更新时间**：2026-06-12（S4 开工）
 **当前分支**：`004-presentation-experience`
 **当前 feature**：`.specify/specs/004-presentation-experience/` Phase P（T101-T107，tasks.md 已开工细化为 P-A/P-B/P-C/P-Gate 四簇）
-**当前阶段**：S4 体验完成层进行中——T101 ✅ / T102 ✅ / T103 ✅ / T104a ✅（房间横幅两段式 + 楼层小地图）；下一片 T104b（选择仪式 choice_ceremony + 蜕皮 chip 飞行粒子），再 T104c（Build 状态条 + 拾取闪烁标记）
+**当前阶段**：S4 体验完成层进行中——T101 ✅ / T102 ✅ / T103 ✅ / T104a ✅ / T104b ✅（选择仪式 + 蜕皮飞行）；下一片 T104c（Build 状态条 + 拾取物世界内闪烁标记），随后 T105 音频 / T106 hint / T107 Gate
 
 ## S4 进度
 
 - T101 ✅（2026-06-12）：`pause(reason)/resume(reason)` 集合语义（缺省 &"default" 保既有
   裸调用），集合空才真恢复；start_ticking 清残留；get_pause_reasons() 观察点；
   hud 手动暂停迁移 &"manual"（文本级契约钉住）；test_t03 扩展（4110→4127 断言）。
+- T104b ✅（2026-06-12）：选择仪式——CeremonyLayer 监听三模态 presented →
+  pause(&"ceremony")+dim，决议 → resume+dim_out+蛇头 acquire 环（整卡飞行收 backlog）；
+  _choice_paused 只解自己的锁（FR-014 自动决议零幻影 resume）、floor_reward 两段单
+  token、shop 非模态、game_feel 关闭不仪式、reset() 兼释放停拍。蜕皮飞行——
+  currency_changed 增可选 position（Vector2i 事发格，EventBus 注释 + QuickReference
+  同步）、ShedskinSystem.earn 第三参透传击杀坐标、shedskin_display fly_to_hud 金粒子。
+  spec 004 backlog.md 新建（四项裁剪收容）。75 套件 4226 断言。
 - T104a ✅（2026-06-12）：房间意图两段式——room_intent_panel 增 show_banner_stage/
   collapse_banner（零编排状态切换）+ room_intent_panel 组；CeremonyLayer 监听
   room_entered 展开 → room_banner_sec(0.9) 后收缩 chip；game_feel 关闭直达；未驱动

@@ -61,6 +61,14 @@ func _on_currency_changed(data: Dictionary) -> void:
 		visible = true
 	if visible and delta != 0:
 		bounce()
+	# §8.5（T104b）：带事发格坐标的入账 → 金色粒子从世界坐标飞到 chip；
+	# 无坐标来源（discard/商店退款等）只 bounce 不飞
+	if delta > 0 and data.get("position") is Vector2i:
+		var grid: Vector2i = data.get("position")
+		var world: Vector2 = Vector2(grid) * Constants.CELL_SIZE \
+			+ Vector2.ONE * (Constants.CELL_SIZE * 0.5)
+		VFXManager.fly_to_hud(world, self,
+			ConfigManager.get_palette_color("accent_shedskin"))
 
 
 func _on_game_over(_data: Dictionary) -> void:

@@ -13,6 +13,9 @@ var _dim_rect: ColorRect
 var _desat_rect: ColorRect
 var _cause_label: Label
 var _tracked_tweens: Array = []
+## §8.3 选择仪式：本层是否持有 &"ceremony" 停拍 token（只解自己加的锁——
+## FR-014 自动决议无 presented 时绝不幻影 resume）
+var _choice_paused: bool = false
 
 
 func _init() -> void:
@@ -62,6 +65,14 @@ func _ready() -> void:
 	EventBus.game_started.connect(reset)
 	# §8.1（T104a）：房间意图两段式——进房横幅展开，room_banner_sec 后收缩为 chip
 	EventBus.room_entered.connect(_on_room_entered)
+	# §8.3（T104b）：选择仪式——三模态 offer 共用（shop 非模态不参与，FR-015 对偶）
+	EventBus.reward_presented.connect(_on_choice_presented)
+	EventBus.scale_reward_presented.connect(_on_choice_presented)
+	EventBus.floor_reward_presented.connect(_on_choice_presented)
+	EventBus.reward_chosen.connect(_on_choice_resolved)
+	EventBus.scale_reward_chosen.connect(_on_choice_resolved)
+	EventBus.scale_option_discarded.connect(_on_choice_resolved)
+	EventBus.floor_reward_chosen.connect(_on_choice_resolved)
 
 
 ## §7 终局仪式入口（main._on_game_over 委派；on_finished = 显示总结屏）。
@@ -147,6 +158,35 @@ func _on_room_entered(_data: Dictionary) -> void:
 			panel.collapse_banner())
 
 
+## §8.3 选择仪式（T104b）：offer 呈现 → 停拍 + dim；floor_reward 两段式重呈现
+## 单 token 原地保持（pause 集合语义幂等）。game_feel 关闭不仪式（FR-015 门控
+## 仍由 RunProgression 把守，tick 照常——L3/L4 世界级行为不变）。
+func _on_choice_presented(_data: Dictionary) -> void:
+	if not bool(ConfigManager.get_game_feel().get("enabled", true)):
+		return
+	if _choice_paused:
+		return
+	_choice_paused = true
+	TickManager.pause(&"ceremony")
+	dim_in()
+
+
+## 决议 → 只解自己持有的锁；选中确认 = 蛇头 acquire 环（§8.3「选中卡飞向蛇头」
+## 的 v1 近似，整卡飞行/余卡坠落编排收 backlog）
+func _on_choice_resolved(_data: Dictionary) -> void:
+	if not _choice_paused:
+		return
+	_choice_paused = false
+	TickManager.resume(&"ceremony")
+	dim_out()
+	var snake: Node = get_tree().get_first_node_in_group("snake")
+	if snake != null and "segments" in snake and not (snake.segments as Array).is_empty():
+		var head = snake.segments[0]
+		if is_instance_valid(head):
+			VFXManager.ring_at(head.global_position,
+				ConfigManager.get_palette_color("accent_resonance"))
+
+
 ## 打断/清场：杀掉进行中编排并清全部视觉残留（重开局/回标题/新局路径调用，
 ## 防止挂起回调迟到污染下一局状态、防止 tween 引用已释放世界节点）
 func reset() -> void:
@@ -154,6 +194,9 @@ func reset() -> void:
 		if is_instance_valid(tw) and tw.is_valid():
 			tw.kill()
 	_tracked_tweens.clear()
+	if _choice_paused:
+		_choice_paused = false
+		TickManager.resume(&"ceremony")
 	_clear_visuals()
 
 

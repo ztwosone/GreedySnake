@@ -50,17 +50,22 @@ func get_total_spent() -> int:
 	return _total_spent
 
 
-func earn(amount: int, source: String) -> int:
+## position（T104b，§8.5）：入账事发格坐标（Vector2i，可选）——蜕皮 chip 飞行粒子
+## 的世界起点；无坐标来源（discard/重置）不带键，表现层只 bounce 不飞
+func earn(amount: int, source: String, grid_position: Variant = null) -> int:
 	if amount <= 0:
 		return _amount
 	_amount += amount
 	_total_earned += amount
-	EventBus.currency_changed.emit({
+	var payload: Dictionary = {
 		"currency": "shedskin",
 		"amount": amount,
 		"total": _amount,
 		"source": source,
-	})
+	}
+	if grid_position is Vector2i:
+		payload["position"] = grid_position
+	EventBus.currency_changed.emit(payload)
 	return _amount
 
 
@@ -111,7 +116,7 @@ func _on_enemy_killed(data: Dictionary) -> void:
 	if bool(ConfigManager.get_enemy_type(enemy_type).get("is_elite", false)):
 		amount = int(cfg.get("kill_elite", 0))
 	var source: String = ("kill_%s" % enemy_type) if enemy_type != "" else "kill"
-	earn(amount, source)
+	earn(amount, source, data.get("position"))
 
 
 ## enemy_killed 的 enemy_def 是 Enemy 节点（兼容 String/Dictionary 形态的测试 payload）

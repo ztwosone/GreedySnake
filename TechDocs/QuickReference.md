@@ -120,6 +120,19 @@ Project/Test/cases/test_l3_smoke_run.gd      # L3 v1 固定路径占位 UI smoke
   查询契约 `get_room_count/get_current_room_id/is_room_completed`（test_xp_minimap）。
 - 测试警示：多壳层套件子测试间必须 `await process_frame` 冲 queue_free——旧壳
   CeremonyLayer 仍连 EventBus 时 `room_entered` 一发多收（test_xp_ceremony _teardown）。
+- T104b 选择仪式（§8.3）：CeremonyLayer 监听三模态 `*_presented`（reward/scale_reward/
+  floor_reward）→ `TickManager.pause(&"ceremony")` + dim_in；决议事件（chosen×3 +
+  scale_option_discarded）→ resume + dim_out + 蛇头 acquire 环（accent_resonance，
+  「选中卡飞向蛇头」v1 近似，整卡飞行收 spec 004 backlog.md）。`_choice_paused` 内部
+  持锁——只解自己加的锁（FR-014 自动决议无 presented 绝不幻影 resume）；floor_reward
+  两段重呈现单 token 原地保持；shop_entered 非模态不参与；game_feel 关闭不仪式
+  （FR-015 推进门控仍由 RunProgression 把守，世界级行为不变）；reset() 兼释放停拍锁。
+- T104b 蜕皮飞行（§8.5）：`currency_changed` payload 增可选 `position`（Vector2i
+  入账事发格）——ShedskinSystem `earn(amount, source, grid_position=null)` 第三参
+  （击杀路径透传 enemy_killed.position；discard/重置无坐标不带键）；shedskin_display
+  带坐标入账 → `VFXManager.fly_to_hud`（格→世界像素 ×CELL_SIZE+半格）金色粒子飞向
+  chip，无坐标只 bounce。spec 004 backlog.md 新建（整卡飞行/列扫 wipe/墙体偏色/
+  商店全屏卡阵四项收容）。
 
 ## AgentOps 统筹事实
 

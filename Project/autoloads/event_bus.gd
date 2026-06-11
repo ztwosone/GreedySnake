@@ -94,7 +94,7 @@ signal resonance_deactivated(data: Dictionary)     # 共鸣停用 { resonance_id
 signal segment_loss_deferred(data: Dictionary)     # 段丢失被延迟 { amount, source }
 
 # === L4 Growth Cycle ===
-signal currency_changed(data: Dictionary)           # 货币变化 { currency, amount, total, source }
+signal currency_changed(data: Dictionary)           # 货币变化 { currency, amount, total, source, position? Vector2i 入账事发格（T104b 飞行粒子起点，可缺省） }
 signal scale_reward_presented(data: Dictionary)     # 鳞片奖励展示 { room_id, options, offer_id }
 signal scale_reward_chosen(data: Dictionary)        # 鳞片奖励选择 { option_id, scale_id, position, level, skipped }（skipped=true 为空池自动决议，FR-014）
 signal scale_option_discarded(data: Dictionary)     # 鳞片选项放弃 { offer_id, discarded_ids, shedskin_gained }（FR-018 拆除合成 room_completed 后的显式决议信号）
