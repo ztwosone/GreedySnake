@@ -1,11 +1,16 @@
 extends RefCounted
+## 草稿套件（M3 T012 重写：阈值 JSON 反证 / 完整 stone payload / bias 消费 / 空列表跳过）。
+## M1 已补存档卫生：注入临时 save_path，绝不触碰生产存档 user://meta_save.json。
 
 const LEGACY_PATH: String = "res://systems/meta_growth/legacy_stone_system.gd"
 const MetaSaveSystemScript := preload("res://systems/meta_growth/meta_save_system.gd")
 
+const TEMP_SAVE_PATH: String = "user://test_l5_legacy_tmp.json"
+
 
 func run(t) -> void:
 	_test_legacy_generation_and_selection(t)
+	_remove_temp_save()
 
 
 func _test_legacy_generation_and_selection(t) -> void:
@@ -13,7 +18,8 @@ func _test_legacy_generation_and_selection(t) -> void:
 	if not FileAccess.file_exists(LEGACY_PATH):
 		return
 
-	var meta = MetaSaveSystemScript.new()
+	_remove_temp_save()
+	var meta = MetaSaveSystemScript.new(TEMP_SAVE_PATH)
 	meta.reset()
 
 	var legacy: Node = load(LEGACY_PATH).new()
@@ -39,3 +45,8 @@ func _test_legacy_generation_and_selection(t) -> void:
 
 	legacy.cleanup()
 	legacy.queue_free()
+
+
+func _remove_temp_save() -> void:
+	if FileAccess.file_exists(TEMP_SAVE_PATH):
+		DirAccess.remove_absolute(TEMP_SAVE_PATH)

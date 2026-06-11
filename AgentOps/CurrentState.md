@@ -1,9 +1,9 @@
 # 当前状态
 
-**更新时间**：2026-06-11（S2 T7 收口 = spec 002 封口）
-**当前分支**：`002-l4-growth-cycle`（S2 已收口合 main；S3 开卡时切 `003-l5-meta-growth`）
-**当前 feature**：`.specify/specs/002-l4-growth-cycle/` ✅ → 下一个 `.specify/specs/003-l5-meta-growth/`
-**当前阶段**：S2 完成（T1-T7 七簇全收口）；下一阶段 S3（L5 元成长，spec 003 重验收）
+**更新时间**：2026-06-11（S3 M1 收口）
+**当前分支**：`003-l5-meta-growth`
+**当前 feature**：`.specify/specs/003-l5-meta-growth/`（spec/plan/tasks 已 2026-06-11 治理修订）
+**当前阶段**：S3 进行中——M1 ✅（run_ended 链路 + 存档硬化）；M2 解锁门控 / M3 传承石 / M4 拾取+验收 待办
 
 ## 阶段路线图
 
@@ -74,8 +74,26 @@ S1 统一设计语言。此后任何中断，项目仍是「打开就能感受�
 
 ## 最近验证基线
 
-- 普通测试：`3635/3635` 断言，套件 `71/71`。
-- 严格测试：`STRICT PASSED`（2026-06-11，S2 T7 收口门禁）。
+- 普通测试：`3708/3708` 断言，套件 `71/71`。
+- 严格测试：`STRICT PASSED`（2026-06-11，S3 M1 收口门禁）。
+
+## S3 进度
+
+- M1 ✅（T001-T005 run_ended 链路 + 存档硬化）：`run_ended` 唯一发射点落定——
+  `RunStatsTracker.finalize_run(outcome)` once-guard（`run_started` 解除），调用方 =
+  `RunProgressionSystem` victory/death 双出口（`set_stats_tracker` duck-typed 注入缝，
+  未注入零行为，RunProgression 侧 guard 双保险）；payload = spec FR-016 冻结契约
+  （outcome/run_id/floor_index + 十字段 stats，`stats.run_outcome` 冗余删除）；度量源补全
+  （damage 双源 boundary+body_attacked / near_death=no_body_countdown_started /
+  low_length=tick×JSON 阈值 / max_length / duration_ticks）；MetaSaveSystem save_path
+  构造注入缝（`_init` 不再隐式读盘）+ `schema_version` 恒写 + 坏档/形状/版本未知容错重置
+  （push_warning，默认解锁集 hydra/salamander）；JSON `meta_growth` 增 schema_version /
+  default_unlocked_heads/tails / stats.low_length_threshold + ConfigManager 四 accessor；
+  `test_l5_meta_save` 全量重写（临时 save_path 卫生），`test_l5_unlocks/legacy/acceptance`
+  草稿卫生化补丁（各自重写卡在 M2/M3/M4）；meta_save/run_stats 已去 class_name；
+  EventBus run_ended 注释 + QuickReference「L5 元成长 M1 事实」同提交落地。
+  注意：生产侧 tracker/MetaGrowthRoot 场景接线归 M2 T009（M1 只落注入缝）；
+  Red 阶段跑旧草稿套件曾写真实 user://meta_save.json，残留已删（M4 Gate-H 删档重验照旧）。
 
 ## S2 进度
 

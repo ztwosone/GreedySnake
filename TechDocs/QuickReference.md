@@ -18,7 +18,7 @@ Godot 4.6 + GDScript 贪吃蛇 Roguelite。Grid-based、Tick-driven、Event-driv
 | L2.5 | Virtual Player 自动化测试基础设施 | ✅ 完成 |
 | L3 | 完整一局：地图 / 房间 / 奖励 / 终局 | ✅ v1 完成并已提交（RunState、FloorMap、房间流程、奖励选择、楼层推进、终局、占位 UI smoke） |
 | L4 | 成长循环（蜕皮/鳞片奖励/槽位/商店/PCG/难度） | ✅ 完成（S2 重验收，spec 002 修订版 SC-001..SC-012 全量自动验收 + 多层冒烟 + VirtualPlayer 体验冒烟 + Layer C 截图证据） |
-| L5 | 元成长（解锁/传承石/拾取/user:// 存档） | 🟡 同上，待按 spec 003 重验收；`run_ended` 生产代码无发射方 |
+| L5 | 元成长（解锁/传承石/拾取/user:// 存档） | 🟡 S3 重验收进行中：M1 ✅ `run_ended` 链路 + 存档硬化；M2 解锁门控 / M3 传承石 / M4 拾取+验收 待办 |
 | 体验层 | 程序化美学 + 游戏手感（SpecKit 004） | 📋 已规划：设计文档 `Designs/Interactive/presentation_design.md` 先行 |
 
 ## 核心配置
@@ -390,6 +390,51 @@ FR-018 显式保留契约：**RewardFlowSystem 为 L3 `reward` 房发射的合�
   GO! 过渡字定格（ui_settle 不含 GameTransition），均登记 S4 顺手项）。
 - S2 验证基线：套件 `71/71`，断言 `3635/3635`，`STRICT PASSED`；几何探测覆盖
   8 典型状态（title/game_over/l3 run/reward + l4 scale/shop/floor_reward 两段）。
+
+## L5 元成长 M1 事实（S3 M1，T001-T005，2026-06-11）
+
+- **`run_ended` 冻结契约（spec 003 FR-016）**：
+  `{outcome: "victory"|"death", run_id: String, floor_index: int, stats: {total_turns,
+  total_kills, reaction_kills, near_death_count, survival_low_length_ticks,
+  floors_completed, max_reaction_chain, damage_taken, max_length, duration_ticks}}`
+  ——恰四顶层键 + 十 stats 字段；草稿 `stats.run_outcome` 冗余已删（顶层 outcome 为准）。
+- **唯一发射点（FR-013）**：`RunStatsTracker.finalize_run(outcome)`，once-guard 同 run 第二次
+  调用零发射（`run_started` 解除）；调用方 = `RunProgressionSystem` victory（`mark_victory`）/
+  death（`_on_snake_died` → `mark_death`）双出口，经 `set_stats_tracker(obj)` duck-typed 注入
+  （未注入零行为——L3 既有测试零破坏；注入引用跨 start_run 存续），RunProgression 侧
+  `_run_stats_finalized` 与 tracker 侧 once-guard 构成双保险。场景接线（MetaGrowthRoot
+  挂 main.tscn）归 M2 T009。
+- 事件对照表增量：
+
+| 信号 | payload | 发射方 | 监听方 |
+|------|---------|--------|--------|
+| `run_ended` | FR-016 冻结契约（上） | RunStatsTracker.finalize_run（唯一，M1 ✅） | UnlockSystem、LegacyStoneSystem（M2/M3 重验收） |
+
+- **RunStatsTracker 度量源（T003 补全）**：total_turns=`snake_turned`；total_kills/
+  reaction_kills=`enemy_killed`（method 含 reaction）；floors_completed=`floor_completed`；
+  max_reaction_chain=`reaction_triggered`（layer_a+layer_b 峰值）；damage_taken=
+  `snake_hit_boundary` + `snake_body_attacked`（双源，草稿仅 boundary）；near_death_count=
+  `no_body_countdown_started`；survival_low_length_ticks=`tick_post_process` × 当前长度 <
+  `meta_growth.stats.low_length_threshold`（长度自 `snake_length_increased/decreased`
+  new_length 跟踪）；max_length=长度事件峰值；duration_ticks=`tick_post_process` 计数。
+  `run_started` 重置全部并缓存 run_id/floor_index（floor_index 随 `floor_generated` 跟进）；
+  finalize 后统计冻结至下个 run_started。
+- **MetaSaveSystem 硬化（T002）**：save_path 构造参数注入缝（缺省读 `meta_growth.save_path`
+  = 生产路径 `user://meta_save.json`）；`_init` 不再隐式读盘（注入先于首次 IO），
+  `load_from_disk()` 显式调用；`save_to_disk` 写入恒带 `schema_version`；读档 parse 失败 /
+  非 Dictionary 形状 / 版本未知 → `push_warning` + 容错重置默认值（绝不带病加载）；
+  缺档静默走默认。reset/容错默认值含默认解锁集（hydra/salamander）。
+- **JSON schema 增量（`meta_growth` 段，T005）**：`schema_version: 1`、
+  `default_unlocked_heads: ["hydra"]`、`default_unlocked_tails: ["salamander"]`、
+  `stats: {low_length_threshold: 5}`。ConfigManager 新 accessor：`get_meta_schema_version()`、
+  `get_meta_stats_config()`、`get_default_unlocked_heads()`、`get_default_unlocked_tails()`。
+  （default_unlocked_* 为 M2 T007 schema 的先行落地；T007 余下职责 = unlock_conditions
+  重写为 v1 双条件。）
+- **测试存档卫生（不可妥协）**：全部 L5 套件注入临时 save_path（`user://test_l5_*_tmp.json`）
+  并测后删除——`test_l5_meta_save` 已按 M1 重写；`test_l5_unlocks/legacy/acceptance` 草稿已
+  卫生化补丁（M2/M3/M4 各自重写卡接手）。生产存档绝不被测试触碰、绝不被依赖。
+- `meta_save_system.gd` / `run_stats_tracker.gd` 已去 class_name（preload/duck-typing，
+  ScriptingLeading C.8）；unlock/legacy/pickup 的 class_name 随各自重验收卡移除。
 
 ## L1 战斗循环关键事实
 

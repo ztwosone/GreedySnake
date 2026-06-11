@@ -1222,7 +1222,13 @@
   "meta_growth": {
     "enabled": true,
     "save_path": "user://meta_save.json",
+    "schema_version": 1,
     "max_legacy_stones": 5,
+    "default_unlocked_heads": ["hydra"],
+    "default_unlocked_tails": ["salamander"],
+    "stats": {
+      "low_length_threshold": 5
+    },
     "unlock_conditions": [
       { "condition_id": "turns_200", "condition_type": "total_turns", "threshold": 200, "target_type": "head", "target_id": "ungud", "display_name": "彩虹蛇", "description": "一局内转弯超过200次" },
       { "condition_id": "reaction_kills_15", "condition_type": "reaction_kills", "threshold": 15, "target_type": "head", "target_id": "medusa", "display_name": "美杜莎", "description": "一局内通过状态反应击杀超过15个敌人" },

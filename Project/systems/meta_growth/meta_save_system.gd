@@ -1,43 +1,61 @@
-class_name MetaSaveSystem
 extends RefCounted
+## spec 003 M1（T002，判决：保留+微修）：L5 元成长存档。
+## - save_path 注入缝：构造参数注入（测试用 user:// 临时路径），缺省读 meta_growth.save_path
+##   （生产路径 user://meta_save.json，FR-009）；草稿 _init 隐式读盘已改为显式 load_from_disk()
+##   （注入必须先于首次磁盘 IO）。
+## - schema_version：写入恒带（FR-014）；读档校验——parse 失败 / 非 Dictionary 形状 / 版本未知
+##   → push_warning + 容错重置默认值，绝不带病加载。
+## - 默认值含默认解锁集（meta_growth.default_unlocked_heads/tails，hydra/salamander）。
 
-var _data: Dictionary = {
-	"unlocked_heads": [],
-	"unlocked_tails": [],
-	"discovered_scales": [],
-	"legacy_stones": [],
-}
+var _save_path: String = ""
+var _data: Dictionary = {}
 
 
-func _init() -> void:
-	load_from_disk()
+func _init(save_path: String = "") -> void:
+	_save_path = save_path
+	if _save_path == "":
+		_save_path = str(ConfigManager.get_meta_growth_config().get("save_path", "user://meta_save.json"))
+	_data = _default_data()
+
+
+func get_save_path() -> String:
+	return _save_path
 
 
 func load_from_disk() -> bool:
-	var cfg: Dictionary = ConfigManager.get_meta_growth_config()
-	var save_path: String = cfg.get("save_path", "user://meta_save.json")
-	if not FileAccess.file_exists(save_path):
+	if not FileAccess.file_exists(_save_path):
+		_data = _default_data()
 		return false
-	var file := FileAccess.open(save_path, FileAccess.READ)
+	var file := FileAccess.open(_save_path, FileAccess.READ)
 	if not file:
+		push_warning("[MetaSave] cannot open save file, tolerant reset: %s" % _save_path)
+		_data = _default_data()
 		return false
 	var text := file.get_as_text()
 	file.close()
 	var json := JSON.new()
-	var err := json.parse(text)
-	if err != OK:
+	if json.parse(text) != OK:
+		push_warning("[MetaSave] corrupt save file (JSON parse error), tolerant reset: %s" % _save_path)
+		_data = _default_data()
 		return false
 	var result = json.data
-	if result is Dictionary:
-		_data = result
-		return true
-	return false
+	if not (result is Dictionary):
+		push_warning("[MetaSave] save file is not a Dictionary, tolerant reset: %s" % _save_path)
+		_data = _default_data()
+		return false
+	var version: int = int(result.get("schema_version", -1))
+	if version != ConfigManager.get_meta_schema_version():
+		push_warning("[MetaSave] unknown schema_version %d (expected %d), tolerant reset: %s"
+			% [version, ConfigManager.get_meta_schema_version(), _save_path])
+		_data = _default_data()
+		return false
+	_data = result
+	return true
 
 
 func save_to_disk() -> bool:
-	var cfg: Dictionary = ConfigManager.get_meta_growth_config()
-	var save_path: String = cfg.get("save_path", "user://meta_save.json")
-	var file := FileAccess.open(save_path, FileAccess.WRITE)
+	_data["schema_version"] = ConfigManager.get_meta_schema_version()
+	var file := FileAccess.open(_save_path, FileAccess.WRITE)
 	if not file:
 		return false
 	file.store_string(JSON.stringify(_data, "  "))
@@ -99,9 +117,14 @@ func get_unlocked_tails() -> Array:
 
 
 func reset() -> void:
-	_data = {
-		"unlocked_heads": [],
-		"unlocked_tails": [],
+	_data = _default_data()
+
+
+func _default_data() -> Dictionary:
+	return {
+		"schema_version": ConfigManager.get_meta_schema_version(),
+		"unlocked_heads": ConfigManager.get_default_unlocked_heads().duplicate(),
+		"unlocked_tails": ConfigManager.get_default_unlocked_tails().duplicate(),
 		"discovered_scales": [],
 		"legacy_stones": [],
 	}
