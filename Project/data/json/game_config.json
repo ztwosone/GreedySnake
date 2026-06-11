@@ -1057,6 +1057,24 @@
           "target_slot": "middle",
           "level_delta": 0,
           "placeholder_color": "#E4572E"
+        },
+        {
+          "option_id": "head_bai_she",
+          "display_name": "白蛇",
+          "reward_type": "head",
+          "target_id": "bai_she",
+          "target_slot": "head",
+          "level_delta": 0,
+          "placeholder_color": "#ECEFF1"
+        },
+        {
+          "option_id": "tail_lag",
+          "display_name": "时滞尾",
+          "reward_type": "tail",
+          "target_id": "lag_tail",
+          "target_slot": "tail",
+          "level_delta": 0,
+          "placeholder_color": "#90CAF9"
         }
       ]
     }
@@ -1230,11 +1248,8 @@
       "low_length_threshold": 5
     },
     "unlock_conditions": [
-      { "condition_id": "turns_200", "condition_type": "total_turns", "threshold": 200, "target_type": "head", "target_id": "ungud", "display_name": "彩虹蛇", "description": "一局内转弯超过200次" },
-      { "condition_id": "reaction_kills_15", "condition_type": "reaction_kills", "threshold": 15, "target_type": "head", "target_id": "medusa", "display_name": "美杜莎", "description": "一局内通过状态反应击杀超过15个敌人" },
-      { "condition_id": "survive_60s_low_length", "condition_type": "survival_low_length", "threshold": 60, "target_type": "head", "target_id": "taotie", "display_name": "饕餮", "description": "一局内在长度<5的情况下存活超过60秒" },
-      { "condition_id": "floors_3", "condition_type": "floors_completed", "threshold": 3, "target_type": "tail", "target_id": "styx_tail", "display_name": "冥河尾", "description": "完成3层以上楼层" },
-      { "condition_id": "enemies_50", "condition_type": "total_kills", "threshold": 50, "target_type": "tail", "target_id": "salamander", "display_name": "火蜥蜴尾", "description": "一局内击杀超过50个敌人" }
+      { "condition_id": "reaction_kills_10", "condition_type": "reaction_kills", "threshold": 10, "target_type": "head", "target_id": "bai_she", "display_name": "白蛇", "description": "一局内通过状态反应击杀 10 个敌人" },
+      { "condition_id": "floors_2", "condition_type": "floors_completed", "threshold": 2, "target_type": "tail", "target_id": "lag_tail", "display_name": "时滞尾", "description": "一局内完成 2 个楼层" }
     ],
     "legacy_stone_templates": {
       "high_kills": { "display_name": "杀戮传承", "highlight_type": "high_kills", "description": "那蛇在一局内屠戮了无数敌人", "bias_config": { "scale_tag_weights": { "fire": 1.3, "physical": 1.2 } } },

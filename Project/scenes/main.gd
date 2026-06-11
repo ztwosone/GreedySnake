@@ -1,13 +1,17 @@
 extends Node
 
+const _UnlockToastScript := preload("res://ui/unlock_toast.gd")
+
 @onready var title_screen: Control = $UILayer/TitleScreen
 @onready var game_over_screen: Control = $UILayer/GameOverScreen
 @onready var game_world_container: Node = $GameWorldContainer
+@onready var meta_growth_root: Node = get_node_or_null("MetaGrowthRoot")
 
 var _game_world_scene: PackedScene = preload("res://scenes/game_world.tscn")
 var _acceptance_scene: PackedScene = preload("res://scenes/l1_acceptance.tscn")
 var _l2_acceptance_scene: PackedScene = preload("res://scenes/l2_acceptance.tscn")
 var _current_game_world: Node2D
+var _unlock_toast: Control
 var _is_acceptance_mode: bool = false
 var _acceptance_level: int = 1  # 1 = L1, 2 = L2
 
@@ -19,6 +23,15 @@ func _ready() -> void:
 	game_over_screen.restart_pressed.connect(_on_restart_pressed)
 	game_over_screen.test_mode_pressed.connect(_on_test_mode_pressed)
 	EventBus.game_over.connect(_on_game_over)
+
+	# spec 003 M2（T011）：解锁 toast 挂壳层 UILayer（跨 run UI，toast 层 ≤1）
+	_unlock_toast = _UnlockToastScript.new()
+	_unlock_toast.name = "UnlockToast"
+	$UILayer.add_child(_unlock_toast)
+
+	# spec 003 M2：game_over 结算数据通路（统计/解锁/铸石文本行，编排归 S4）
+	if meta_growth_root and game_over_screen.has_method("set_summary_source"):
+		game_over_screen.set_summary_source(meta_growth_root)
 
 	# Initial state: show title only
 	title_screen.show()
@@ -69,6 +82,10 @@ func _start_new_game() -> void:
 	_is_acceptance_mode = false
 	_current_game_world = _game_world_scene.instantiate()
 	game_world_container.add_child(_current_game_world)
+	# spec 003 M2（T009/T010）：常驻 meta 根对新世界接线——tracker 注入（run_ended 链路）
+	# + RewardFlow 解锁过滤（须先于 start_game：首个 room_entered 可能即触发 offer）
+	if meta_growth_root and meta_growth_root.has_method("attach_world"):
+		meta_growth_root.attach_world(_current_game_world)
 	_current_game_world.start_game()
 	GameManager.start_game()
 

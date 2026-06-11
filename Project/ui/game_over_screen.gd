@@ -4,6 +4,9 @@ extends Control
 ## §11.7（测试模式按钮与 T 捷径属 debug UI，收进 presentation.debug_ui 开关）。
 ## 公共契约不变（main.gd 依赖）：restart_pressed / test_mode_pressed 信号 +
 ## show_results(data) + 场景节点路径 VBoxContainer/*（test_t11 打包结构）。
+## spec 003 M2 结算数据通路：set_summary_source(obj)（duck-typed，
+## MetaGrowthRoot.get_last_run_summary）→ 本局统计 + 新解锁 + 铸石以 kit 文本行呈现
+## （零仪式；RunSummaryScreen 视觉编排归 S4 Phase P）。
 
 signal restart_pressed
 signal test_mode_pressed
@@ -17,6 +20,9 @@ const _KitPanelScript := preload("res://ui/kit/kit_panel.gd")
 
 var _test_button: Button
 var _frame_panel: PanelContainer
+## spec 003 M2：结算数据源（duck-typed get_last_run_summary；未注入零行为）
+var _summary_source = null
+var _summary_box: VBoxContainer
 
 
 func _ready() -> void:
@@ -25,6 +31,7 @@ func _ready() -> void:
 	cause_label.add_theme_color_override(
 		"font_color", ConfigManager.get_palette_color("text_dim"))
 	restart_button.pressed.connect(_on_restart_pressed)
+	_build_summary_box()
 	_build_frame()
 
 	# §11.7：测试模式按钮属 debug UI，开关关闭时不创建（信号契约保留）
@@ -64,7 +71,77 @@ func show_results(data: Dictionary) -> void:
 	score_label.text = "得分 %d ／ 最佳 %d" % [score, best]
 	# 死因 cause→中文映射（presentation.death_causes）随 Phase P 死亡仪式落地（§7）
 	cause_label.text = "死因：%s" % cause
+	# spec 003 M2 结算行：同步刷一次（测试/布景直驱）；再延迟刷一次——生产时序里
+	# game_over（GameManager autoload 先连 snake_died）先于 run_ended 抵达，
+	# 结算缓存在同一派发稍后才写入（M1 事实：finalize 在 RunProgression 的 snake_died handler）
+	_refresh_summary()
+	call_deferred("_refresh_summary")
 	show()
+
+
+## spec 003 M2：结算数据源注入（main.gd 接 MetaGrowthRoot；未注入零行为）
+func set_summary_source(source) -> void:
+	_summary_source = source
+
+
+## 结算文本行快照（测试契约；空 = 无本局结算数据）
+func get_summary_lines() -> Array:
+	var lines: Array = []
+	if _summary_box == null:
+		return lines
+	for child in _summary_box.get_children():
+		if child is Label:
+			lines.append(child.text)
+	return lines
+
+
+func _build_summary_box() -> void:
+	_summary_box = VBoxContainer.new()
+	_summary_box.name = "SummaryRows"
+	menu_box.add_child(_summary_box)
+	menu_box.move_child(_summary_box, cause_label.get_index() + 1)
+
+
+## 重建结算行（幂等）：统计一行 + 每个新解锁一行 + 铸石一行；无数据零行
+func _refresh_summary() -> void:
+	if _summary_box == null or not is_instance_valid(_summary_box):
+		return
+	for child in _summary_box.get_children():
+		_summary_box.remove_child(child)
+		child.free()
+	if _summary_source == null or not is_instance_valid(_summary_source):
+		return
+	if not _summary_source.has_method("get_last_run_summary"):
+		return
+	var summary: Dictionary = _summary_source.get_last_run_summary()
+	if summary.is_empty():
+		return
+
+	var stats: Dictionary = summary.get("stats", {})
+	_add_summary_row("击杀 %d（反应 %d）｜楼层 %d｜历时 %d tick" % [
+		int(stats.get("total_kills", 0)),
+		int(stats.get("reaction_kills", 0)),
+		int(stats.get("floors_completed", 0)),
+		int(stats.get("duration_ticks", 0)),
+	], "text_dim")
+	for unlock in summary.get("unlocks", []):
+		if unlock is Dictionary:
+			_add_summary_row("解锁 %s" % str(unlock.get("display_name",
+				unlock.get("content_id", ""))), "accent_shedskin")
+	var stone: Dictionary = summary.get("stone", {})
+	if not stone.is_empty():
+		_add_summary_row("传承石 「%s」" % str(stone.get("display_name", "")),
+			"accent_resonance")
+
+
+func _add_summary_row(text: String, palette_token: String) -> void:
+	var label := Label.new()
+	label.theme_type_variation = "BodyLabel"
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_color_override(
+		"font_color", ConfigManager.get_palette_color(palette_token))
+	label.text = text
+	_summary_box.add_child(label)
 
 
 func _unhandled_input(event: InputEvent) -> void:

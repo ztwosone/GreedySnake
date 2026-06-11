@@ -32,12 +32,12 @@
 
 **Independent Test**: 新档默认池恰 = hydra + salamander（bai_she / lag_tail 不出现在 offer）；一局 reaction_kills ≥ 10 → run_ended → bai_she 入解锁集 + `content_unlocked` + 落盘；重复达成零二次解锁；解锁后下局奖励池含 bai_she。
 
-- [ ] T006 [M2] Red 卡：重写 `Project/Test/cases/test_l5_unlocks.gd` 对照 v1 映射——默认解锁集（hydra/salamander）；reaction_kills ≥ 10 → bai_she、floors_completed ≥ 2 → lag_tail；幂等（无重复解锁/事件）；临时 save_path 持久化；池过滤断言（锁定内容不进 offer、解锁后进入）；unlock_conditions 的 target_id 必须存在于 snake_heads/snake_tails（数据互证断言）。测试套件：`test_l5_unlocks.gd`
-- [ ] T007 [M2] JSON 卡：`game_config.json` `meta_growth.unlock_conditions` 重写为 v1 双条件（`reaction_kills_10` → bai_she / `floors_2` → lag_tail，display_name 对齐内容池 白蛇/时滞尾）+ `default_unlocked_heads: ["hydra"]` / `default_unlocked_tails: ["salamander"]`；草稿五条件中指向 ungud/medusa/taotie/styx_tail 的目标移除（backlog.md 收容，含 salamander 旧条件——已改默认解锁）。**JSON schema 变更同提交落 QuickReference。**测试套件：`test_l5_unlocks.gd`（数据断言）
-- [ ] T008 [M2] 验证修复 `Project/systems/meta_growth/unlock_system.gd`（判决：保留+修）：条件评估对照 v1 schema（condition_type 枚举与 FR-016 stats 字段对齐）；幂等保持；`content_unlocked` 发射 + 解锁即落盘保持；去 class_name。测试套件：`test_l5_unlocks.gd`
-- [ ] T009 [M2] MetaGrowthRoot 卡：新建 `Project/systems/meta_growth/meta_growth_root.gd`（+.uid）挂 `Project/scenes/main.tscn` 常驻节点（GameWorldContainer 外）：boot 加载 MetaSaveSystem（生产路径，测试可注入）；子节点 UnlockSystem / LegacyStoneSystem / RunStatsTracker `setup(meta_save)`；`run_started` 重置 tracker；跨 run 存续断言（世界重建后解锁集/石碑仍在）。测试套件：`test_l5_unlocks.gd`（root 装配/存续用例）
-- [ ] T010 [M2] 池过滤卡：`Project/systems/rewards/reward_flow_system.gd`（L3 头/尾奖励 offer）及头尾池消费方按解锁集过滤（duck-typed 解锁查询注入，未注入全量回退——L3 既有测试零破坏；v1 鳞片不过滤，Designs §12.3 附录）。测试套件：`test_l5_unlocks.gd`（过滤用例）+ `test_l3_rewards.gd` 回归
-- [ ] T011 [M2] [P] UI 卡：新建 `Project/ui/unlock_toast.gd`（+.uid）**基于 ui/kit chip/banner**（监听 `content_unlocked`；数据通路 only，编排/仪式归 S4；toast ≤ 1 几何规则）；main/game_world 接线。测试套件：`test_l5_unlocks.gd`（toast 数据断言）+ 几何探测（进组自动覆盖）
+- [x] T006 [M2] Red 卡：重写 `Project/Test/cases/test_l5_unlocks.gd` 对照 v1 映射——默认解锁集（hydra/salamander）；reaction_kills ≥ 10 → bai_she、floors_completed ≥ 2 → lag_tail；幂等（无重复解锁/事件）；临时 save_path 持久化；池过滤断言（锁定内容不进 offer、解锁后进入）；unlock_conditions 的 target_id 必须存在于 snake_heads/snake_tails（数据互证断言）。测试套件：`test_l5_unlocks.gd`
+- [x] T007 [M2] JSON 卡：`game_config.json` `meta_growth.unlock_conditions` 重写为 v1 双条件（`reaction_kills_10` → bai_she / `floors_2` → lag_tail，display_name 对齐内容池 白蛇/时滞尾）+ `default_unlocked_heads: ["hydra"]` / `default_unlocked_tails: ["salamander"]`；草稿五条件中指向 ungud/medusa/taotie/styx_tail 的目标移除（backlog.md 收容，含 salamander 旧条件——已改默认解锁）。**JSON schema 变更同提交落 QuickReference。**测试套件：`test_l5_unlocks.gd`（数据断言）
+- [x] T008 [M2] 验证修复 `Project/systems/meta_growth/unlock_system.gd`（判决：保留+修）：条件评估对照 v1 schema（condition_type 枚举与 FR-016 stats 字段对齐）；幂等保持；`content_unlocked` 发射 + 解锁即落盘保持；去 class_name。测试套件：`test_l5_unlocks.gd`
+- [x] T009 [M2] MetaGrowthRoot 卡：新建 `Project/systems/meta_growth/meta_growth_root.gd`（+.uid）挂 `Project/scenes/main.tscn` 常驻节点（GameWorldContainer 外）：boot 加载 MetaSaveSystem（生产路径，测试可注入）；子节点 UnlockSystem / LegacyStoneSystem / RunStatsTracker `setup(meta_save)`；`run_started` 重置 tracker；跨 run 存续断言（世界重建后解锁集/石碑仍在）。测试套件：`test_l5_unlocks.gd`（root 装配/存续用例）
+- [x] T010 [M2] 池过滤卡：`Project/systems/rewards/reward_flow_system.gd`（L3 头/尾奖励 offer）及头尾池消费方按解锁集过滤（duck-typed 解锁查询注入，未注入全量回退——L3 既有测试零破坏；v1 鳞片不过滤，Designs §12.3 附录）。测试套件：`test_l5_unlocks.gd`（过滤用例）+ `test_l3_rewards.gd` 回归
+- [x] T011 [M2] [P] UI 卡：新建 `Project/ui/unlock_toast.gd`（+.uid）**基于 ui/kit chip/banner**（监听 `content_unlocked`；数据通路 only，编排/仪式归 S4；toast ≤ 1 几何规则）；main/game_world 接线。测试套件：`test_l5_unlocks.gd`（toast 数据断言）+ 几何探测（进组自动覆盖）
 
 **M2 收口**: 严格门禁绿 → 勾卡 → 提交 → 合 main。
 

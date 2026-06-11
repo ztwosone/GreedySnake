@@ -1,5 +1,10 @@
-class_name UnlockSystem
 extends Node
+## spec 003 M2（T008，判决：保留+修）：解锁条件评估——Designs §12.3 附录「v1 内容映射」。
+## - condition_type 与 spec FR-016 冻结 stats 字段对齐：直接以 condition_type 为 stats 键取值
+##   （草稿手写映射表删除，含 survival_low_length 别名；v1 双条件 = reaction_kills / floors_completed）。
+## - 幂等：已解锁目标不重复解锁、不重复发事件（spec Edge Case）；解锁即落盘（FR-002）。
+## - `run_ended`（FR-016 冻结 payload）驱动评估；check_unlocks(stats) 亦可直调（测试/调用方）。
+## - 已去 class_name（preload/duck-typing，ScriptingLeading C.8）。
 
 # MetaSaveSystem 实例（鸭子类型，避免 headless 下依赖全局 class_name 缓存）
 var _meta_save = null
@@ -80,19 +85,9 @@ func _unlock_content(content_type: String, content_id: String) -> void:
 	_meta_save.save_to_disk()
 
 
+## condition_type 即 FR-016 冻结 stats 字段名（数据互证由 test_l5_unlocks 钉住）
 func _get_stat_value(stats: Dictionary, cond_type: String) -> int:
-	match cond_type:
-		"total_turns":
-			return int(stats.get("total_turns", 0))
-		"total_kills":
-			return int(stats.get("total_kills", 0))
-		"reaction_kills":
-			return int(stats.get("reaction_kills", 0))
-		"survival_low_length":
-			return int(stats.get("survival_low_length_ticks", 0))
-		"floors_completed":
-			return int(stats.get("floors_completed", 0))
-	return 0
+	return int(stats.get(cond_type, 0))
 
 
 func _on_run_ended(data: Dictionary) -> void:
