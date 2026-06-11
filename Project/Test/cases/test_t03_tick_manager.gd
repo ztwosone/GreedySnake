@@ -87,8 +87,65 @@ func run(t) -> void:
 	t.assert_eq(TickManager.step_once(), false, "step_once returns false when manual_mode off")
 	t.assert_eq(TickManager.current_tick, 2, "non-manual step does not advance")
 
+	EventBus.tick_pre_process.disconnect(on_pre)
+	EventBus.tick_post_process.disconnect(on_post_manual)
+
+	# --- T101: reason-token 暂停（presentation_design.md §11.2） ---
+	# 集合语义：pause(reason) 入集合，resume(reason) 出集合，集合空才真恢复
+	t.assert_true(TickManager.has_method("get_pause_reasons"), "has get_pause_reasons()")
+	if not TickManager.has_method("get_pause_reasons"):
+		TickManager.stop_ticking()
+		TickManager.manual_mode = false
+		return
+
+	TickManager.manual_mode = true
+	TickManager.start_ticking()
+	t.assert_eq(TickManager.get_pause_reasons(), [], "start_ticking: reason set empty")
+
+	# 裁定 #1：仪式 resume 不得吞掉玩家暂停
+	TickManager.pause(&"manual")
+	t.assert_eq(TickManager.is_ticking, false, "pause(manual): is_ticking == false")
+	TickManager.pause(&"ceremony")
+	TickManager.resume(&"ceremony")
+	t.assert_eq(TickManager.is_ticking, false, "ceremony resume must NOT swallow manual pause")
+	t.assert_eq(TickManager.step_once(), false, "still paused: step_once rejected")
+	t.assert_eq(TickManager.get_pause_reasons(), [&"manual"], "only manual reason remains")
+	TickManager.resume(&"manual")
+	t.assert_eq(TickManager.is_ticking, true, "all reasons cleared: truly resumed")
+	t.assert_eq(TickManager.step_once(), true, "resumed: step_once works again")
+
+	# 同 reason 重复 pause = 集合语义（幂等），一次 resume 即清
+	TickManager.pause(&"ceremony")
+	TickManager.pause(&"ceremony")
+	TickManager.resume(&"ceremony")
+	t.assert_eq(TickManager.is_ticking, true, "same-reason pause is idempotent (set semantics)")
+
+	# 未持有 reason 的 resume 不解他人的锁
+	TickManager.pause(&"manual")
+	TickManager.resume(&"ceremony")
+	t.assert_eq(TickManager.is_ticking, false, "resume of unheld reason does not unlock others")
+	TickManager.resume(&"manual")
+	t.assert_eq(TickManager.is_ticking, true, "owner resume unlocks")
+
+	# 裸调用回退默认 token（既有调用方零破坏）
+	TickManager.pause()
+	t.assert_eq(TickManager.is_ticking, false, "bare pause() still pauses (default token)")
+	TickManager.resume()
+	t.assert_eq(TickManager.is_ticking, true, "bare resume() still resumes (default token)")
+
+	# start_ticking 重置原因集合（新局不带残留暂停）
+	TickManager.pause(&"ceremony")
+	TickManager.start_ticking()
+	t.assert_eq(TickManager.get_pause_reasons(), [], "start_ticking resets stale reason set")
+	t.assert_eq(TickManager.is_ticking, true, "fresh start: is_ticking == true")
+
+	# hud 手动暂停迁移到 &"manual"（文本级契约，杜绝匿名 token 回潮）
+	var hud_source: String = (load("res://ui/hud.gd") as GDScript).source_code
+	t.assert_true(hud_source.contains('pause(&"manual")'),
+		"hud.gd pauses with &\"manual\" reason token")
+	t.assert_true(hud_source.contains('resume(&"manual")'),
+		"hud.gd resumes with &\"manual\" reason token")
+
 	# cleanup：恢复单例默认态
 	TickManager.stop_ticking()
 	TickManager.manual_mode = false
-	EventBus.tick_pre_process.disconnect(on_pre)
-	EventBus.tick_post_process.disconnect(on_post_manual)

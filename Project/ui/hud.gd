@@ -172,10 +172,11 @@ func _on_countdown_cancelled() -> void:
 
 
 func _toggle_pause() -> void:
+	# §11.2 reason-token：手动暂停持 &"manual"，仪式 resume 不会吞掉玩家暂停
 	_is_paused = not _is_paused
 	if _is_paused:
-		TickManager.pause()
+		TickManager.pause(&"manual")
 		_pause_label.visible = true
 	else:
-		TickManager.resume()
+		TickManager.resume(&"manual")
 		_pause_label.visible = false

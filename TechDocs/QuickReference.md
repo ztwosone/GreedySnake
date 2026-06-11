@@ -62,6 +62,7 @@ Project/Test/cases/test_l3_smoke_run.gd      # L3 v1 固定路径占位 UI smoke
 - `game_config.json` 新增 `presentation` 段：palette（20 token）/typography/motion（tick 量化）/layout/glyphs/acceptance/game_feel/audio/hints/death_causes/debug_ui；ConfigManager 全套 accessor。
 - `Project/ui/kit/`：theme_builder（JSON→Theme + 对比度对 + WCAG contrast_ratio）、kit_panel（角括号框基类，出生带 ui_kit 分组/ui_layer 元数据/settle()/track_tween/register_hit_target）、glyph（_draw 零子节点数据驱动图标）、choice_card/banner/chip（零编排组件态）。
 - 仪表缝：TickManager `manual_mode`+`step_once()`（pause 期间步进无效）；VFXManager `vfx_invoked` 信号 + 参数 JSON 化 + 新效果 shatter_at/ring_at/fly_to_hud。
+- TickManager reason-token 暂停（Phase P T101，设计 §11.2）：`pause(reason)`/`resume(reason)`（缺省 `&"default"`，既有裸调用零破坏），原因集合空才真恢复；`start_ticking()` 清残留集合；`get_pause_reasons()` 观察点；hud 手动暂停持 `&"manual"`（test_t03 文本级契约钉住），仪式用 `&"ceremony"`——仪式 resume 不吞玩家暂停。
 - 体验验收基建 `Project/Test/experience/`：experience_recorder（四通道时间线+pending modal 栈）、tick_driver（模态感知手动步进）、ui_actor（playbook 驱动面板公共 API）、ui_settle、ui_geometry_probe（几何五项+有效底色对比度，dry_run 自测）、state_stager（典型状态装配）。
 - L3 三面板 + title/game_over/hud 已迁移 kit 设计语言；debug UI（kill_feed/debug_panel/build_test_panel/event_log_panel + T/Y 捷径）收进 `presentation.debug_ui` 开关（默认关）。
 - banner 文字色按对比度自动选深/浅（金色底配深字）；banner 副标题用 HeadingLabel（body 字号在 room_combat 上对比 4.48 < 4.5，banner 按 large 阈值设计）。

@@ -8,6 +8,10 @@ var current_tick: int = 0
 ## 仪表缝（presentation_design.md §11.4）：true 时不自走拍，由 step_once() 手动步进
 var manual_mode: bool = false
 
+## reason-token 暂停集合（presentation_design.md §11.2）：键 = StringName 原因，
+## 集合空才真恢复——防止仪式 resume 吞掉玩家手动暂停（裁定 #1）
+var _pause_reasons: Dictionary = {}
+
 var _timer: Timer
 
 
@@ -21,7 +25,10 @@ func _ready() -> void:
 func start_ticking() -> void:
 	current_tick = 0
 	is_ticking = true
+	_pause_reasons.clear()
+	_timer.paused = false
 	if manual_mode:
+		_timer.stop()
 		return
 	_timer.wait_time = get_effective_interval()
 	_timer.start()
@@ -32,14 +39,22 @@ func stop_ticking() -> void:
 	_timer.stop()
 
 
-func pause() -> void:
+func pause(reason: StringName = &"default") -> void:
+	_pause_reasons[reason] = true
 	is_ticking = false
 	_timer.paused = true
 
 
-func resume() -> void:
+func resume(reason: StringName = &"default") -> void:
+	_pause_reasons.erase(reason)
+	if not _pause_reasons.is_empty():
+		return
 	is_ticking = true
 	_timer.paused = false
+
+
+func get_pause_reasons() -> Array:
+	return _pause_reasons.keys()
 
 
 func get_effective_interval() -> float:

@@ -53,13 +53,51 @@
   覆盖 title/game_over/l3_run_start/l3_reward_pending；Gate-H 待人工 5 分钟裁定，
   不阻塞 S2 开工，须在 S2 收口前补录于 CurrentState）
 
-## Phase P — 体验完成层（S4，占位，开工时细化）
+## Phase P — 体验完成层（S4，2026-06-12 开工细化；蓝本 = AgentOps/CurrentState「S4 开卡」节）
 
-- [ ] T101 [P] TickManager reason-token 暂停 + hud 迁移 + test_t03 扩展
-- [ ] T102 [P] AppFlow 四态（GameManager.GameState 扩展）+ 标题屏重建 + StoneSelect/
-  RunSummary 屏 + CeremonyLayer
-- [ ] T103 [P] 死亡/胜利仪式 + 局后总结
-- [ ] T104 [P] 房间横幅→chip + 楼层小地图 + 选择仪式 + 蜕皮 chip + Build 状态条
-- [ ] T105 [P] SFXForge + AudioManager + 触发表 MUST #1-8 全量 + 强度排序断言
-- [ ] T106 [P] hint_system 认知轻度引导
-- [ ] T107 [P] AcceptanceShots 装置 + Layer C 评审 + S4 Gate
+每卡纪律：TDD Red 先行；每 US 严格门禁绿合 main；EventBus/JSON 契约变更同提交落
+QuickReference；appflow 套件入树即 `root.boot(临时路径)`（存档卫生红线）；
+kit 零编排红线的解除处 = CeremonyLayer 从外部驱动（S1 铁律的对偶）。
+
+### P-A 基座（US4 前置 + US3 骨架）
+
+- [x] T101 [P-A] TickManager reason-token 暂停（`pause(reason)`/`resume(reason)`，
+  原因集合空才真恢复，`start_ticking` 清集合，`get_pause_reasons()` 观察点）+
+  hud 手动暂停迁移 `&"manual"`（裁定 #1：仪式 resume 不得吞掉玩家暂停）+
+  test_t03 扩展（叠加/幂等/未持有 reason 不解他锁）
+- [ ] T102 [P-A] AppFlow 四态收口：`GameManager.GameState` 增 SUMMARY（尾部追加保
+  int 值；STONE_SELECT 已于 S3 M3 落地）+ RunSummaryScreen（kit 屏，数据通路 =
+  `MetaGrowthRoot.get_last_run_summary()` / game_over_screen `get_summary_lines()`）+
+  标题屏菜单重建（开始/退出，有石碑多一项）+ `CeremonyLayer`（ui/ceremony_layer.gd，
+  编排宿主：dim/stagger/飞行/hitstop 调度，监听 EventBus 驱动 kit 公共 API）+
+  T/Y 验收捷径保持 debug 开关后；test_xp_contracts 扩展 AppFlow 状态序列断言
+
+### P-B 仪式与局内体验（US3 余下 + US4）
+
+- [ ] T103 [P-B] 死亡仪式（hitstop 0.1 → 蛇尾到头逐段消散 0.05s/段 → 世界去饱和 →
+  dim → 死因中文一行，cause→中文映射 `presentation.death_causes`；tick 脉搏线随消散
+  渐灭）+ 胜利仪式（终点格金色扩散环 → dim）+ 局后总结编排（统计行 stagger 滚入 →
+  解锁卡 → 石碑卡 → 按钮；与 `run_ended.stats` 一致性 Layer A 断言）
+- [ ] T104 [P-B] 房间意图横幅→chip 两段式（0.9s 横幅收缩为顶中 chip + 完成章）+
+  楼层小地图（左上，意图色方块 + 路径线 + 当前脉动/完成暗化）+ 选择仪式
+  `choice_ceremony`（`pause(&"ceremony")` → dim → 三卡 stagger → 选中卡飞向蛇头 →
+  `resume(&"ceremony")`，奖励/鳞片/楼层奖励三模态共用）+ 蜕皮 chip 飞行粒子
+  （`currency_changed` 世界坐标 → chip + bounce）+ Build 状态条（底中槽位 glyph +
+  等级点 + 共鸣青色连线 + 首次发现横幅）+ 拾取物世界内闪烁标记（§8.7 前半）
+
+### P-C 音频与引导（US5 + US6）
+
+- [ ] T105 [P-C] SFXForge autoload（JSON 合成 AudioStreamWAV，16-bit mono 22050Hz，
+  五条实现坑强制遵守）+ AudioManager autoload（8 voice 池 + 50ms 防重 +
+  `sfx_invoked` 仪表 + `last_played` 环形缓冲）+ Game-Feel 触发表 MUST #1-8 全量
+  （`presentation.game_feel.triggers` 表即契约）+ 强度排序断言
+  （segment_loss > hit，JSON 数值比较）+ `audio.enabled=false` 契约全量重跑
+- [ ] T106 [P-C] hint_system 认知轻度引导（首次事件 caption chip 3s，≤1 概念/房间，
+  已见列表入 meta save——注意 schema_version 兼容；文案 `presentation.hints`）
+
+### P-Gate
+
+- [ ] T107 [P-Gate] AcceptanceShots 全状态截图 + Layer C findings + 3 局 soak +
+  S4 Gate（**Gate-H 阻塞封板**：S2 三项 + S3 跨进程持久化人工欠账一并清偿，
+  脚本见 CurrentState「Gate-H 欠账」节）+ 文档清偿（QuickReference/CurrentState/
+  DailyLog/本文件全勾）
