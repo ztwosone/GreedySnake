@@ -11,9 +11,11 @@ const STAGER_PATH: String = "res://Test/experience/state_stager.gd"
 
 ## §12.1：每个典型状态一次沉降态探测（l4_scale_pending = spec 002 T2 鳞片模态 + 蜕皮 chip；
 ## l4_shop_open = spec 002 T3 商店货架 + 蜕皮 chip；l4_floor_reward_slot/choice =
-## spec 002 T5b Boss 结算两段模态）
+## spec 002 T5b Boss 结算两段模态；l5_stone_select = spec 003 M3 传承石选择屏，
+## 假档 2 石临时路径布景）
 const STATES: Array = ["title_screen", "game_over", "l3_run_start", "l3_reward_pending",
-	"l4_scale_pending", "l4_shop_open", "l4_floor_reward_slot", "l4_floor_reward_choice"]
+	"l4_scale_pending", "l4_shop_open", "l4_floor_reward_slot", "l4_floor_reward_choice",
+	"l5_stone_select"]
 
 
 func run(t) -> void:
@@ -56,6 +58,8 @@ func _probe_state(t, state_name: String) -> void:
 			_assert_game_over_extras(t, ctx)
 		"l3_run_start":
 			_assert_run_start_extras(t, ctx)
+		"l5_stone_select":
+			_assert_stone_select_extras(t, ctx)
 
 	stager_script.teardown(ctx)
 	await t.get_tree().process_frame
@@ -124,6 +128,24 @@ func _assert_run_start_extras(t, ctx: Dictionary) -> void:
 		"[XP-GEO:run] length label re-homed onto a kit panel")
 	t.assert_true(_has_kit_panel_ancestor(hud.status_label),
 		"[XP-GEO:run] status label re-homed onto a kit panel")
+
+
+# ── M3: 传承石选择屏布景（spec 003 T015：kit modal + 假档 2 石 + 标题让位） ────
+
+func _assert_stone_select_extras(t, ctx: Dictionary) -> void:
+	var app: Node = ctx.get("world", null)
+	var screen: Control = app.get_node("UILayer/StoneSelectScreen")
+	t.assert_true(screen.visible, "[XP-GEO:stone] stone select screen staged visible")
+	t.assert_true(screen.is_in_group("ui_modal"), "[XP-GEO:stone] screen in ui_modal group")
+	t.assert_eq(screen.get_visible_stone_count(), 2,
+		"[XP-GEO:stone] staged fake save renders 2 stone cards")
+	t.assert_false(app.get_node("UILayer/TitleScreen").visible,
+		"[XP-GEO:stone] title yields to stone select")
+	var skip_in_hit: bool = false
+	for node in t.get_tree().get_nodes_in_group("ui_hit"):
+		if node is Button and node.text.contains("轻装上阵"):
+			skip_in_hit = true
+	t.assert_true(skip_in_hit, "[XP-GEO:stone] skip entry registered as ui_hit target")
 
 
 func _has_kit_frame(screen: Control) -> bool:

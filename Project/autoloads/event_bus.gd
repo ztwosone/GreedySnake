@@ -110,7 +110,7 @@ signal floor_theme_set(data: Dictionary)            # 楼层主题设定 { theme
 # === L5 Meta Growth ===
 signal content_unlocked(data: Dictionary)           # 内容解锁 { content_type, content_id, display_name }
 signal legacy_stone_created(data: Dictionary)       # 传承石创建 { description, highlight_type, bias_config }
-signal legacy_stone_selected(data: Dictionary)      # 传承石选择 { stone_index }
+signal legacy_stone_selected(data: Dictionary)      # 传承石选择 { stone_index, stone }（完整 stone dict，spec 003 M3 修订）；发射方 = LegacyStoneSystem.select_legacy_stone（StoneSelectScreen 驱动），选中即消耗（移除+落盘）
 signal pickup_dropped(data: Dictionary)             # 拾取物掉落 { pickup_id, position, display_name }
 signal pickup_activated(data: Dictionary)           # 拾取物激活 { pickup_id }
 signal run_ended(data: Dictionary)                  # Run 结束（spec 003 FR-016 冻结契约）{ outcome: "victory"|"death", run_id, floor_index, stats: {total_turns, total_kills, reaction_kills, near_death_count, survival_low_length_ticks, floors_completed, max_reaction_chain, damage_taken, max_length, duration_ticks} }；唯一发射点 = RunStatsTracker.finalize_run（once-guard），调用方 = RunProgressionSystem victory/death 双出口

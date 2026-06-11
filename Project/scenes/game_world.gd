@@ -1,5 +1,7 @@
 extends Node2D
 
+const _StoneBiasScript := preload("res://systems/meta_growth/stone_bias.gd")
+
 @onready var snake: Snake = $EntityContainer/Snake
 @onready var enemy_container: Node2D = $EntityContainer/EnemyContainer
 @onready var food_container: Node2D = $EntityContainer/FoodContainer
@@ -327,7 +329,9 @@ func cleanup() -> void:
 	GridWorld.clear_all()
 
 
-func start_game() -> void:
+## run_options（spec 003 M3）：{ legacy_stone: Dictionary }——选中的传承石（main.gd 经
+## StoneSelectScreen 注入；空/缺省 = 无石开局）。缺省参数保持全部既有调用方零改动。
+func start_game(run_options: Dictionary = {}) -> void:
 	# 1. Initialize Grid
 	GridWorld.init_grid(Constants.GRID_WIDTH, Constants.GRID_HEIGHT)
 
@@ -337,6 +341,10 @@ func start_game() -> void:
 
 	# 3. Initialize food
 	food_manager.init_foods(3)
+
+	# 3.5 spec 003 M3（T014）：传承石 bias 注入——每局显式 set-or-clear，
+	# bias 生命周期恰一局（FR-015：下局未带石即清除）
+	_apply_legacy_stone_bias(run_options.get("legacy_stone", {}))
 
 	# 4. Initialize L3 run and current room
 	var current_room: Dictionary = {}
@@ -362,3 +370,21 @@ func start_game() -> void:
 
 	# 7. Notify game started
 	EventBus.game_started.emit()
+
+
+## spec 003 M3（T014）：选中石的 bias_config.scale_tag_weights → stone_bias 加权重排
+## Callable，注入 ScaleRewardSystem（S2 T005 既有钩子）+ RewardFlowSystem（同口径）。
+## 石为空/无权重 → 注入空 Callable 清除（FR-015 恰一局有效）。
+## bias RNG 种子按 run seed 派生（与 start_run 的 default_seed 解析一致，定种子可复现）。
+func _apply_legacy_stone_bias(stone: Variant) -> void:
+	var weights: Dictionary = {}
+	if stone is Dictionary:
+		weights = stone.get("bias_config", {}).get("scale_tag_weights", {})
+	var bias: Callable = Callable()
+	if not weights.is_empty():
+		var run_seed: int = int(ConfigManager.get_floor_config().get("default_seed", 0))
+		bias = _StoneBiasScript.make_bias(weights, hash("%d:stone_bias" % run_seed))
+	if scale_reward_system and scale_reward_system.has_method("set_sampling_bias"):
+		scale_reward_system.set_sampling_bias(bias)
+	if reward_flow_system and reward_flow_system.has_method("set_sampling_bias"):
+		reward_flow_system.set_sampling_bias(bias)

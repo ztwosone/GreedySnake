@@ -18,6 +18,8 @@ static func stage(state_name: String, host: Node) -> Dictionary:
 	##   "l4_shop_open"：走完两战斗一奖励进商店房（ShopPanel 可见 + 蜕皮 chip，spec 002 T3）
 	##   "l4_floor_reward_slot"：Boss 结算第一段（FloorRewardPanel 槽位定位选择，spec 002 T5b）
 	##   "l4_floor_reward_choice"：Boss 结算第二段（FloorRewardPanel choice_card×3，spec 002 T5b）
+	##   "l5_stone_select"：传承石选择屏（main.tscn 壳层 + 假档 2 石临时路径，spec 003 M3；
+	##   teardown 删临时档——存档卫生：root 先 boot(临时路径) 再开屏，生产存档零写入）
 	## ctx["ui_root"]：几何探针扫描根（壳层屏 = UILayer，局内 = game_world 的 UI 层）
 	var ctx: Dictionary = {
 		"state_name": state_name,
@@ -29,6 +31,8 @@ static func stage(state_name: String, host: Node) -> Dictionary:
 	}
 	if state_name == "title_screen" or state_name == "game_over":
 		return _stage_app_screen(state_name, host, ctx)
+	if state_name == "l5_stone_select":
+		return _stage_stone_select(host, ctx)
 	var scene: PackedScene = load(GAME_WORLD_SCENE_PATH) as PackedScene
 	if scene == null:
 		push_warning("state_stager: game_world scene failed to load")
@@ -92,6 +96,49 @@ static func stage(state_name: String, host: Node) -> Dictionary:
 	return ctx
 
 
+## 传承石选择屏布景（spec 003 M3）：临时档写 2 块假石 → 壳层入树 → root 换临时档 →
+## 隐标题 + open()。存档卫生：屏幕流不发 run_ended，但 boot(临时路径) 仍前置——
+## 布景期间任何意外落盘都打在临时档上；teardown 按 ctx["temp_save_path"] 删档。
+static func _stage_stone_select(host: Node, ctx: Dictionary) -> Dictionary:
+	var temp_path: String = "user://stager_stone_select_tmp.json"
+	var MetaSaveScript: GDScript = load("res://systems/meta_growth/meta_save_system.gd")
+	var meta = MetaSaveScript.new(temp_path)
+	meta.reset()
+	meta.add_legacy_stone({
+		"description": "上一局大杀四方",
+		"highlight_type": "high_kills",
+		"display_name": "杀戮传承",
+		"bias_config": {"scale_tag_weights": {"fire": 1.3}},
+		"created_at": 1,
+	})
+	meta.add_legacy_stone({
+		"description": "稳健存活到了最后",
+		"highlight_type": "long_survival",
+		"display_name": "生存传承",
+		"bias_config": {"scale_tag_weights": {"recovery": 1.5}},
+		"created_at": 2,
+	})
+	meta.save_to_disk()
+	ctx["temp_save_path"] = temp_path
+
+	var scene: PackedScene = load(MAIN_SCENE_PATH) as PackedScene
+	if scene == null:
+		push_warning("state_stager: main scene failed to load")
+		return ctx
+	var app: Node = scene.instantiate()
+	host.add_child(app)
+	ctx["world"] = app
+	ctx["ui_root"] = app.get_node("UILayer")
+	var root: Node = app.get_node_or_null("MetaGrowthRoot")
+	if root != null and root.has_method("boot"):
+		root.boot(temp_path)
+	app.get_node("UILayer/TitleScreen").hide()
+	var screen: Node = app.get_node_or_null("UILayer/StoneSelectScreen")
+	if screen != null and screen.has_method("open"):
+		screen.open()
+	return ctx
+
+
 ## 壳层屏幕布景：标题屏原样；game_over = 隐标题 + show_results 既有契约
 static func _stage_app_screen(state_name: String, host: Node, ctx: Dictionary) -> Dictionary:
 	var scene: PackedScene = load(MAIN_SCENE_PATH) as PackedScene
@@ -123,3 +170,7 @@ static func teardown(ctx: Dictionary) -> void:
 	GameManager.best_score = int(ctx.get("saved_best", 0))
 	TickManager.stop_ticking()
 	GridWorld.clear_all()
+	# 存档卫生：布景用临时档随布景一起清理
+	var temp_save_path: String = str(ctx.get("temp_save_path", ""))
+	if temp_save_path != "" and FileAccess.file_exists(temp_save_path):
+		DirAccess.remove_absolute(temp_save_path)

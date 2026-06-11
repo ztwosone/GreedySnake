@@ -489,6 +489,53 @@ FR-018 显式保留契约：**RewardFlowSystem 为 L3 `reward` 房发射的合�
   class_name 随 M3/M4 卡移除。`test_l5_acceptance` 草稿已补 v1 映射最小适配
   （turns_200→ungud 断言改 reaction_kills_10→bai_she，全量重写归 M4 T020）。
 
+## L5 元成长 M3 事实（S3 M3，T012-T016，2026-06-11）
+
+- **高光阈值 JSON 化（T013，FR-004）**：`meta_growth.legacy_stone_thresholds`
+  （highlight_type 键 → 达标下限：high_kills 30 / complex_reaction 5 / near_death 2 /
+  long_survival 3；缺键 = 该高光禁用，落 default「旅者」石）；ConfigManager 新 accessor
+  `get_legacy_stone_thresholds()`。评估优先级固定 high_kills > complex_reaction >
+  near_death > long_survival > default。`legacy_stone_system.gd` 已去 class_name。
+- **`legacy_stone_selected` payload 修订（T013）**：`{stone_index, stone}`——stone 为完整
+  dict（description/highlight_type/display_name/bias_config/created_at），消费方无需回查
+  存档；选中即消耗（存档移除 + 落盘），越界选择零副作用零事件。
+- **bias 消费链（T014，FR-015/SC-004）**：选中石 →
+  `main._start_new_game(stone)` → `game_world.start_game(run_options)`（新缺省参数
+  `{legacy_stone: stone}`，全部既有调用方零改动；l1/l2 验收场景 override 已同签名）→
+  `_apply_legacy_stone_bias`：`stone.bias_config.scale_tag_weights` 经
+  `systems/meta_growth/stone_bias.gd` 构造加权重排 Callable（scale 选项按
+  ConfigManager.get_scale_tags 连乘 tag 乘数、head/tail 恒 1.0；按权重不放回抽样重排 =
+  输入的置换；RNG 种子 = hash("run_seed:stone_bias") 定种子可复现）→ 注入
+  `ScaleRewardSystem.set_sampling_bias`（S2 T005 既有钩子零改造）+
+  `RewardFlowSystem.set_sampling_bias`（M3 新钩子，同口径；未注入保持 L3 first-N 池序）。
+  **bias 生命周期恰一局**：每局 start_game 显式 set-or-clear（空石注入空 Callable 清除）；
+  两系统新增 `has_sampling_bias()` 可观测。
+- **StoneSelectScreen（T015，`ui/stone_select_screen.gd`，FR-012）**：kit modal
+  （ui_modal 组 + ui_layer=modal，choice_card 横排石碑卡 ≤5 + 「轻装上阵」跳过；
+  ←/→ 高亮环绕、1-5 直选、回车/空格确认、Esc 跳过、鼠标点卡；居中停靠 =
+  reset_size + set_anchors_and_offsets_preset(CENTER, MINSIZE)，unlock_toast 同款）。
+  **空石碑列表整屏跳过**：open() 返回 false 绝不闪现（裁定 #12，概念第二局登场）。
+  公共契约：setup(legacy_system)/open/get_visible_stone_count/get_stone_labels/
+  get_selected_index/get_skip_label_text/choose_stone_by_index/skip +
+  `stone_select_finished(stone)` 信号（空 dict = 跳过）。
+- **屏幕流提前落地（T015 范围修订，spec/presentation §7 已同步注记）**：
+  `GameManager.GameState` 尾部追加 `STONE_SELECT`（既有 int 值不变）+
+  `enter_stone_select()`；main.gd 开局分流 `_begin_run_flow()`——「开始」与
+  「再来一局」（非验收模式）均先经选石（有石 → STONE_SELECT；空石直进 RUN）；
+  T/Y 验收捷径与全部既有信号/流程保持。SUMMARY 枚举与仪式编排仍归 S4。
+  新增 glyph `stone`（presentation.glyphs，石碑卡图标）。
+- **结算数据通路（T016）**：`get_last_run_summary().stone` 为完整铸石 dict（与
+  `legacy_stone_created` payload 同构），`run_started` 清缓存——M2 既有通路的
+  M3 数据可达性断言收口（呈现编排归 S4 RunSummaryScreen）。
+- **几何探测新增状态 `l5_stone_select`**（state_stager + test_xp_ui_geometry，共 9 状态）：
+  临时档写 2 块假石 → main.tscn 壳层 + root.boot(临时路径) → 隐标题 + open()；
+  teardown 按 ctx["temp_save_path"] 删临时档（存档卫生）。
+- 事件对照表增量：
+
+| 信号 | payload | 发射方 | 监听方 |
+|------|---------|--------|--------|
+| `legacy_stone_selected` | {stone_index, stone}（完整 stone dict，M3 修订） | LegacyStoneSystem.select_legacy_stone（StoneSelectScreen/AppFlow 驱动，M3 ✅） | 表现层（S4 仪式）/测试观测 |
+
 ## L1 战斗循环关键事实
 
 - **吃敌人无消耗** — 蛇头碰敌人 = 直接吞噬，不扣长度；若蛇头与敌人携带异类状态则触发反应、双方状态清除

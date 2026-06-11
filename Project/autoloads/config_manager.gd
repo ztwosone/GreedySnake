@@ -404,6 +404,12 @@ func get_legacy_stone_templates() -> Dictionary:
 	return meta_growth.get("legacy_stone_templates", {})
 
 
+## spec 003 M3（T013）：高光评估阈值（highlight_type 键 → 达标下限；缺键 = 该高光禁用，
+## 落到 default 石——FR-004/FR-010，草稿魔数 30/5/2/3 已入 JSON）
+func get_legacy_stone_thresholds() -> Dictionary:
+	return meta_growth.get("legacy_stone_thresholds", {})
+
+
 func get_max_legacy_stones() -> int:
 	return int(meta_growth.get("max_legacy_stones", 5))
 

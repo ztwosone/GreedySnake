@@ -2,7 +2,7 @@
 
 **Feature Branch**: `003-l5-meta-growth`
 **Created**: 2026-06-05
-**Amended**: 2026-06-11（S3 治理修订：解锁目标对齐 Designs §12.3 附录 v1 内容映射；US3 裁定为 SHOULD + broken_eye only；新增 run_ended 唯一发射点 / 冻结 payload 契约 / 存档 schema_version / 空石碑跳过 / bias 消费口径诸 FR）
+**Amended**: 2026-06-11（S3 治理修订：解锁目标对齐 Designs §12.3 附录 v1 内容映射；US3 裁定为 SHOULD + broken_eye only；新增 run_ended 唯一发射点 / 冻结 payload 契约 / 存档 schema_version / 空石碑跳过 / bias 消费口径诸 FR。M3 编排裁定：`GameManager.GameState.STONE_SELECT` 枚举与基础开局分流提前至 S3 落地，SUMMARY 与仪式编排仍归 S4）
 **Status**: Amended for S3 re-acceptance
 **Input**: Implement cross-run meta growth via knowledge unlocks and legacy stones, plus event encounter pickups that add discovery-based interaction within runs.
 
@@ -146,4 +146,4 @@ run_ended: {
 - L3 systems (RunProgressionSystem, RoomFlowSystem) provide run lifecycle hooks.
 - user:// directory is writable on target platforms.
 - L5 v1 scopes to unlocks + legacy stones + `broken_eye` pickup; full event encounters (buildings, traces), `serpent_scale`, and future heads/tails are deferred (backlog.md).
-- S3 builds data paths only: all UI on `Project/ui/kit/`; `GameManager.GameState` enum extension (STONE_SELECT / SUMMARY) and screen-flow/ceremony choreography belong to S4 (004 Phase P).
+- S3 builds data paths plus the minimal StoneSelect screen flow: all UI on `Project/ui/kit/`. Per the 2026-06-11 M3 orchestration ruling, `GameManager.GameState.STONE_SELECT` (appended to the enum, existing int values preserved) and the title/restart → stone-select → run branching landed in S3 M3; `SUMMARY` and all ceremony choreography remain S4 (004 Phase P).

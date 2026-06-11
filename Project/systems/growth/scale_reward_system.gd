@@ -32,6 +32,12 @@ func set_sampling_bias(bias: Callable) -> void:
 	_sampling_bias = bias
 
 
+## spec 003 M3（T014）：bias 生命周期可观测——传承石 bias 恰一局有效（FR-015），
+## game_world.start_game(run_options) 每局显式 set-or-clear（空 Callable = 清除）
+func has_sampling_bias() -> bool:
+	return _sampling_bias.is_valid()
+
+
 func connect_events() -> void:
 	if not EventBus.room_completed.is_connected(_on_room_completed):
 		EventBus.room_completed.connect(_on_room_completed)

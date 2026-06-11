@@ -12,6 +12,12 @@ var _current_offer: Dictionary = {}
 ## FR-014 自动决议（合成 room_completed 保留，不死锁）。
 var _unlock_query: Callable = Callable()
 
+## spec 003 M3（T014）：传承石抽样偏置注入缝（口径同 ScaleRewardSystem.set_sampling_bias）
+## ——收合格选项 Array、返回加权重排 Array，取前 offer_count 即偏置后 offer。
+## 未注入零行为：保持 L3 first-N 池序确定性（既有测试零破坏）。
+## bias 恰一局有效（FR-015）：game_world.start_game(run_options) 每局显式 set-or-clear。
+var _sampling_bias: Callable = Callable()
+
 
 func _ready() -> void:
 	connect_events()
@@ -28,6 +34,14 @@ func setup(parts_mgr: Node, scale_mgr: Node) -> void:
 
 func set_unlock_query(query: Callable) -> void:
 	_unlock_query = query
+
+
+func set_sampling_bias(bias: Callable) -> void:
+	_sampling_bias = bias
+
+
+func has_sampling_bias() -> bool:
+	return _sampling_bias.is_valid()
 
 
 func connect_events() -> void:
@@ -133,7 +147,7 @@ func cleanup() -> void:
 
 
 func _get_visible_options(pool: Array, offer_count: int) -> Array:
-	var result: Array = []
+	var eligible: Array = []
 	for option in pool:
 		if not (option is Dictionary):
 			continue
@@ -142,9 +156,15 @@ func _get_visible_options(pool: Array, offer_count: int) -> Array:
 			continue
 		if not _can_apply_option(option_copy):
 			continue
-		result.append(option_copy)
-		if result.size() >= offer_count:
-			break
+		eligible.append(option_copy)
+	# M3（T014）：传承石偏置重排（未注入 = 原池序，first-N 行为与 L3 全等）
+	if _sampling_bias.is_valid():
+		var biased: Variant = _sampling_bias.call(eligible)
+		if biased is Array:
+			eligible = biased
+	var result: Array = []
+	for i in range(mini(offer_count, eligible.size())):
+		result.append(eligible[i])
 	return result
 
 

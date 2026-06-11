@@ -1,6 +1,8 @@
 extends Node
 
-enum GameState { TITLE, PLAYING, GAME_OVER }
+# STONE_SELECT 追加在尾部：既有状态 int 值不变（测试 save/restore 以 int 存取）。
+# spec 003 M3 提前落地 §7 屏幕流的 STONE_SELECT；SUMMARY 仍归 S4（004 Phase P）。
+enum GameState { TITLE, PLAYING, GAME_OVER, STONE_SELECT }
 
 var current_state: int = GameState.TITLE
 var current_score: int = 0
@@ -42,6 +44,11 @@ func go_to_title() -> void:
 	current_state = GameState.TITLE
 	TickManager.stop_ticking()
 	GridWorld.clear_all()
+
+
+## spec 003 M3：传承石选择屏状态（presentation §7 屏幕流；可见性切换在 main.gd）
+func enter_stone_select() -> void:
+	current_state = GameState.STONE_SELECT
 
 
 func _on_snake_died(data: Dictionary) -> void:

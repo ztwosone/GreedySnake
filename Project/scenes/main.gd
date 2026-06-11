@@ -4,6 +4,7 @@ const _UnlockToastScript := preload("res://ui/unlock_toast.gd")
 
 @onready var title_screen: Control = $UILayer/TitleScreen
 @onready var game_over_screen: Control = $UILayer/GameOverScreen
+@onready var stone_select_screen: Control = get_node_or_null("UILayer/StoneSelectScreen")
 @onready var game_world_container: Node = $GameWorldContainer
 @onready var meta_growth_root: Node = get_node_or_null("MetaGrowthRoot")
 
@@ -33,6 +34,13 @@ func _ready() -> void:
 	if meta_growth_root and game_over_screen.has_method("set_summary_source"):
 		game_over_screen.set_summary_source(meta_growth_root)
 
+	# spec 003 M3（T015）：传承石选择屏接线（§7 屏幕流——开始/再来一局先经选石分流；
+	# 空石碑整屏跳过 FR-012；选中石经 finished 信号注入新局）
+	if stone_select_screen:
+		stone_select_screen.stone_select_finished.connect(_on_stone_select_finished)
+		if meta_growth_root and meta_growth_root.has_method("get_legacy_stone_system"):
+			stone_select_screen.setup(meta_growth_root.get_legacy_stone_system())
+
 	# Initial state: show title only
 	title_screen.show()
 	game_over_screen.hide()
@@ -56,7 +64,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _on_start_pressed() -> void:
 	title_screen.hide()
-	_start_new_game()
+	_begin_run_flow()
 
 
 func _on_restart_pressed() -> void:
@@ -65,7 +73,22 @@ func _on_restart_pressed() -> void:
 	if _is_acceptance_mode:
 		_start_acceptance_test(_acceptance_level)
 	else:
-		_start_new_game()
+		# §7 屏幕流：「再来一局」同样先经选石分流（刚铸成的石头下一局即登场）
+		_begin_run_flow()
+
+
+## spec 003 M3：开局分流——有传承石先进 STONE_SELECT，空石碑列表整屏跳过直进 RUN
+## （FR-012：open() 返回 false 时屏幕绝不闪现）
+func _begin_run_flow() -> void:
+	if stone_select_screen and stone_select_screen.has_method("open") \
+			and stone_select_screen.open():
+		GameManager.enter_stone_select()
+		return
+	_start_new_game()
+
+
+func _on_stone_select_finished(stone: Dictionary) -> void:
+	_start_new_game(stone)
 
 
 func _on_test_mode_pressed() -> void:
@@ -78,7 +101,9 @@ func _on_game_over(data: Dictionary) -> void:
 	game_over_screen.show_results(data)
 
 
-func _start_new_game() -> void:
+## legacy_stone（spec 003 M3）：StoneSelectScreen 选中的完整 stone dict（空 = 无石开局），
+## 经 game_world.start_game(run_options) 注入本局抽样偏置（FR-015 恰一局有效）
+func _start_new_game(legacy_stone: Dictionary = {}) -> void:
 	_is_acceptance_mode = false
 	_current_game_world = _game_world_scene.instantiate()
 	game_world_container.add_child(_current_game_world)
@@ -86,7 +111,7 @@ func _start_new_game() -> void:
 	# + RewardFlow 解锁过滤（须先于 start_game：首个 room_entered 可能即触发 offer）
 	if meta_growth_root and meta_growth_root.has_method("attach_world"):
 		meta_growth_root.attach_world(_current_game_world)
-	_current_game_world.start_game()
+	_current_game_world.start_game({"legacy_stone": legacy_stone})
 	GameManager.start_game()
 
 
