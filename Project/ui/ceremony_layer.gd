@@ -91,7 +91,8 @@ func play_end_ceremony(data: Dictionary, on_finished: Callable) -> void:
 ## 死亡仪式：hitstop → 逐段消散（尾→头）→ 去饱和 → dim → 死因一行 → 总结
 func _play_death(cause: String, on_finished: Callable) -> void:
 	var cfg: Dictionary = ConfigManager.get_ceremony_config()
-	VFXManager.hit_stop(float(cfg.get("death_hitstop_sec", 0.0)))
+	# hitstop 强度出自触发表 §9 #6（T105 起单一来源，ceremony.death_hitstop_sec 已删）
+	VFXManager.hit_stop(float(ConfigManager.get_trigger("snake_died").get("hitstop", 0.0)))
 
 	var tw: Tween = _track(create_tween())
 	# ① 蛇尾到头逐段消散（蛇不在场——壳层测试/布景——跳过该段）

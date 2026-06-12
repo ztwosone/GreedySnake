@@ -321,7 +321,9 @@ func _attack_segment(segment: SnakeSegment) -> void:
 	VFXManager.lunge_toward(self, seg_world_pos)
 	VFXManager.burst_at(seg_world_pos, Color(1.0, 0.2, 0.2), 20.0, 0.15)
 	VFXManager.flash_entity(segment, Color(1.5, 0.3, 0.3))
-	VFXManager.screen_shake(1.5, 0.05)
+	# §9 #3 强度出自触发表（T105 表即代码）
+	VFXManager.screen_shake(
+		float(ConfigManager.get_trigger("snake_body_attacked").get("shake", 1.5)), 0.05)
 
 	# 找到蛇节点
 	var snake_node: Snake = segment.get_parent() as Snake

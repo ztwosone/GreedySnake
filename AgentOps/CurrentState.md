@@ -3,13 +3,22 @@
 **更新时间**：2026-06-12（S4 开工）
 **当前分支**：`004-presentation-experience`
 **当前 feature**：`.specify/specs/004-presentation-experience/` Phase P（T101-T107，tasks.md 已开工细化为 P-A/P-B/P-C/P-Gate 四簇）
-**当前阶段**：S4 体验完成层进行中——T101 ✅ / T102 ✅ / T103 ✅ / T104（a/b/c 全片 ✅：横幅两段式+小地图 / 选择仪式+蜕皮飞行 / Build 状态条+拾取闪烁）；下一卡 T105（SFXForge + AudioManager + 触发表 MUST #1-8）/ T106 hint / T107 Gate
+**当前阶段**：S4 体验完成层进行中——T101 ✅ / T102 ✅ / T103 ✅ / T104 ✅ / T105 ✅（程序化音频 + 触发表全量）；下一卡 T106（hint_system 认知轻度引导），随后 T107 Gate（Gate-H 人工欠账阻塞封板）
 
 ## S4 进度
 
 - T101 ✅（2026-06-12）：`pause(reason)/resume(reason)` 集合语义（缺省 &"default" 保既有
   裸调用），集合空才真恢复；start_ticking 清残留；get_pause_reasons() 观察点；
   hud 手动暂停迁移 &"manual"（文本级契约钉住）；test_t03 扩展（4110→4127 断言）。
+- T105 ✅（2026-06-12）：SFXForge（11 音色 JSON 合成，16-bit mono 22050 s16 小端 +
+  LCG 噪声 + steps 台阶）+ AudioManager（8 voice / dedup_ms / sfx_invoked +
+  last_played ≤32 / 连吃半音 streak / 反应三变体哈希 / card_in stagger 超防重窗 /
+  enabled=false 零播放）双 autoload（VFXManager 之后）。triggers 9 行表即代码：
+  hitstop/shake 运行时强度迁移单一来源（enemy_manager 0.02→0.03 / length_system
+  shake 4.0+hitstop 0.05 / enemy 1.5→表 / ceremony 死亡 hitstop 读表，
+  death_hitstop_sec 删除）。get_trigger/get_audio_config accessor。
+  新套件 test_xp_audio（77 套件 4364 断言）。
+  测试事实：dedup 用真实 ticks_msec——同帧多次断言需 dedup_ms=0 或真实等待滑窗。
 - T104c ✅（2026-06-12）：Build 状态条 ui/build_status_bar.gd（game_world 挂
   UI/BuildStatusBar + setup 三管理器只读面）：底中 _draw 格序 [头][front…][middle…]
   [back…][尾]、空槽虚框、装备实心+等级点、共鸣连线（ResonanceManager.get_active_pairs

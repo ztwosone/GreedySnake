@@ -291,10 +291,21 @@ Layer A 从 JSON 比较断言。
     "cause_hold_sec": 0.8, "victory_ring_token": "accent_shedskin", // 死因停留 / §7 胜利金色扩散环色
     "room_banner_sec": 0.9,                                   // §8.1 房间意图横幅停留后收缩为 chip
     "discovery_hold_sec": 2.0                                 // §8.6 共鸣首次发现 caption 停留
+    // 死亡 hitstop 单一来源 = game_feel.triggers.snake_died.hitstop（§9 #6，T105 起）
   },
   "glyphs": { "combat": [ {"rect": [x,y,w,h], "rotation": 45}, ... ], ... },  // §3
-  "game_feel": { "enabled": true, "triggers": { ... } },      // §9
-  "audio": { "enabled": true, "master_volume_db": -6, "dedup_ms": 50, "sfx": { ... } },  // §10
+  "game_feel": { "enabled": true, "pickup_blink_hz": 1.2,     // §9（T105 触发表落地：
+    "triggers": {                                             //  表即代码——运行时绑定与 Layer A 断言共用）
+      "snake_food_eaten": { "enabled": true, "sfx": "eat", "pitch_step_semitones": 1, "streak_window_sec": 4.0, ... },
+      "enemy_killed": { "enabled": true, "sfx": "kill", "hitstop": 0.03, "shake": 2.0 },
+      "snake_body_attacked": { "sfx": "hit", "shake": 1.5 }, "snake_length_decreased": { "sfx": "segment_loss", "hitstop": 0.05, "shake": 4.0 },
+      "reaction_triggered": { "sfx_variants": ["reaction_burst", "reaction_zap", "reaction_cloud"] },  // 变体按 reaction_id 哈希定声
+      "snake_died": { "sfx": "death", "hitstop": 0.1 }, "room_completed": { "sfx": "room_clear" },
+      "choice_presented": { "sfx": "card_in", "stagger_count": 3, "stagger_sec": 0.06 }, "choice_chosen": { "sfx": "confirm" }
+    } },
+  "audio": { "enabled": true, "master_volume_db": -6, "dedup_ms": 50,  // §10（T105：音色全 JSON 合成）
+    "sfx": { "<id>": { "wave": "sine|square|triangle|noise", "freq_start": 660, "freq_end": 880,
+      "duration": 0.08, "attack": 0.005, "decay": 0.05, "noise_mix": 0.0, "volume": 0.5, "steps": 1 } } },  // steps>1 = 扫频量化台阶（room_clear 两音上行）
   "hints": { "first_food": "...", ... },                      // §8.8
   "death_causes": { "hit_self": "吞到了自己", ... },           // §7 死亡仪式（键 = snake.die(cause) 实际死因 + victory/unknown；缺键回退原文）
   "acceptance": {                                             // §12.1 阈值

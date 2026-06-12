@@ -490,6 +490,16 @@ func get_game_feel() -> Dictionary:
 	return presentation.get("game_feel", {})
 
 
+func get_trigger(event_id: String) -> Dictionary:
+	## §9 触发表行（T105：表即代码——运行时 juice 强度与 Layer A 断言共用此 JSON）
+	return presentation.get("game_feel", {}).get("triggers", {}).get(event_id, {})
+
+
+func get_audio_config() -> Dictionary:
+	## §10 音频体系（SFXForge 音色库 / AudioManager 防重与音量）
+	return presentation.get("audio", {})
+
+
 func get_glyph_def(glyph_id: String) -> Array:
 	## §3 glyph 定义（≤4 矩形）；"_" 前缀为元数据键，非 glyph
 	var glyphs: Dictionary = presentation.get("glyphs", {})

@@ -25,6 +25,8 @@ GridWorld="*res://autoloads/grid_world.gd"
 GameManager="*res://autoloads/game_manager.gd"
 StatusEffectManager="*res://systems/status/status_effect_manager.gd"
 VFXManager="*res://autoloads/vfx_manager.gd"
+SFXForge="*res://autoloads/sfx_forge.gd"
+AudioManager="*res://autoloads/audio_manager.gd"
 
 [display]
 

@@ -77,7 +77,10 @@ func _on_decrease_requested(data: Dictionary) -> void:
 		if not snake.body.is_empty():
 			var tail_pos: Vector2 = GridWorld.grid_to_world(snake.body[-1])
 			VFXManager.popup_text("-%d" % removed, tail_pos, Color(1.0, 0.3, 0.3))
-			VFXManager.screen_shake(3.0, 0.1)
+			# §9 #4 强度出自触发表（segment_loss 必须重于 hit，T105 表即代码）
+			var loss_trigger: Dictionary = ConfigManager.get_trigger("snake_length_decreased")
+			VFXManager.screen_shake(float(loss_trigger.get("shake", 3.0)), 0.1)
+			VFXManager.hit_stop(float(loss_trigger.get("hitstop", 0.0)))
 		EventBus.snake_length_decreased.emit({
 			"amount": removed,
 			"source": source,

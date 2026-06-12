@@ -94,8 +94,8 @@ func _on_snake_hit_enemy(data: Dictionary) -> void:
 	# 蛇头 scale bounce
 	if snake and not snake.segments.is_empty() and is_instance_valid(snake.segments[0]):
 		VFXManager.scale_bounce(snake.segments[0], 1.3, 0.15)
-	# 极短暂停（打击感）
-	VFXManager.hit_stop(0.02)
+	# 极短暂停（打击感）——强度出自触发表（§9 #2，T105 表即代码）
+	VFXManager.hit_stop(float(ConfigManager.get_trigger("enemy_killed").get("hitstop", 0.02)))
 
 	# Snake eats enemy
 	enemy.take_damage(enemy.hp)

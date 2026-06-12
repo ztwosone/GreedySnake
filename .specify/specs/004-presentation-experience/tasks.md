@@ -90,11 +90,14 @@ kit 零编排红线的解除处 = CeremonyLayer 从外部驱动（S1 铁律的�
 
 ### P-C 音频与引导（US5 + US6）
 
-- [ ] T105 [P-C] SFXForge autoload（JSON 合成 AudioStreamWAV，16-bit mono 22050Hz，
-  五条实现坑强制遵守）+ AudioManager autoload（8 voice 池 + 50ms 防重 +
-  `sfx_invoked` 仪表 + `last_played` 环形缓冲）+ Game-Feel 触发表 MUST #1-8 全量
-  （`presentation.game_feel.triggers` 表即契约）+ 强度排序断言
-  （segment_loss > hit，JSON 数值比较）+ `audio.enabled=false` 契约全量重跑
+- [x] T105 [P-C] SFXForge autoload（11 音色 JSON 合成 AudioStreamWAV，16-bit mono
+  22050Hz s16 小端手写 + LCG 确定性噪声 + steps 扫频台阶；五条实现坑全遵守）+
+  AudioManager autoload（8 voice 池 + dedup_ms 防重 + `sfx_invoked` 仪表 +
+  `last_played` 环形缓冲 ≤32 + 连吃半音 streak + 反应三变体哈希定声 + card_in ×3
+  stagger）+ 触发表 MUST #1-8 全量（triggers 9 行表即代码：运行时 hitstop/shake
+  强度迁移单一来源——enemy_manager/length_system/enemy/ceremony 四处）+ 强度排序
+  断言（segment_loss > hit）+ audio.enabled=false 零播放全 MUST 扫掠
+  （test_xp_audio 新套件）
 - [ ] T106 [P-C] hint_system 认知轻度引导（首次事件 caption chip 3s，≤1 概念/房间，
   已见列表入 meta save——注意 schema_version 兼容；文案 `presentation.hints`）
 

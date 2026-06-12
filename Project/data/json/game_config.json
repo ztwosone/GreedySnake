@@ -1322,7 +1322,6 @@
     "ceremony": {
       "dim_alpha": 0.6,
       "dim_sec": 0.3,
-      "death_hitstop_sec": 0.1,
       "dissolve_per_segment_sec": 0.05,
       "desaturate_alpha": 0.55,
       "desaturate_sec": 0.4,
@@ -1408,9 +1407,36 @@
       "ring_start_scale": 0.25,
       "fly_size": 8,
       "pickup_blink_hz": 1.2,
-      "triggers": {}
+      "triggers": {
+        "snake_food_eaten": { "enabled": true, "sfx": "eat", "hitstop": 0.0, "shake": 0.0, "pitch_step_semitones": 1, "streak_window_sec": 4.0 },
+        "enemy_killed": { "enabled": true, "sfx": "kill", "hitstop": 0.03, "shake": 2.0 },
+        "snake_body_attacked": { "enabled": true, "sfx": "hit", "hitstop": 0.0, "shake": 1.5 },
+        "snake_length_decreased": { "enabled": true, "sfx": "segment_loss", "hitstop": 0.05, "shake": 4.0 },
+        "reaction_triggered": { "enabled": true, "sfx_variants": ["reaction_burst", "reaction_zap", "reaction_cloud"], "hitstop": 0.0, "shake": 2.0 },
+        "snake_died": { "enabled": true, "sfx": "death", "hitstop": 0.1, "shake": 0.0 },
+        "room_completed": { "enabled": true, "sfx": "room_clear", "hitstop": 0.0, "shake": 0.0 },
+        "choice_presented": { "enabled": true, "sfx": "card_in", "stagger_count": 3, "stagger_sec": 0.06 },
+        "choice_chosen": { "enabled": true, "sfx": "confirm" }
+      }
     },
-    "audio": { "enabled": true, "master_volume_db": -6, "dedup_ms": 50, "sfx": {} },
+    "audio": {
+      "enabled": true,
+      "master_volume_db": -6,
+      "dedup_ms": 50,
+      "sfx": {
+        "eat": { "wave": "sine", "freq_start": 660, "freq_end": 880, "duration": 0.08, "attack": 0.005, "decay": 0.05, "noise_mix": 0.0, "volume": 0.5 },
+        "kill": { "wave": "square", "freq_start": 220, "freq_end": 110, "duration": 0.12, "attack": 0.005, "decay": 0.08, "noise_mix": 0.2, "volume": 0.5 },
+        "hit": { "wave": "noise", "freq_start": 220, "freq_end": 150, "duration": 0.1, "attack": 0.005, "decay": 0.07, "noise_mix": 1.0, "volume": 0.45 },
+        "segment_loss": { "wave": "square", "freq_start": 160, "freq_end": 60, "duration": 0.25, "attack": 0.005, "decay": 0.15, "noise_mix": 0.5, "volume": 0.6 },
+        "reaction_burst": { "wave": "square", "freq_start": 330, "freq_end": 520, "duration": 0.15, "attack": 0.01, "decay": 0.1, "noise_mix": 0.15, "volume": 0.5 },
+        "reaction_zap": { "wave": "square", "freq_start": 880, "freq_end": 440, "duration": 0.1, "attack": 0.005, "decay": 0.06, "noise_mix": 0.3, "volume": 0.45 },
+        "reaction_cloud": { "wave": "noise", "freq_start": 400, "freq_end": 200, "duration": 0.2, "attack": 0.02, "decay": 0.14, "noise_mix": 1.0, "volume": 0.4 },
+        "death": { "wave": "sine", "freq_start": 600, "freq_end": 80, "duration": 1.2, "attack": 0.01, "decay": 0.9, "noise_mix": 0.1, "volume": 0.55 },
+        "room_clear": { "wave": "triangle", "freq_start": 440, "freq_end": 660, "duration": 0.25, "attack": 0.01, "decay": 0.12, "noise_mix": 0.0, "volume": 0.5, "steps": 2 },
+        "card_in": { "wave": "triangle", "freq_start": 520, "freq_end": 700, "duration": 0.06, "attack": 0.005, "decay": 0.03, "noise_mix": 0.0, "volume": 0.4 },
+        "confirm": { "wave": "sine", "freq_start": 520, "freq_end": 780, "duration": 0.12, "attack": 0.005, "decay": 0.08, "noise_mix": 0.0, "volume": 0.5 }
+      }
+    },
     "hints": {},
     "death_causes": {
       "hit_boundary": "撞上了边界",

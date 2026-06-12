@@ -145,6 +145,22 @@ Project/Test/cases/test_l3_smoke_run.gd      # L3 v1 固定路径占位 UI smoke
 - T104c 拾取闪烁（§8.7 前半）：pickup_entity `_process` 正弦 alpha 脉动
   （`blink_alpha(phase)` 纯函数钳 [0.55,1.0]，`game_feel.pickup_blink_hz`（1.2）驱动；
   game_feel 关闭恒亮）。
+- T105 程序化音频（§9/§10）：`SFXForge` autoload（boot 按 `audio.sfx` 合成
+  AudioStreamWAV——16-bit mono 22050、s16 小端手写、id 哈希 LCG 确定性噪声、
+  `steps>1` 扫频量化台阶 = room_clear 两音上行；11 音色全 JSON）+ `AudioManager`
+  autoload（8 voice 池、仅监听 EventBus、`dedup_ms` 防重 ticks_msec 差值、
+  `sfx_invoked` 仪表 + `last_played` 环形缓冲 ≤32、`audio.enabled=false` 零播放）。
+  两 autoload 注册在 VFXManager 之后（坑 #3：晚于 ConfigManager）。
+- T105 触发表落地（§9 表即代码）：`game_feel.triggers` 9 行（MUST #1-8，#5 三变体
+  `sfx_variants` 按 reaction_id 哈希定声、#8 拆 choice_presented/chosen 两行，
+  presented 族 card_in ×3 stagger 0.06s 超防重窗）；连吃音高 +1 半音/4s 衰减
+  （`pitch_step_semitones`/`streak_window_sec`，`game_started` 清 streak）；
+  `ConfigManager.get_trigger(event_id)`/`get_audio_config()` 新 accessor。
+  **强度数值单一来源迁移**：enemy_killed hitstop 0.02→表 0.03（enemy_manager）、
+  segment_loss shake 3.0→表 4.0 + 新增 hitstop 0.05（length_system）、
+  body_attacked shake 1.5→表（enemy.gd）、死亡 hitstop = triggers.snake_died.hitstop
+  （`ceremony.death_hitstop_sec` 已删，单一来源）。强度排序硬约束 segment_loss > hit
+  由 test_xp_audio 从同一 JSON 断言。新套件 `test_xp_audio.gd`。
 
 ## AgentOps 统筹事实
 
