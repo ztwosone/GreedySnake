@@ -290,7 +290,8 @@ Layer A 从 JSON 比较断言。
     "desaturate_alpha": 0.55, "desaturate_sec": 0.4,          // §7 世界去饱和（§13 无 shader——灰罩近似）
     "cause_hold_sec": 0.8, "victory_ring_token": "accent_shedskin", // 死因停留 / §7 胜利金色扩散环色
     "room_banner_sec": 0.9,                                   // §8.1 房间意图横幅停留后收缩为 chip
-    "discovery_hold_sec": 2.0                                 // §8.6 共鸣首次发现 caption 停留
+    "discovery_hold_sec": 2.0,                                // §8.6 共鸣首次发现 caption 停留
+    "hint_hold_sec": 3.0                                      // §8.8 引导 caption 停留
     // 死亡 hitstop 单一来源 = game_feel.triggers.snake_died.hitstop（§9 #6，T105 起）
   },
   "glyphs": { "combat": [ {"rect": [x,y,w,h], "rotation": 45}, ... ], ... },  // §3
@@ -306,7 +307,7 @@ Layer A 从 JSON 比较断言。
   "audio": { "enabled": true, "master_volume_db": -6, "dedup_ms": 50,  // §10（T105：音色全 JSON 合成）
     "sfx": { "<id>": { "wave": "sine|square|triangle|noise", "freq_start": 660, "freq_end": 880,
       "duration": 0.08, "attack": 0.005, "decay": 0.05, "noise_mix": 0.0, "volume": 0.5, "steps": 1 } } },  // steps>1 = 扫频量化台阶（room_clear 两音上行）
-  "hints": { "first_food": "...", ... },                      // §8.8
+  "hints": { "first_food": "...", ... },                      // §8.8（T106：8 条首次事件文案；已见列表入 meta 存档 seen_hints 字段，schema_version 1 兼容新增）
   "death_causes": { "hit_self": "吞到了自己", ... },           // §7 死亡仪式（键 = snake.die(cause) 实际死因 + victory/unknown；缺键回退原文）
   "acceptance": {                                             // §12.1 阈值
     "feedback_window_ticks": 1, "max_pending_modals": 1,

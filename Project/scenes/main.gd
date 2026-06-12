@@ -2,6 +2,7 @@ extends Node
 
 const _UnlockToastScript := preload("res://ui/unlock_toast.gd")
 const _CeremonyLayerScript := preload("res://ui/ceremony_layer.gd")
+const _HintSystemScript := preload("res://ui/hint_system.gd")
 
 @onready var title_screen: Control = $UILayer/TitleScreen
 @onready var game_over_screen: Control = $UILayer/GameOverScreen
@@ -15,6 +16,7 @@ var _l2_acceptance_scene: PackedScene = preload("res://scenes/l2_acceptance.tscn
 var _current_game_world: Node2D
 var _unlock_toast: Control
 var _ceremony_layer: Control
+var _hint_system: Control
 var _is_acceptance_mode: bool = false
 var _acceptance_level: int = 1  # 1 = L1, 2 = L2
 
@@ -41,6 +43,13 @@ func _ready() -> void:
 	_unlock_toast = _UnlockToastScript.new()
 	_unlock_toast.name = "UnlockToast"
 	$UILayer.add_child(_unlock_toast)
+
+	# Phase P T106（§8.8）：认知轻度引导——跨 run 壳层 UI，已见列表经 meta 根入档
+	_hint_system = _HintSystemScript.new()
+	_hint_system.name = "HintSystem"
+	$UILayer.add_child(_hint_system)
+	if meta_growth_root:
+		_hint_system.set_save_source(meta_growth_root)
 
 	# spec 003 M2：game_over 结算数据通路（统计/解锁/铸石文本行，编排归 S4）
 	if meta_growth_root and game_over_screen.has_method("set_summary_source"):

@@ -1328,7 +1328,8 @@
       "cause_hold_sec": 0.8,
       "victory_ring_token": "accent_shedskin",
       "room_banner_sec": 0.9,
-      "discovery_hold_sec": 2.0
+      "discovery_hold_sec": 2.0,
+      "hint_hold_sec": 3.0
     },
     "glyphs": {
       "_canvas_units": 16,
@@ -1437,7 +1438,16 @@
         "confirm": { "wave": "sine", "freq_start": 520, "freq_end": 780, "duration": 0.12, "attack": 0.005, "decay": 0.08, "noise_mix": 0.0, "volume": 0.5 }
       }
     },
-    "hints": {},
+    "hints": {
+      "first_food": "吃下食物会变长——长度就是生命",
+      "first_hit": "蛇身被咬住了——回头吃掉它，或者快跑",
+      "first_status": "状态会层层叠加——两种状态相遇就是反应",
+      "first_reward": "选一件——蛇的形态从此分岔",
+      "first_resonance": "相邻的鳞片在共鸣",
+      "first_shedskin": "蜕皮是货币——到商店里花掉它",
+      "first_shop": "进店看看——不买也能走",
+      "first_pickup": "拾取物带在身上就有效果"
+    },
     "death_causes": {
       "hit_boundary": "撞上了边界",
       "hit_self": "吞到了自己",

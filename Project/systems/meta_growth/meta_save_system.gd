@@ -116,6 +116,20 @@ func get_unlocked_tails() -> Array:
 	return _data.get("unlocked_tails", []).duplicate()
 
 
+## §8.8 引导已见列表（T106）：可选字段——旧档缺键走默认空，schema_version 1 兼容
+func get_seen_hints() -> Array:
+	return _data.get("seen_hints", []).duplicate()
+
+
+func mark_hint_seen(hint_id: String) -> void:
+	var seen: Array = _data.get("seen_hints", [])
+	if seen.has(hint_id):
+		return
+	seen.append(hint_id)
+	_data["seen_hints"] = seen
+	save_to_disk()
+
+
 func reset() -> void:
 	_data = _default_data()
 
@@ -127,4 +141,5 @@ func _default_data() -> Dictionary:
 		"unlocked_tails": ConfigManager.get_default_unlocked_tails().duplicate(),
 		"discovered_scales": [],
 		"legacy_stones": [],
+		"seen_hints": [],
 	}

@@ -161,6 +161,15 @@ Project/Test/cases/test_l3_smoke_run.gd      # L3 v1 固定路径占位 UI smoke
   body_attacked shake 1.5→表（enemy.gd）、死亡 hitstop = triggers.snake_died.hitstop
   （`ceremony.death_hitstop_sec` 已删，单一来源）。强度排序硬约束 segment_loss > hit
   由 test_xp_audio 从同一 JSON 断言。新套件 `test_xp_audio.gd`。
+- T106 认知轻度引导（§8.8，`ui/hint_system.gd` 挂 main UILayer 跨 run）：8 条首次
+  事件 caption（first_food/hit/status/reward/resonance/shedskin/shop/pickup，
+  文案全 `presentation.hints`；first_shedskin 条件 = shedskin 且 amount>0）；
+  底中 Build 条之上，`ceremony.hint_hold_sec`（3.0）后收起（track_tween 入 settle）；
+  **≤1 概念/房间**（room_entered 重置预算；被压掉的不标已见——下房间再现）；
+  已见列表入 meta 存档 `seen_hints` 可选字段（`get_seen_hints/mark_hint_seen`，
+  旧档缺键走默认，schema_version 1 兼容新增）；存档源 duck-typed
+  `set_save_source(root)`——`get_meta_save()` 每次取活档（boot 换档安全）。
+  新套件 `test_xp_hints.gd`。
 
 ## AgentOps 统筹事实
 

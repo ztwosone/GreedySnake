@@ -98,8 +98,11 @@ kit 零编排红线的解除处 = CeremonyLayer 从外部驱动（S1 铁律的�
   强度迁移单一来源——enemy_manager/length_system/enemy/ceremony 四处）+ 强度排序
   断言（segment_loss > hit）+ audio.enabled=false 零播放全 MUST 扫掠
   （test_xp_audio 新套件）
-- [ ] T106 [P-C] hint_system 认知轻度引导（首次事件 caption chip 3s，≤1 概念/房间，
-  已见列表入 meta save——注意 schema_version 兼容；文案 `presentation.hints`）
+- [x] T106 [P-C] hint_system 认知轻度引导（ui/hint_system.gd 挂 main UILayer：
+  8 条首次事件 caption、hint_hold_sec 3s、≤1 概念/房间——压掉的不标已见、
+  已见列表入 meta save `seen_hints` 可选字段 schema_version 1 兼容、
+  boot 换档安全（get_meta_save 每次取活档）；文案全 `presentation.hints`；
+  test_xp_hints 新套件）
 
 ### P-Gate
 

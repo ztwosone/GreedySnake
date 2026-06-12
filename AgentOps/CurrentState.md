@@ -3,13 +3,17 @@
 **更新时间**：2026-06-12（S4 开工）
 **当前分支**：`004-presentation-experience`
 **当前 feature**：`.specify/specs/004-presentation-experience/` Phase P（T101-T107，tasks.md 已开工细化为 P-A/P-B/P-C/P-Gate 四簇）
-**当前阶段**：S4 体验完成层进行中——T101 ✅ / T102 ✅ / T103 ✅ / T104 ✅ / T105 ✅（程序化音频 + 触发表全量）；下一卡 T106（hint_system 认知轻度引导），随后 T107 Gate（Gate-H 人工欠账阻塞封板）
+**当前阶段**：S4 体验完成层进行中——T101 ✅ / T102 ✅ / T103 ✅ / T104 ✅ / T105 ✅ / T106 ✅（hint 引导）；仅剩 T107 Gate（AcceptanceShots + Layer C + 3 局 soak + 文档清偿；**Gate-H 人工欠账阻塞封板**——需人工通跑，脚本见「Gate-H 欠账」节）
 
 ## S4 进度
 
 - T101 ✅（2026-06-12）：`pause(reason)/resume(reason)` 集合语义（缺省 &"default" 保既有
   裸调用），集合空才真恢复；start_ticking 清残留；get_pause_reasons() 观察点；
   hud 手动暂停迁移 &"manual"（文本级契约钉住）；test_t03 扩展（4110→4127 断言）。
+- T106 ✅（2026-06-12）：hint_system（ui/hint_system.gd 挂 main UILayer 跨 run）——
+  8 条首次事件 caption（文案全 presentation.hints）、hint_hold_sec 3.0、≤1 概念/
+  房间（压掉不标已见）、seen_hints 入 meta 存档（可选字段 schema_version 1 兼容、
+  get_meta_save 每次取活档 boot 安全）。新套件 test_xp_hints（78 套件 4390 断言）。
 - T105 ✅（2026-06-12）：SFXForge（11 音色 JSON 合成，16-bit mono 22050 s16 小端 +
   LCG 噪声 + steps 台阶）+ AudioManager（8 voice / dedup_ms / sfx_invoked +
   last_played ≤32 / 连吃半音 streak / 反应三变体哈希 / card_in stagger 超防重窗 /
