@@ -154,7 +154,7 @@ static func _stage_app_screen(state_name: String, host: Node, ctx: Dictionary) -
 		app.get_node("UILayer/GameOverScreen").show_results({
 			"score": 3,
 			"best_score": 5,
-			"cause": "self_collision",
+			"cause": "hit_self",
 		})
 	return ctx
 

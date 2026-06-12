@@ -106,7 +106,9 @@ kit 零编排红线的解除处 = CeremonyLayer 从外部驱动（S1 铁律的�
 
 ### P-Gate
 
-- [ ] T107 [P-Gate] AcceptanceShots 全状态截图 + Layer C findings + 3 局 soak +
-  S4 Gate（**Gate-H 阻塞封板**：S2 三项 + S3 跨进程持久化人工欠账一并清偿，
-  脚本见 CurrentState「Gate-H 欠账」节）+ 文档清偿（QuickReference/CurrentState/
-  DailyLog/本文件全勾）
+- [x] T107 [P-Gate] 机器层全绿（2026-06-12）：AcceptanceShots 9 镜头（新增总结屏/
+  选石屏）+ Layer C findings 9 PASS / 0 FAIL + 3 局 soak（test_xp_soak）+
+  顺手项清偿（GO! 定格 = GameTransition settle 语义、布景死因真实键）+ 文档清偿。
+  **Gate-H 人工终审未清（阻塞封板）**：S2 三项 + S3 跨进程重验 + S4 体感终审
+  （30 秒上手 / 丢段体感重于受击 / 死后 5 秒说出死因 / 音频品味），
+  脚本见 AgentOps/CurrentState「Gate-H 欠账」节——人工通过后合 main 进 S5

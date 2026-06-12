@@ -29,6 +29,16 @@ func _ready() -> void:
 
 	EventBus.game_started.connect(_on_game_started)
 	EventBus.snake_died.connect(_on_snake_died)
+	# SpecKit 004 T107：过渡入 settle 语义（ui_settle 经 ui_kit 组快进——
+	# 修 S2 登记顺手项「GO! 过渡字在截图里定格」）
+	add_to_group("ui_kit")
+	set_meta("ui_layer", "dim")
+
+
+## ui_settle 契约：活动过渡快进到终态（GO! 渐隐完 / 死亡暗化到位）
+func settle() -> void:
+	if _tw and _tw.is_valid():
+		_tw.custom_step(INF)
 
 
 func _on_game_started() -> void:

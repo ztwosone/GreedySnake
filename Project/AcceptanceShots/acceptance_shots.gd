@@ -21,6 +21,9 @@ const SHOT_MANIFEST: Array = [
 	{"id": "05_l4_floor_reward_slot", "state": "l4_floor_reward_slot"},
 	{"id": "06_l4_floor_reward_choice", "state": "l4_floor_reward_choice"},
 	{"id": "07_l4_multifloor_midrun", "state": "@multifloor_midrun"},
+	# S4（004 Phase P T107）：总结屏 + 传承石选择屏入镜头清单
+	{"id": "08_summary_screen", "state": "game_over"},
+	{"id": "09_l5_stone_select", "state": "l5_stone_select"},
 ]
 
 const MULTIFLOOR_SEED: int = 9090

@@ -52,7 +52,7 @@ Project/Test/cases/test_l3_smoke_run.gd      # L3 v1 固定路径占位 UI smoke
 - Tick = 0.25s
 - 测试入口：`res://Test/test_runner.tscn`
 - 严格测试入口：`$env:GODOT_DISABLE_CRASH_HANDLER="1"; powershell -ExecutionPolicy Bypass -File Tools/run_tests_strict.ps1`
-- 当前验证事实（2026-06-11，S3 M4 收口 = spec 003 封口）：普通测试 `4110/4110` 断言通过，套件 `72/72`（runner 现核对"发现/运行"数）；严格门禁 `STRICT PASSED`。严格脚本先跑 `--headless --import` 重建 class cache/.uid（导入器输出不进扫描），再跑测试并扫描 stderr，豁免 AtomRegistry 负向测试、lambda capture 清理日志和 headless 退出期资源日志。
+- 当前验证事实（2026-06-12，S4 T107 机器层收口）：普通测试 `4430/4430` 断言通过，套件 `79/79`（runner 现核对"发现/运行"数）；严格门禁 `STRICT PASSED`；Layer C `2026-06-12` 批 9 镜头 9 PASS / 0 FAIL；**Gate-H 人工终审未清（阻塞 S4 封板）**。严格脚本先跑 `--headless --import` 重建 class cache/.uid（导入器输出不进扫描），再跑测试并扫描 stderr，豁免 AtomRegistry 负向测试、lambda capture 清理日志和 headless 退出期资源日志。
 - Layer C 截图装置（spec 002 T035）：`Project/AcceptanceShots/acceptance_shots.tscn`（自承载主场景，与 Layer A/B 共用 state_stager）经 `Tools/run_acceptance_shots.ps1` **带窗**运行（headless 截图全黑），输出 `AgentOps/acceptance_shots/<date>/`（PNG + manifest.json + AI 读图 findings.md）；Stage Gate 时点使用。
 - 测试约定：禁止裸引用全局 class_name，一律 `const XxxScript := preload(...)`（见 ScriptingLeading 附录 C.8）；坏套件计 FAIL 不再静默吞测（2026-06-05 的"ALL PASSED 758/758"假绿根因已修复）。
 
@@ -161,6 +161,11 @@ Project/Test/cases/test_l3_smoke_run.gd      # L3 v1 固定路径占位 UI smoke
   body_attacked shake 1.5→表（enemy.gd）、死亡 hitstop = triggers.snake_died.hitstop
   （`ceremony.death_hitstop_sec` 已删，单一来源）。强度排序硬约束 segment_loss > hit
   由 test_xp_audio 从同一 JSON 断言。新套件 `test_xp_audio.gd`。
+- T107 S4 Gate 机器层（2026-06-12）：3 局 soak `test_xp_soak`（连续三局 + 回标题分支，
+  每局 run_ended 恰一、模态全收、dim 清）；AcceptanceShots 镜头清单扩到 9（新增
+  08 总结屏 / 09 选石屏）；GameTransition 入 settle 语义（ui_kit 组 + settle()——
+  修 S2 顺手项 GO! 定格，连带消除局内镜头黑罩残留）；stager game_over 布景死因
+  改真实键 hit_self（总结屏镜头显示中文映射）。Layer C findings 9 PASS / 0 FAIL。
 - T106 认知轻度引导（§8.8，`ui/hint_system.gd` 挂 main UILayer 跨 run）：8 条首次
   事件 caption（first_food/hit/status/reward/resonance/shedskin/shop/pickup，
   文案全 `presentation.hints`；first_shedskin 条件 = shedskin 且 amount>0）；

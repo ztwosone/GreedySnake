@@ -3,7 +3,23 @@
 **更新时间**：2026-06-12（S4 开工）
 **当前分支**：`004-presentation-experience`
 **当前 feature**：`.specify/specs/004-presentation-experience/` Phase P（T101-T107，tasks.md 已开工细化为 P-A/P-B/P-C/P-Gate 四簇）
-**当前阶段**：S4 体验完成层进行中——T101 ✅ / T102 ✅ / T103 ✅ / T104 ✅ / T105 ✅ / T106 ✅（hint 引导）；仅剩 T107 Gate（AcceptanceShots + Layer C + 3 局 soak + 文档清偿；**Gate-H 人工欠账阻塞封板**——需人工通跑，脚本见「Gate-H 欠账」节）
+**当前阶段**：S4 体验完成层 T101-T107 机器层全绿 ✅（七卡全交付）；**仅余 Gate-H 人工终审阻塞封板**（S2 三项 + S3 跨进程重验 + S4 体感终审，脚本见「Gate-H 欠账」节——人工通过后即可合 main 进 S5 封板）
+
+## S4 Gate-A 记录（T107，2026-06-12）
+
+- **严格门禁**：`STRICT PASSED`，普通汇总 `79/79 套件`（最终断言数见最后提交信息）。
+- **3 局 soak（§12.1 机器层收口）**：`test_xp_soak`——main.tscn 壳层连续三局
+  （开始/选石跳过 → 局内事件 → 死亡仪式 settle → 总结屏 → 再来一局）×3 +
+  回标题分支收尾；每局 run_ended 恰一次、世界唯一、模态全收、dim 清。
+- **Layer C 截图**：`AgentOps/acceptance_shots/2026-06-12/`（9 镜头含 S4 新增
+  总结屏/选石屏 + findings.md：**9 PASS / 0 FAIL / 2 SUSPECT 不阻塞**）。
+- **顺手项清偿**（S2 登记两项全清）：① GO! 过渡字定格——GameTransition 入
+  settle 语义（ui_kit 组 + settle()，连带消除全部局内镜头黑罩残留偏暗）；
+  ② choice 镜头零装备三卡同类别 = spec Edge Case 既有裁定，维持不阻塞；
+  另修布景死因键 self_collision → hit_self（总结屏镜头显示中文映射）。
+- **S4 全卡回顾**：T101 reason-token 暂停 / T102 AppFlow SUMMARY + CeremonyLayer /
+  T103 终局仪式 + 总结 stagger / T104 横幅两段+小地图+选择仪式+蜕皮飞行+Build 条+
+  拾取闪烁 / T105 程序化音频 + 触发表表即代码 / T106 hint 引导 / T107 本 Gate。
 
 ## S4 进度
 
