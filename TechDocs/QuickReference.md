@@ -161,6 +161,12 @@ Project/Test/cases/test_l3_smoke_run.gd      # L3 v1 固定路径占位 UI smoke
   body_attacked shake 1.5→表（enemy.gd）、死亡 hitstop = triggers.snake_died.hitstop
   （`ceremony.death_hitstop_sec` 已删，单一来源）。强度排序硬约束 segment_loss > hit
   由 test_xp_audio 从同一 JSON 断言。新套件 `test_xp_audio.gd`。
+- **Gate-H 实证修复（2026-06-12，启动序教训）**：ConfigManager 配置加载从 `_ready`
+  提前到 `_init`——真实 F5 启动时**全部节点 `_init`（含主场景）先于任何 `_ready`**，
+  主场景内 kit 组件在 `_init` 构建共享 Theme，原时序下色板为空 → 整套主题缓存品红
+  回退色。机器层测不到（测试/截图装置运行时实例化场景，配置已加载），人工启动首发
+  即现——Gate-H 价值实证。规则：**autoload 若被任何节点 `_init` 消费，其数据必须在
+  自身 `_init` 就绪**。
 - T107 S4 Gate 机器层（2026-06-12）：3 局 soak `test_xp_soak`（连续三局 + 回标题分支，
   每局 run_ended 恰一、模态全收、dim 清）；AcceptanceShots 镜头清单扩到 9（新增
   08 总结屏 / 09 选石屏）；GameTransition 入 settle 语义（ui_kit 组 + settle()——

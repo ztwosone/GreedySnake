@@ -45,7 +45,11 @@ var _tag_res_lookup: Dictionary = {}
 var _scale_override_lookup: Dictionary = {}
 
 
-func _ready() -> void:
+func _init() -> void:
+	# Gate-H 实证修复（2026-06-12）：真实启动时全部节点 _init（含主场景）先于任何
+	# _ready 执行——主场景内 kit 组件在 _init 构建共享 Theme，配置必须在此之前就绪。
+	# （机器层测不到：测试/截图装置都是运行时实例化场景，配置早已加载；
+	#   原 _ready 加载在 F5 启动下让整套主题缓存成品红回退色。）
 	load_config()
 
 

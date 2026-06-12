@@ -20,6 +20,11 @@
 - **S4 全卡回顾**：T101 reason-token 暂停 / T102 AppFlow SUMMARY + CeremonyLayer /
   T103 终局仪式 + 总结 stagger / T104 横幅两段+小地图+选择仪式+蜕皮飞行+Build 条+
   拾取闪烁 / T105 程序化音频 + 触发表表即代码 / T106 hint 引导 / T107 本 Gate。
+- **Gate-H 首发实证修复（2026-06-12，人工通跑首屏即现）**：F5 真启动全 UI 品红——
+  主场景节点 `_init` 先于一切 `_ready`，kit 共享 Theme 在 `_init` 构建时
+  ConfigManager（原 `_ready` 加载）色板为空 → 主题缓存品红回退。修复 = 配置加载
+  提前到 `_init`。机器层结构性盲区（运行时实例化场景测不到真启动序）；
+  新规则入 QuickReference：autoload 数据若被任何 `_init` 消费必须在自身 `_init` 就绪。
 
 ## S4 进度
 
